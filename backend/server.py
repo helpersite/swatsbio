@@ -3944,6 +3944,52 @@ async def now_playing(username: str, db: AsyncSession = Depends(get_db)):
         "lyrics": lyrics,
     }
 
+@api.get("/u/{username}/discord-presence")
+async def get_discord_presence(username: str, db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT * FROM users WHERE username = :u"), {"u": username.lower()})
+    user = row_to_user(row.fetchone())
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    dc = (user.get("connections") or {}).get("discord") or {}
+    s = user.get("settings") or {}
+    
+    discord_id = s.get("discord_snowflake_id") or dc.get("id") or ""
+    status = s.get("discord_presence_status") or dc.get("status") or "online"
+    if status == "auto":
+        status = dc.get("status") or "online"
+        
+    custom_status_state = s.get("discord_custom_status") or ""
+    custom_status_emoji = s.get("discord_status_emoji") or ""
+    
+    activity_name = s.get("discord_activity_name") or ""
+    activity_details = s.get("discord_activity_details") or ""
+    
+    avatar = s.get("discord_avatar_override") or dc.get("avatar") or ""
+    bio_text = s.get("discord_bio") or user.get("description") or ""
+    
+    return {
+        "connected": bool(dc.get("id")),
+        "discord_id": discord_id,
+        "username": dc.get("username") or user.get("username"),
+        "global_name": dc.get("global_name") or user.get("display_name") or dc.get("username"),
+        "avatar": avatar,
+        "avatar_decoration": dc.get("avatar_decoration"),
+        "status": status,
+        "custom_status": {
+            "state": custom_status_state,
+            "emoji": custom_status_emoji,
+        } if (custom_status_state or custom_status_emoji) else None,
+        "activity": {
+            "name": activity_name,
+            "details": activity_details,
+            "type": 0,
+        } if activity_name else None,
+        "bio": bio_text,
+        "public_flags": dc.get("public_flags", 0),
+        "premium_type": dc.get("premium_type", 0),
+    }
+
 def _jload(val):
     return _j(val)
 

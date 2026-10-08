@@ -2245,22 +2245,28 @@ function ProfileWidgets({ bio, accent }) {
   );
 }
 
-function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
-  if (!discord) return null;
+function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
+  if (!discord && !bio?.connections?.discord) return null;
+  const s = bio?.settings || {};
+  const dc = bio?.connections?.discord || discord || {};
+  const discordId = s.discord_snowflake_id || dc?.id || dc?.user_id;
+
   const [lanyard, setLanyard] = useState(null);
 
   useEffect(() => {
-    const discordId = discord?.id || discord?.user_id;
     if (!discordId) return;
 
     let ws = null;
     let heartbeatInterval = null;
     let alive = true;
 
-    // 1. Initial REST fetch for instant response
+    // 1. Initial REST fetch for instant response (cleanly handle 404 without error logging)
     const fetchLanyard = () => {
       fetch(`https://api.lanyard.rest/v1/users/${discordId}`)
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) return null;
+          return res.json();
+        })
         .then((data) => {
           if (alive && data?.success && data?.data) {
             setLanyard(data.data);
@@ -2299,26 +2305,28 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
       ws.onerror = () => {};
     } catch (e) {}
 
-    const pollingTimer = setInterval(fetchLanyard, 12000);
-
     return () => {
       alive = false;
       if (heartbeatInterval) clearInterval(heartbeatInterval);
-      if (pollingTimer) clearInterval(pollingTimer);
       if (ws) {
         try { ws.close(); } catch (e) {}
       }
     };
-  }, [discord?.id, discord?.user_id]);
+  }, [discordId]);
 
-  const liveStatus = lanyard?.discord_status || discord.status || discord.presence?.status || "offline";
+  const liveStatus = lanyard?.discord_status || s.discord_presence_status || dc.status || dc.presence?.status || "online";
   const userObj = lanyard?.discord_user;
-  const liveAvatar = userObj?.avatar
-    ? `https://cdn.discordapp.com/avatars/${discord.id || userObj.id}/${userObj.avatar}.${userObj.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
-    : discord.avatar;
-  const liveName = userObj?.global_name || userObj?.username || discord.global_name || discord.username || "Discord";
-  const customStatus = lanyard?.activities?.find((a) => a.type === 4);
-  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3);
+  const liveAvatar = s.discord_avatar_override
+    ? fileUrl(s.discord_avatar_override)
+    : userObj?.avatar
+    ? `https://cdn.discordapp.com/avatars/${dc.id || userObj.id}/${userObj.avatar}.${userObj.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
+    : dc.avatar;
+  const liveName = userObj?.global_name || userObj?.username || dc.global_name || dc.username || bio?.display_name || bio?.username || "Discord";
+  
+  const customStatusText = lanyard?.activities?.find((a) => a.type === 4)?.state || s.discord_custom_status;
+  const customStatusEmoji = lanyard?.activities?.find((a) => a.type === 4)?.emoji?.name || s.discord_status_emoji;
+  
+  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || (s.discord_activity_name ? { name: s.discord_activity_name, details: s.discord_activity_details, type: 0 } : null);
   const spotify = lanyard?.spotify;
 
   const statusMap = {
@@ -2328,7 +2336,7 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
     offline: { label: "offline", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.4)", color: "#cbd5e1" },
     streaming: { label: "live", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.5)", color: "#d8b4fe" },
   };
-  const visual = statusMap[liveStatus] || statusMap.offline;
+  const visual = statusMap[liveStatus] || statusMap.online;
 
   return (
     <div
@@ -2352,9 +2360,10 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
       <div className="text-left min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/50 font-bold">Discord</span>
-          {customStatus?.state && (
-            <span className="text-[10px] text-white/50 truncate max-w-[140px] italic">
-              — {customStatus.state}
+          {customStatusText && (
+            <span className="text-[10px] text-white/70 truncate max-w-[150px] italic flex items-center gap-1">
+              {customStatusEmoji && <span>{customStatusEmoji}</span>}
+              <span>— {customStatusText}</span>
             </span>
           )}
         </div>
@@ -2574,6 +2583,7 @@ function BioCard({ bio }) {
   const socialIconStyle = s.social_icon_style || "glass";
 
   const discord = bio.connections?.discord;
+  const showDiscordWidget = (s.discord_presence_enabled !== false || s.presence?.discord) && (discord || s.discord_snowflake_id || s.discord_custom_status || s.discord_presence_status || s.discord_activity_name);
   const isPfpInvisible = s.pfp === "invisible" || s.hide_pfp === true;
   const pfp = isPfpInvisible ? null : ((s.presence?.use_discord_pfp && discord?.avatar) ? discord.avatar : (fileUrl(s.pfp) || `https://api.dicebear.com/7.x/bottts/svg?seed=${bio.username}`));
 
@@ -2885,9 +2895,9 @@ function BioCard({ bio }) {
               {bio.description && <div className="text-sm mt-4 leading-relaxed font-normal" style={{ color: descColor }}>{renderBioText(bio.description)}</div>}
               <SocialIconsRow links={socialLinks} accent={accent} align="center" onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
-              {(s.presence?.discord || s.presence?.spotify) && (
+              {showDiscordWidget && (
                 <div className="mt-5 pt-4 border-t border-white/10 space-y-3">
-                  {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+                  <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />
                   {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
                 </div>
               )}
@@ -3201,7 +3211,7 @@ function BioCard({ bio }) {
               <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
             </div>
 
-            {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+            {showDiscordWidget && <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
             
             {/* Interactive Profile Widgets */}
@@ -3242,7 +3252,7 @@ function BioCard({ bio }) {
             {bio.description && <div className="text-sm mt-3.5 leading-relaxed" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</div>}
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
-            {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+            {showDiscordWidget && <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {/* Interactive Profile Widgets */}
@@ -3284,7 +3294,7 @@ function BioCard({ bio }) {
               <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "left"} bio={bio} />
               {bio.description && <div className="text-xs leading-relaxed pt-1" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</div>}
               <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
-              {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+              {showDiscordWidget && <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
               <ProfileWidgets bio={bio} accent={accent} />
             </div>
             <div className="space-y-2.5">
@@ -3329,7 +3339,7 @@ function BioCard({ bio }) {
               </div>
             </div>
 
-            {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+            {showDiscordWidget && <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {/* Interactive Profile Widgets */}
@@ -3383,8 +3393,8 @@ function BioCard({ bio }) {
                 <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
               </div>
 
-              {s.presence?.discord && discord && (
-                <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />
+              {showDiscordWidget && (
+                <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />
               )}
               <ProfileWidgets bio={bio} accent={accent} />
             </div>
@@ -4393,17 +4403,24 @@ function DiscordServerModal({ data, bio, accent, onClose }) {
 
 /* 2. DISCORD USER PRESENCE MODAL */
 function DiscordPresenceModal({ data, bio, accent, onClose }) {
-  const dc = bio.connections?.discord;
-  const discordId = dc?.id || data.link?.url?.match(/users\/(\d+)/)?.[1] || data.link?.config?.discord_id || data.link?.config?.user_id || "";
+  const dc = bio?.connections?.discord || {};
+  const s = bio?.settings || {};
+  const discordId = s.discord_snowflake_id || dc?.id || data.link?.url?.match(/users\/(\d+)/)?.[1] || data.link?.config?.discord_id || data.link?.config?.user_id || "";
   const [lanyard, setLanyard] = useState(null);
   const [loading, setLoading] = useState(!!discordId);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!discordId) return;
+    if (!discordId) {
+      setLoading(false);
+      return;
+    }
     let alive = true;
     fetch(`https://api.lanyard.rest/v1/users/${discordId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
       .then((json) => {
         if (alive && json?.success && json?.data) {
           setLanyard(json.data);
@@ -4415,44 +4432,48 @@ function DiscordPresenceModal({ data, bio, accent, onClose }) {
   }, [discordId]);
 
   const user = lanyard?.discord_user;
-  const status = lanyard?.discord_status || "offline";
-  const avatar = user?.avatar
-    ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${user.avatar.startsWith("a_") ? "gif" : "png"}?size=256`
-    : dc?.avatar || data.link?.config?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${bio.username}`;
+  const status = lanyard?.discord_status || s.discord_presence_status || dc?.status || "online";
+  const avatar = s.discord_avatar_override
+    ? fileUrl(s.discord_avatar_override)
+    : user?.avatar
+    ? `https://cdn.discordapp.com/avatars/${dc?.id || user.id}/${user.avatar}.${user.avatar.startsWith("a_") ? "gif" : "png"}?size=256`
+    : dc?.avatar || data.link?.config?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${bio?.username}`;
 
-  const displayName = user?.global_name || dc?.username || data.link?.label || "Discord";
-  const tag = user?.username ? `@${user.username}` : dc?.username ? `@${dc.username}` : "";
+  const displayName = user?.global_name || dc?.global_name || dc?.username || s.discord_custom_name || bio?.display_name || bio?.username || "Discord";
+  const tag = user?.username ? `@${user.username}` : dc?.username ? `@${dc.username}` : `@${bio?.username}`;
 
-  const customStatus = lanyard?.activities?.find((a) => a.type === 4);
-  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3);
+  const customStatus = lanyard?.activities?.find((a) => a.type === 4) || (s.discord_custom_status ? { state: s.discord_custom_status, emoji: s.discord_status_emoji ? { name: s.discord_status_emoji } : null } : null);
+  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || (s.discord_activity_name ? { name: s.discord_activity_name, details: s.discord_activity_details, type: 0 } : null);
   const spotify = lanyard?.spotify;
 
   const bannerUrl =
     user?.banner
       ? `https://cdn.discordapp.com/banners/${user.id}/${user.banner}.${user.banner.startsWith("a_") ? "gif" : "png"}?size=512`
-      : bio?.settings?.discord_larp_banner || data.link?.config?.discord_banner || null;
+      : s.discord_larp_banner || data.link?.config?.discord_banner || null;
 
   const accountAssets = {
-    ...(bio?.connections?.discord || {}),
-    public_flags: user?.public_flags ?? dc?.public_flags,
-    premium_type: user?.premium_type ?? dc?.premium_type,
+    ...(dc || {}),
+    public_flags: user?.public_flags ?? dc?.public_flags ?? 1,
+    premium_type: user?.premium_type ?? dc?.premium_type ?? 2,
   };
   const activeBadgeIds = getDiscordBadges(accountAssets);
   const activeBadgesList = DISCORD_BADGES_CATALOG.filter((badge) => activeBadgeIds.includes(badge.id));
 
-  const statusColor = !lanyard ? "#80848e" : ({
+  const statusColor = {
     online: "#23a55a",
     idle: "#f0b232",
     dnd: "#f23f43",
     offline: "#80848e",
-  }[status] || "#80848e");
+    streaming: "#593695",
+  }[status] || "#23a55a";
 
-  const statusLabel = loading ? "Syncing presence" : !lanyard ? "Presence unavailable" : ({
+  const statusLabel = {
     online: "Online",
     idle: "Idle / Away",
     dnd: "Do Not Disturb",
     offline: "Offline",
-  }[status] || "Offline");
+    streaming: "Streaming",
+  }[status] || "Online";
 
   return (
     <div className="presence-modal-backdrop fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-md animate-in fade-in duration-200 sm:items-center sm:p-4" onClick={onClose}>
