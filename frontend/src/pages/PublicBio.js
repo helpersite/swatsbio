@@ -2173,48 +2173,6 @@ function getProfileTitleStyle(style, accent, glowColor, textColor) {
   }
 }
 
-function FriendsShowcaseWidget({ friends, accent }) {
-  if (!Array.isArray(friends) || friends.length === 0) return null;
-  return (
-    <div className="w-full rounded-2xl bg-black/45 border border-white/10 p-4 space-y-3 text-left backdrop-blur-xl shadow-xl">
-      <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-        <div className="flex items-center gap-2">
-          <Users size={15} style={{ color: accent }} />
-          <span className="text-xs font-bold uppercase tracking-wider text-white">Friends</span>
-        </div>
-        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-[#E5E7EB]/70">
-          {friends.length} {friends.length === 1 ? "friend" : "friends"}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        {friends.map((f) => {
-          const fPfp = fileUrl(f.settings?.pfp) || `https://api.dicebear.com/7.x/bottts/svg?seed=${f.username}`;
-          const fDec = f.settings?.avatar_decoration;
-          return (
-            <Link
-              key={f.id}
-              to={`/${encodeURIComponent(f.username)}`}
-              className="flex items-center gap-2.5 p-2 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/15 transition-all group"
-            >
-              <div className="relative w-8 h-8 shrink-0">
-                <MediaDisplay src={fPfp} alt={`${f.username} profile picture`} loading="lazy" className="w-full h-full rounded-full object-cover border border-white/10" />
-                {fDec && fDec !== "none" && <AvatarDecoration decoration={fDec} />}
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <div className="text-xs font-semibold text-white group-hover:text-[#5B8DB8] transition-colors truncate">
-                  {stripEffectSyntax(f.display_name || f.username)}
-                </div>
-                <div className="text-[10px] text-[#E5E7EB]/50 font-mono truncate">@{f.username}</div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function BioCard({ bio }) {
   const s = {
     ...(bio.settings || {}),
@@ -2228,15 +2186,6 @@ function BioCard({ bio }) {
   const a = s.audio || {};
   const hasAudio = (a.tracks || []).length > 0;
   useEffect(() => injectCustomFonts(s.custom_fonts), [s.custom_fonts]);
-
-  const [friends, setFriends] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    api.get(`/u/${encodeURIComponent(bio.username)}/friends`).then(({ data }) => {
-      if (alive && Array.isArray(data)) setFriends(data);
-    }).catch(() => {});
-    return () => { alive = false; };
-  }, [bio.username]);
 
   const cardRef = useRef(null);
   const rafId = useRef(null);
@@ -2465,15 +2414,12 @@ function BioCard({ bio }) {
       }
     }
 
-    if (s.show_friends !== false && friends.length > 0) {
-      list.push({ id: "slide-friends", label: "Friends" });
-    }
     if (Array.isArray(s.promos) && s.promos.length > 0) {
       list.push({ id: "slide-3", label: "Showcase" });
     }
     list.push({ id: "slide-footer", label: "Footer" });
     return list;
-  }, [customSlides, s.projects, s.discord_guild, s.discord_server, s.show_friends, friends, s.promos]);
+  }, [customSlides, s.projects, s.discord_guild, s.discord_server, s.promos]);
 
   const scrollToSlide = (id) => {
     const target = id && document.getElementById(id);
@@ -2749,22 +2695,6 @@ function BioCard({ bio }) {
                 }}
               >
                 <DiscordGuildCardWidget guildConfig={s.discord_guild || s.discord_server} accent={accent} />
-              </div>
-            </div>
-          )}
-
-          {/* Slide: Dedicated Friends Showcase */}
-          {s.show_friends !== false && friends.length > 0 && (
-            <div id="slide-friends" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-friends")}>
-              <div
-                className={`w-full max-w-lg transition-transform duration-75 overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8 rounded-3xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"} ${cardFxClass}`}
-                style={{
-                  ...(layout === "minimal" || isCardInvisible ? { background: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", border: showCardBorder && cardBorder ? `1px solid ${cardBorder}` : "none", boxShadow: "none" } : cardMaterial),
-                  ...(layout === "minimal" || isCardInvisible ? {} : cardShape),
-                  fontFamily: s.font || "Outfit",
-                }}
-              >
-                <FriendsShowcaseWidget friends={friends} accent={accent} />
               </div>
             </div>
           )}
@@ -3365,13 +3295,6 @@ function BioCard({ bio }) {
                 </a>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Friends Showcase in Card */}
-        {s.show_friends !== false && friends.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-white/10 w-full">
-            <FriendsShowcaseWidget friends={friends} accent={accent} />
           </div>
         )}
 

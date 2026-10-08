@@ -16,12 +16,12 @@
       "destination": "https://swatsbio-production.up.railway.app/meta/$1"
     },
     {
-      "source": "/:username",
+      "source": "/:username([^/]+)",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i).*(discordbot|twitterbot|facebookexternalhit|telegrambot|whatsapp|slackbot|linkedinbot|embedly|quora|rogerbot|showyoubot|outbrain|pinterest|bingpreview|vkshare|w3c_validator|curl|wget).*"
+          "value": ".*([dD]iscord|[tT]witter|[tT]elegram|[fF]acebook|[wW]hats[aA]pp|[sS]lack|[bB]ot|[cC]rawler|[sS]pider|[eE]mbed|curl|Wget|Google|bing).*"
         }
       ],
       "destination": "https://swatsbio-production.up.railway.app/meta/:username"

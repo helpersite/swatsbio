@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { api } from "@/lib/auth";
+import { api, fileUrl } from "@/lib/auth";
 import { Header, Panel, ToggleRow, SliderRow, SelectRow, ColorRow } from "@/components/DashboardUI";
 import { BADGE_DEFS } from "@/pages/dashboard/badges";
-import { renderBioText } from "@/lib/textEffects";
+import { renderBioText, stripEffectSyntax } from "@/lib/textEffects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,8 +13,9 @@ import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Resp
 import { toast } from "sonner";
 import {
   MoreVertical, Trash2, Award, ExternalLink, Copy, Plus, Globe, Save,
-  Search, Shield, ShieldAlert, Check, CheckSquare, Square, Eye, Sparkles, UserCheck, Crown
+  Search, Shield, ShieldAlert, ShieldCheck, Check, CheckSquare, Square, Eye, Sparkles, UserCheck, Crown, Activity, X, Link2
 } from "lucide-react";
+import { SiSpotify, SiDiscord } from "react-icons/si";
 import { brandIcon } from "@/lib/brandIcons";
 
 const PLATFORMS = ["discord", "twitter", "youtube", "twitch", "instagram", "tiktok", "telegram", "github", "spotify", "kick", "website"];

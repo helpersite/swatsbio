@@ -29,13 +29,30 @@ function isVideo(value) {
 module.exports = async function profileOg(req, res) {
   let username = String(req.query.username || "").trim().toLowerCase();
   try { username = decodeURIComponent(username); } catch {}
-  if (!/^[a-z0-9_#!-]{2,20}$/.test(username) || RESERVED_PATHS.has(username)) {
+  if (!/^[a-z0-9_#!-]{1,30}$/.test(username) || RESERVED_PATHS.has(username)) {
     res.status(404).send("Profile not found");
     return;
   }
 
+  // 1. Try proxying Railway's server-rendered /meta/{username} HTML directly
   try {
-    const response = await fetch(`${BACKEND_URL}/api/profile-preview/${encodeURIComponent(username)}`, {
+    const metaResp = await fetch(`${BACKEND_URL}/meta/${encodeURIComponent(username)}`, {
+      headers: { "User-Agent": req.headers["user-agent"] || "SwatsBio-Proxy/1.0" },
+    });
+    if (metaResp.ok) {
+      const htmlText = await metaResp.text();
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+      res.status(200).send(htmlText);
+      return;
+    }
+  } catch (err) {
+    // Continue to fallback
+  }
+
+  // 2. Fallback: fetch user data from /api/u/{username}
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/u/${encodeURIComponent(username)}`, {
       headers: { Accept: "application/json" },
     });
     if (!response.ok) {
@@ -46,24 +63,56 @@ module.exports = async function profileOg(req, res) {
     const bio = await response.json();
     const settings = bio.settings || {};
     const candidates = [
+      settings.meta_image,
       settings.profile_embed_image,
       settings.header_banner,
       ...(Array.isArray(settings.backgrounds) ? settings.backgrounds : []),
       settings.banner,
       settings.pfp,
     ].filter((value) => value && value !== "invisible" && !isVideo(value));
-    const image = mediaUrl(candidates[0]) || "https://www.swats.bio/logo.png";
+    
+    const image = mediaUrl(candidates[0]) || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`;
     const displayName = bio.display_name || bio.username || username;
-    const title = `${displayName} (@${username}) · swats.bio`;
+    const title = settings.meta_title || `${displayName} (@${username}) • Swats.bio`;
     const views = Number(bio.views || 0).toLocaleString();
-    const description = `${bio.description || `View @${username}'s profile on swats.bio`} · ${views} profile views`.slice(0, 300);
-    const pageUrl = `https://www.swats.bio/${encodeURIComponent(username)}`;
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"><meta name="theme-color" content="${escapeHtml(settings.accent_color || "#5B8DB8")}"><meta property="og:type" content="profile"><meta property="og:site_name" content="swats.bio"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:url" content="${escapeHtml(pageUrl)}"><meta property="og:image" content="${escapeHtml(image)}"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escapeHtml(title)}"><meta name="twitter:description" content="${escapeHtml(description)}"><meta name="twitter:image" content="${escapeHtml(image)}"><meta http-equiv="refresh" content="0;url=${escapeHtml(pageUrl)}"></head><body><a href="${escapeHtml(pageUrl)}">Open ${escapeHtml(title)}</a></body></html>`;
+    const rawDesc = settings.meta_desc || bio.description || `View @${username}'s official bio, social links, and music on Swats.bio.`;
+    const description = rawDesc.replace(/:[a-zA-Z0-9_-]+:/g, "").slice(0, 300);
+    const themeColor = settings.meta_theme_color || settings.accent_color || "#5B8DB8";
+    const pageUrl = `https://swats.bio/${encodeURIComponent(username)}`;
+    const oembedUrl = `${BACKEND_URL}/api/oembed?username=${encodeURIComponent(username)}&format=json`;
+
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Swats.bio">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(pageUrl)}">
+  <meta property="og:image" content="${escapeHtml(image)}">
+  <meta property="og:image:secure_url" content="${escapeHtml(image)}">
+  <meta name="theme-color" content="${escapeHtml(themeColor)}">
+  <meta name="twitter:card" content="${escapeHtml(settings.twitter_card || "summary_large_image")}">
+  <meta name="twitter:site" content="@swatsbio">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(image)}">
+  <link rel="alternate" type="application/json+oembed" href="${escapeHtml(oembedUrl)}" title="${escapeHtml(title)}">
+  <meta http-equiv="refresh" content="0;url=${escapeHtml(pageUrl)}">
+</head>
+<body style="background:#08090d;color:#e5e7eb;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+  <p>Loading <a href="${escapeHtml(pageUrl)}" style="color:#5b8db8;font-weight:bold;">@${escapeHtml(username)} on Swats.bio</a>...</p>
+</body>
+</html>`;
 
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.setHeader("Cache-Control", "public, s-maxage=120, stale-while-revalidate=600");
+    res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
     res.status(200).send(html);
-  } catch {
+  } catch (err) {
     res.status(502).send("Profile preview unavailable");
   }
 };

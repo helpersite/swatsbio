@@ -4,16 +4,31 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/api/$1"
+    },
+    {
+      "source": "/meta/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/meta/$1"
+    },
+    {
+      "source": "/raw-meta/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/meta/$1"
+    },
+    {
       "source": "/:username([^/]+)",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": "(?i)(discordbot|twitterbot|facebookexternalhit|slackbot|telegrambot|whatsapp|linkedinbot).*"
+          "value": ".*([dD]iscord|[tT]witter|[tT]elegram|[fF]acebook|[wW]hats[aA]pp|[sS]lack|[bB]ot|[cC]rawler|[sS]pider|[eE]mbed|curl|Wget|Google|bing).*"
         }
       ],
       "destination": "/api/profile-og?username=:username"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

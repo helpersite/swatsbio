@@ -699,19 +699,19 @@ def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse
     import html as html_lib
     if not user:
         meta_title = f"@{username} • Swats.bio"
-        meta_desc = f"Swats.bio — #1 private bio handler service. Explore @{username}'s links and profile."
+        meta_desc = f"View @{username}'s official bio, links, and music on Swats.bio."
         meta_image = f"https://api.dicebear.com/7.x/bottts/svg?seed={username}"
         theme_color = "#5B8DB8"
-        card_type = "summary"
+        card_type = "summary_large_image"
     else:
         settings = _j(user.get("settings")) or {}
         display_name = user.get("display_name") or username
         meta_title = settings.get("meta_title") or f"{display_name} (@{username}) • Swats.bio"
-        raw_desc = settings.get("meta_desc") or user.get("description") or "Explore my official bio, social links, and music on Swats.bio."
+        raw_desc = settings.get("meta_desc") or user.get("description") or f"View @{username}'s official bio, social links, and music on Swats.bio."
         # Strip BBCode/effect markers from description for clean embed
         meta_desc = re.sub(r':[a-zA-Z0-9_-]+:', '', raw_desc).strip()
         if not meta_desc:
-            meta_desc = f"Explore @{username}'s official profile on Swats.bio."
+            meta_desc = f"View @{username}'s official profile on Swats.bio."
         
         theme_color = settings.get("meta_theme_color") or settings.get("accent_color") or "#5B8DB8"
         if not theme_color.startswith("#"):
@@ -736,6 +736,7 @@ def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse
     esc_color = html_lib.escape(theme_color)
     esc_user = html_lib.escape(username)
     esc_url = f"https://swats.bio/{esc_user}"
+    oembed_url = f"https://swatsbio-production.up.railway.app/api/oembed?username={esc_user}&format=json"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -762,6 +763,9 @@ def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse
   <meta name="twitter:description" content="{esc_desc}">
   <meta name="twitter:image" content="{esc_img}">
   
+  <!-- oEmbed Provider for Discord/Slack/Telegram -->
+  <link rel="alternate" type="application/json+oembed" href="{oembed_url}" title="{esc_title}">
+  
   <!-- Client redirection -->
   <meta http-equiv="refresh" content="0; url={esc_url}">
   <link rel="canonical" href="{esc_url}">
@@ -780,6 +784,38 @@ async def get_user_meta_endpoint(username: str, db: AsyncSession = Depends(get_d
     row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
     user = row_to_user(row.fetchone())
     return generate_user_meta_html(user, clean_u)
+
+@api.get("/oembed")
+@app.get("/oembed")
+@app.get("/api/oembed")
+async def oembed_endpoint(username: str = "", url: str = "", db: AsyncSession = Depends(get_db)):
+    clean_u = (username or "").lstrip("@").strip().lower()
+    if not clean_u and url:
+        m = re.search(r'swats\.bio/([a-zA-Z0-9_#-]+)', url)
+        if m:
+            clean_u = m.group(1).lower()
+    if clean_u:
+        row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
+        user = row_to_user(row.fetchone())
+        if user:
+            settings = _j(user.get("settings")) or {}
+            display_name = user.get("display_name") or clean_u
+            return {
+                "version": "1.0",
+                "type": "link",
+                "title": settings.get("meta_title") or f"{display_name} (@{clean_u}) • Swats.bio",
+                "author_name": display_name,
+                "author_url": f"https://swats.bio/{clean_u}",
+                "provider_name": "Swats.bio",
+                "provider_url": "https://swats.bio"
+            }
+    return {
+        "version": "1.0",
+        "type": "link",
+        "title": "Swats.bio",
+        "provider_name": "Swats.bio",
+        "provider_url": "https://swats.bio"
+    }
 
 # ─────────────────────────────────────────
 # Routes — health

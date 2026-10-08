@@ -18,7 +18,6 @@ import {
   BadgesSection, LeaderboardSection, MyStatsSection, LinksSection
 } from "@/pages/dashboard/Sections";
 import ProfileTemplatesSection from "@/pages/dashboard/ProfileTemplatesSection";
-import SocialSection from "@/pages/dashboard/SocialSection";
 import ToolsSection from "@/pages/dashboard/ToolsSection";
 import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection, AdminOAuthInspector } from "@/pages/dashboard/Admin";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -46,7 +45,6 @@ const SIDEBAR_CATEGORIES = [
     icon: Users,
     items: [
       { id: "templates", label: "Templates", icon: Sparkles },
-      { id: "friends", label: "Friends", icon: MessageSquare },
       { id: "leaderboard", label: "Leaderboard", icon: Trophy },
     ],
   },
@@ -120,7 +118,7 @@ export default function Dashboard() {
   let active = section || "home";
   if (active === "editor") active = "profile";
   if (active === "stats") active = "analytics";
-  if (active === "social") active = "friends";
+  if (active === "social" || active === "friends") active = "home";
   if (active === "overview") active = "home";
 
   const [tutorialOpen, setTutorialOpen] = useState(false);
@@ -156,8 +154,6 @@ export default function Dashboard() {
         return <LinksSection />;
       case "templates":
         return <ProfileTemplatesSection />;
-      case "friends":
-        return <SocialSection />;
       case "leaderboard":
         return <LeaderboardSection />;
       case "tools":
@@ -320,9 +316,9 @@ export default function Dashboard() {
       </div>
 
       {/* Main Workspace Stage (Solid Background, wide container) */}
-      <main className="flex-1 p-4 sm:p-8 pt-18 lg:pt-6 overflow-x-hidden min-h-screen bg-[#08090d]">
+      <main className="flex-1 p-3 sm:p-6 lg:p-8 pt-18 lg:pt-6 overflow-x-hidden min-h-screen bg-[#08090d]">
         <div className="w-full max-w-[1900px] mx-auto">
-          <div id={`section-${active}`} className="w-full">
+          <div id={`section-${active}`} className="w-full bg-[#0c0e18]/90 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl shadow-black/80">
             <ErrorBoundary key={active}>
               {renderSection()}
             </ErrorBoundary>
