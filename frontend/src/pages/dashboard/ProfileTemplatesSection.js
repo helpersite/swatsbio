@@ -5,146 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
-  Sparkles, Check, Eye, Loader2, Plus, Search,
-  Trash2, Edit3, Sliders, CheckSquare, Square
+  Check, Eye, Loader2, Plus, Search,
+  Trash2, Edit3, CheckSquare, Square
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// ─────────────────────────────────────────────────────────────
-// OFFICIAL STYLE PRESETS
-// ─────────────────────────────────────────────────────────────
-const OFFICIAL_STYLE_PRESETS = [
-  {
-    id: "preset_cyberpunk",
-    name: "Cyberpunk",
-    category: "Dark",
-    tagline: "Cyan & magenta neon with dark terminal styling",
-    accent: "#00FFCC",
-    bg_gradient: "from-cyan-950/60 via-purple-950/40 to-[#08090d]",
-    settings: {
-      accent_color: "#00FFCC",
-      glow_color: "#FF007F",
-      card_color: "#0b0f19",
-      card_opacity: 85,
-      card_blur: 16,
-      border_color: "#00FFCC",
-      border_radius: 18,
-      bg_effect: "matrix",
-      avatar_fx: "neon_pulse",
-      avatar_fx_color: "#00FFCC",
-      banner_fx: "scanlines",
-      name_effect: "neon",
-      name_color: "#00FFCC",
-      bio_effect: "glow",
-      layout: "classic",
-      font_family: "Space Grotesk",
-    },
-  },
-  {
-    id: "preset_minimal_mono",
-    name: "Monochrome",
-    category: "Minimal",
-    tagline: "Minimalist black and white frosted glass",
-    accent: "#E2E8F0",
-    bg_gradient: "from-zinc-900/60 via-stone-900/40 to-[#050505]",
-    settings: {
-      accent_color: "#E2E8F0",
-      card_color: "#09090b",
-      card_opacity: 75,
-      card_blur: 20,
-      border_color: "#27272a",
-      border_radius: 24,
-      bg_effect: "subtle_stars",
-      avatar_fx: "soft_glow",
-      avatar_fx_color: "#ffffff",
-      banner_fx: "none",
-      name_effect: "none",
-      name_color: "#ffffff",
-      bio_effect: "none",
-      layout: "compact_feed",
-      font_family: "Inter",
-    },
-  },
-  {
-    id: "preset_anime_cherry",
-    name: "Sakura",
-    category: "Pastel",
-    tagline: "Soft pink accents with ambient glow",
-    accent: "#F472B6",
-    bg_gradient: "from-pink-950/50 via-purple-950/30 to-[#0c0a14]",
-    settings: {
-      accent_color: "#F472B6",
-      card_color: "#180d19",
-      card_opacity: 80,
-      card_blur: 18,
-      border_color: "#F472B6",
-      border_radius: 22,
-      bg_effect: "cherry_blossom",
-      avatar_fx: "rainbow_ring",
-      avatar_fx_color: "#F472B6",
-      banner_fx: "shimmer",
-      name_effect: "gradient",
-      name_color: "#F472B6",
-      bio_effect: "glow",
-      layout: "floating_island",
-      font_family: "Outfit",
-    },
-  },
-  {
-    id: "preset_terminal_hacker",
-    name: "Terminal",
-    category: "Terminal",
-    tagline: "Classic green phosphor console with monospaced font",
-    accent: "#22C55E",
-    bg_gradient: "from-emerald-950/60 via-green-950/40 to-[#020d06]",
-    settings: {
-      accent_color: "#22C55E",
-      card_color: "#041007",
-      card_opacity: 90,
-      card_blur: 12,
-      border_color: "#15803d",
-      border_radius: 12,
-      bg_effect: "crt_scanlines",
-      avatar_fx: "glitch",
-      avatar_fx_color: "#22C55E",
-      banner_fx: "scanlines",
-      name_effect: "typewriter",
-      name_color: "#22C55E",
-      bio_effect: "glitch",
-      layout: "classic",
-      font_family: "Fira Code",
-    },
-  },
-  {
-    id: "preset_vip_gold",
-    name: "Obsidian",
-    category: "Dark",
-    tagline: "Dark theme with amber accents and subtle blur",
-    accent: "#F59E0B",
-    bg_gradient: "from-amber-950/60 via-yellow-950/40 to-[#08090d]",
-    settings: {
-      accent_color: "#F59E0B",
-      card_color: "#120e06",
-      card_opacity: 90,
-      card_blur: 24,
-      border_color: "#F59E0B",
-      border_radius: 20,
-      bg_effect: "aurora",
-      avatar_fx: "shimmer",
-      avatar_fx_color: "#F59E0B",
-      banner_fx: "shimmer",
-      name_effect: "sparkle",
-      name_color: "#F59E0B",
-      bio_effect: "glow",
-      layout: "split_left",
-      font_family: "Outfit",
-    },
-  },
-];
 
 export default function ProfileTemplatesSection() {
   const { user, setUser } = useAuth();
@@ -198,58 +66,43 @@ export default function ProfileTemplatesSection() {
 
   const categories = [
     "All",
-    "Presets",
-    "Dark",
-    "Minimal",
-    "Pastel",
-    "Terminal",
     "Community",
     "My Templates",
-    ...(isAdmin ? ["All Community"] : [])
+    ...(isAdmin ? ["Role Restricted", "Unlisted"] : [])
   ];
 
-  const allTemplates = [
-    ...OFFICIAL_STYLE_PRESETS.map((t) => ({ ...t, is_curated: true })),
-    ...communityTemplates.map((t) => ({
-      id: t.id,
-      name: t.name,
-      category: t.visibility === "role" ? "Role Restricted" : (t.visibility === "unlisted" ? "Unlisted" : "Community"),
-      tagline: t.description || `Shared by @${t.owner_username || "user"}`,
-      author: `@${t.owner_username || "user"}`,
-      accent: t.settings?.accent_color || "#5B8DB8",
-      bg_gradient: "from-blue-950/40 via-purple-950/20 to-[#08090d]",
-      settings: t.settings || {},
-      owner_id: t.owner_id,
-      owner_username: t.owner_username,
-      visibility: t.visibility,
-      target_role: t.target_role,
-      is_curated: false,
-    })),
-  ];
+  const allTemplates = communityTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    category: t.visibility === "role" ? "Role Restricted" : (t.visibility === "unlisted" ? "Unlisted" : "Community"),
+    tagline: t.description || `Shared by @${t.owner_username || "user"}`,
+    author: `@${t.owner_username || "user"}`,
+    accent: t.settings?.accent_color || "#5B8DB8",
+    bg_gradient: "from-blue-950/40 via-purple-950/20 to-[#08090d]",
+    settings: t.settings || {},
+    owner_id: t.owner_id,
+    owner_username: t.owner_username,
+    visibility: t.visibility,
+    target_role: t.target_role,
+  }));
 
   const filteredTemplates = allTemplates.filter((t) => {
     const matchSearch = `${t.name} ${t.tagline} ${t.author || ""}`.toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
     if (activeCategory === "All") return true;
-    if (activeCategory === "Presets") return t.is_curated;
+    if (activeCategory === "Community") return t.visibility === "public" || !t.visibility;
     if (activeCategory === "My Templates") return t.owner_id === user?.id;
-    if (activeCategory === "All Community") return !t.is_curated;
+    if (activeCategory === "Role Restricted") return t.visibility === "role";
+    if (activeCategory === "Unlisted") return t.visibility === "unlisted";
     return t.category === activeCategory;
   });
 
   const handleApply = async (template) => {
     setApplyingId(template.id);
     try {
-      if (template.is_curated) {
-        const nextSettings = { ...(user?.settings || {}), ...template.settings };
-        const { data } = await api.put("/profile/settings", nextSettings);
-        setUser((prev) => ({ ...prev, settings: data }));
-        toast.success(`Equipped ${template.name}`);
-      } else {
-        const { data } = await api.post(`/templates/${template.id}/apply`);
-        setUser(data.user);
-        toast.success(`Equipped ${template.name}`);
-      }
+      const { data } = await api.post(`/templates/${template.id}/apply`);
+      setUser(data.user);
+      toast.success(`Equipped template: ${template.name}`);
       setPreviewTemplate(null);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to apply template.");
@@ -419,42 +272,53 @@ export default function ProfileTemplatesSection() {
       </div>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTemplates.map((t) => {
-          const isApplying = applyingId === t.id;
-          const canManage = isAdmin || (!t.is_curated && t.owner_id === user?.id);
+      {loading ? (
+        <div className="py-16 flex items-center justify-center text-white/40 text-xs">
+          <Loader2 size={20} className="animate-spin mr-2" /> Loading templates...
+        </div>
+      ) : filteredTemplates.length === 0 ? (
+        <div className="py-16 text-center text-white/40 bg-[#0c0e18] rounded-2xl border border-white/10 p-8 space-y-3">
+          <p className="text-xs">No templates found matching your criteria.</p>
+          <Button
+            type="button"
+            onClick={() => setPublishOpen(true)}
+            className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-4 h-8 rounded-xl"
+          >
+            <Plus size={13} className="mr-1" /> Publish First Template
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredTemplates.map((t) => {
+            const isApplying = applyingId === t.id;
+            const canManage = isAdmin || t.owner_id === user?.id;
 
-          return (
-            <div
-              key={t.id}
-              className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/50 overflow-hidden flex flex-col justify-between group transition-all shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
-            >
-              {/* Card Banner */}
-              <div className={`relative h-28 bg-gradient-to-br ${t.bg_gradient} p-3.5 flex flex-col justify-between border-b border-white/10 overflow-hidden`}>
-                <div className="flex items-center justify-between z-10">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm"
-                      style={{
-                        backgroundColor: `${t.accent}20`,
-                        borderColor: `${t.accent}60`,
-                        color: t.accent,
-                      }}
-                    >
-                      {t.category}
-                    </span>
-                    {t.visibility === "role" && (
-                      <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-mono">
-                        {t.target_role || "Role"}
+            return (
+              <div
+                key={t.id}
+                className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/50 overflow-hidden flex flex-col justify-between group transition-all shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+              >
+                {/* Card Banner */}
+                <div className={`relative h-28 bg-gradient-to-br ${t.bg_gradient} p-3.5 flex flex-col justify-between border-b border-white/10 overflow-hidden`}>
+                  <div className="flex items-center justify-between z-10">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+                        style={{
+                          backgroundColor: `${t.accent}20`,
+                          borderColor: `${t.accent}60`,
+                          color: t.accent,
+                        }}
+                      >
+                        {t.category}
                       </span>
-                    )}
-                  </div>
+                      {t.visibility === "role" && (
+                        <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-mono">
+                          {t.target_role || "Role"}
+                        </span>
+                      )}
+                    </div>
 
-                  {t.is_curated ? (
-                    <span className="text-[10px] font-semibold text-amber-300 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20">
-                      Official
-                    </span>
-                  ) : (
                     <div className="flex items-center gap-1">
                       {canManage && (
                         <button
@@ -480,78 +344,78 @@ export default function ProfileTemplatesSection() {
                         {t.author}
                       </span>
                     </div>
-                  )}
-                </div>
+                  </div>
 
-                {/* Header Title */}
-                <div className="flex items-center gap-2 z-10">
+                  {/* Header Title */}
+                  <div className="flex items-center gap-2 z-10">
+                    <div
+                      className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold shadow-md"
+                      style={{ backgroundColor: t.accent, color: "#000" }}
+                    >
+                      {t.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-white">{t.name}</div>
+                      <div className="text-[10px] text-[#E5E7EB]/60 font-mono">{t.settings?.font_family || "Inter"}</div>
+                    </div>
+                  </div>
+
                   <div
-                    className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold shadow-md"
-                    style={{ backgroundColor: t.accent, color: "#000" }}
-                  >
-                    {t.name.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-white">{t.name}</div>
-                    <div className="text-[10px] text-[#E5E7EB]/60 font-mono">{t.settings?.font_family || "Inter"}</div>
-                  </div>
+                    className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full filter blur-2xl opacity-40 pointer-events-none"
+                    style={{ backgroundColor: t.accent }}
+                  />
                 </div>
 
-                <div
-                  className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full filter blur-2xl opacity-40 pointer-events-none"
-                  style={{ backgroundColor: t.accent }}
-                />
-              </div>
+                {/* Card Body */}
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  <p className="text-[11px] text-[#E5E7EB]/60 leading-relaxed line-clamp-2">
+                    {t.tagline}
+                  </p>
 
-              {/* Card Body */}
-              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                <p className="text-[11px] text-[#E5E7EB]/60 leading-relaxed line-clamp-2">
-                  {t.tagline}
-                </p>
+                  {/* Specs Pill List */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
+                      {t.settings?.layout || "classic"}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
+                      {t.settings?.bg_effect || "none"}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
+                      {t.settings?.font_family || "Inter"}
+                    </span>
+                  </div>
 
-                {/* Specs Pill List */}
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                    {t.settings?.layout || "classic"}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                    {t.settings?.bg_effect || "none"}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                    {t.settings?.font_family || "Inter"}
-                  </span>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-2 flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setPreviewTemplate(t)}
-                    className="flex-1 border-white/10 hover:bg-white/5 text-white/80 hover:text-white text-xs h-8 rounded-xl gap-1 cursor-pointer"
-                  >
-                    <Eye size={12} /> Inspect
-                  </Button>
-                  <Button
-                    type="button"
-                    disabled={isApplying}
-                    onClick={() => handleApply(t)}
-                    className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 rounded-xl shadow-md gap-1 cursor-pointer"
-                  >
-                    {isApplying ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <>
-                        <Check size={12} /> Equip
-                      </>
-                    )}
-                  </Button>
+                  {/* Action Buttons */}
+                  <div className="pt-2 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setPreviewTemplate(t)}
+                      className="flex-1 border-white/10 hover:bg-white/5 text-white/80 hover:text-white text-xs h-8 rounded-xl gap-1 cursor-pointer"
+                    >
+                      <Eye size={12} /> Inspect
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={isApplying}
+                      onClick={() => handleApply(t)}
+                      className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 rounded-xl shadow-md gap-1 cursor-pointer"
+                    >
+                      {isApplying ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Check size={12} /> Equip
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Inspect Modal */}
       <Dialog open={Boolean(previewTemplate)} onOpenChange={(o) => !o && setPreviewTemplate(null)}>
