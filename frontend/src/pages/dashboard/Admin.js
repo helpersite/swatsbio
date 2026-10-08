@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { api } from "@/lib/auth";
-import { Header, Panel } from "@/pages/dashboard/Editor";
 import { BADGE_DEFS } from "@/pages/dashboard/badges";
 import { renderBioText } from "@/lib/textEffects";
 import { Button } from "@/components/ui/button";

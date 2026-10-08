@@ -62,6 +62,43 @@ export const CARD_WIDTHS = [
   { v: "wide", l: "Ultra-Wide (680px)" },
 ];
 
+export const SOCIAL_ICON_STYLES = [
+  { v: "glass", l: "Glass Circle (Default)" },
+  { v: "clean", l: "Clean Floating (No Background)" },
+  { v: "solid", l: "Dark Solid Circle" },
+  { v: "neon", l: "Glowing Neon Aura" },
+  { v: "minimal", l: "Minimalist Borderless" },
+];
+
+export const LINK_DISPLAY_OPTIONS = [
+  { v: "both", l: "Both (Social Icons & Link Cards)" },
+  { v: "cards", l: "Link Cards Only (Hide top duplicate icons)" },
+  { v: "icons", l: "Social Icons Only (Clean icons row only)" },
+];
+
+export const LINK_LAYOUT_STYLES = [
+  { v: "list", l: "Vertical List Stack" },
+  { v: "grid_2col", l: "2-Column Compact Grid" },
+  { v: "bento", l: "Asymmetric Bento Blocks" },
+  { v: "pill", l: "Rounded Glass Pills" },
+];
+
+export const LINK_ANIMATIONS = [
+  { v: "none", l: "None (Static)" },
+  { v: "glow_pulse", l: "Glow Pulse (Breathing neon glow)" },
+  { v: "neon_border", l: "Neon Border (Edge highlight pulse)" },
+  { v: "shimmer", l: "Light Shimmer (Continuous metallic sheen)" },
+  { v: "float_3d", l: "Floating 3D (Subtle floating wave)" },
+  { v: "glass_lift", l: "Glass Lift (Smooth breathing zoom)" },
+];
+
+export const LINK_BTN_OPTIONS = [
+  { v: "arrow", l: "External Arrow Icon" },
+  { v: "copy", l: "Copy Link Button" },
+  { v: "presence", l: "Live Presence Status Pill" },
+  { v: "none", l: "Clean Minimal" },
+];
+
 // Helper UI primitives
 export function Header({ title, subtitle, action }) {
   return (
@@ -88,7 +125,16 @@ export function Panel({ title, children, className = "" }) {
   );
 }
 
-function SliderRow({ label, value, onChange, min = 0, max = 100, step = 1, suffix = "%" }) {
+export function ToggleRow({ label, checked, onChange, testid }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-1.5">
+      <span className="text-xs text-[#E5E7EB]/80 font-medium">{label}</span>
+      <Switch data-testid={testid} checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
+
+export function SliderRow({ label, value, onChange, min = 0, max = 100, step = 1, suffix = "%" }) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-xs text-[#E5E7EB]/70 font-medium">
@@ -107,7 +153,7 @@ function SliderRow({ label, value, onChange, min = 0, max = 100, step = 1, suffi
   );
 }
 
-function SelectRow({ label, value, onChange, options }) {
+export function SelectRow({ label, value, onChange, options }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-xs text-[#E5E7EB]/70 font-medium shrink-0">{label}</span>
@@ -127,7 +173,7 @@ function SelectRow({ label, value, onChange, options }) {
   );
 }
 
-function ColorRow({ label, value, onChange }) {
+export function ColorRow({ label, value, onChange }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-xs text-[#E5E7EB]/70 font-medium">{label}</span>

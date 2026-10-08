@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useAuth, api, fileUrl } from "@/lib/auth";
-import { Header, Panel, ToggleRow, SelectRow, LINK_DISPLAY_OPTIONS, LINK_LAYOUT_STYLES, LINK_ANIMATIONS, LINK_BTN_OPTIONS, SOCIAL_ICON_STYLES } from "@/pages/dashboard/Editor";
 import { BADGE_DEFS, BADGE_CATEGORIES, BADGE_ICON_CATALOG } from "@/pages/dashboard/badges";
 import { brandIcon, BRAND_COLORS } from "@/lib/brandIcons";
 import { renderBioText, stripEffectSyntax } from "@/lib/textEffects";
