@@ -1084,6 +1084,8 @@ export function AdminBotSection() {
   const [botData, setBotData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [postingLeaderboard, setPostingLeaderboard] = useState(false);
+  const [testingToken, setTestingToken] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const [dmModal, setDmModal] = useState({ open: false, user: null, message: "" });
   const [sendingDm, setSendingDm] = useState(false);
   const [customChannel, setCustomChannel] = useState("1557281277734813806");
@@ -1098,6 +1100,21 @@ export function AdminBotSection() {
   useEffect(() => {
     loadBotData();
   }, []);
+
+  const handleTestToken = async () => {
+    setTestingToken(true);
+    setTestResult(null);
+    try {
+      const { data } = await api.post("/admin/bot/test-token");
+      setTestResult(data);
+      toast.success(`Bot connected: @${data.username} (${data.guild_count} servers)`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Discord bot token test failed.");
+      setTestResult({ ok: false, error: e.response?.data?.detail || e.message });
+    } finally {
+      setTestingToken(false);
+    }
+  };
 
   const handlePostLeaderboard = async () => {
     setPostingLeaderboard(true);
@@ -1153,16 +1170,43 @@ export function AdminBotSection() {
         title="Discord Bot & Leaderboard Command"
         subtitle="Manage Discord authentication gateway, server booster roles, and channel 1557281277734813806 leaderboard sync."
         action={
-          <Button
-            type="button"
-            disabled={postingLeaderboard}
-            onClick={handlePostLeaderboard}
-            className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(88,101,242,0.4)] gap-1.5 cursor-pointer"
-          >
-            {postingLeaderboard ? "Posting Embed..." : "⚡ Post Leaderboard to Channel Now"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              disabled={testingToken}
+              onClick={handleTestToken}
+              variant="outline"
+              className="border-white/10 text-white text-xs font-semibold px-3 h-9 rounded-xl hover:bg-white/5 cursor-pointer"
+            >
+              {testingToken ? "Testing..." : "🔍 Test Bot Token"}
+            </Button>
+            <Button
+              type="button"
+              disabled={postingLeaderboard}
+              onClick={handlePostLeaderboard}
+              className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(88,101,242,0.4)] gap-1.5 cursor-pointer"
+            >
+              {postingLeaderboard ? "Posting Embed..." : "⚡ Post Leaderboard to Channel Now"}
+            </Button>
+          </div>
         }
       />
+
+      {/* Test Result Banner */}
+      {testResult && (
+        <div className={`p-4 rounded-2xl border ${testResult.ok ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-red-500/10 border-red-500/30 text-red-300"} text-xs space-y-1`}>
+          <div className="font-bold flex items-center gap-2">
+            <span>{testResult.ok ? "✓ Discord Bot Connection Verified" : "✗ Discord Bot Connection Error"}</span>
+          </div>
+          {testResult.ok ? (
+            <p className="text-white/80">
+              Bot account: <strong>@{testResult.username}</strong> (ID: {testResult.id}) • Joined {testResult.guild_count} Discord servers.
+            </p>
+          ) : (
+            <p className="text-white/80">{testResult.error || "Please verify DISCORD_BOT_TOKEN in Railway environment variables."}</p>
+          )}
+        </div>
+      )}
 
       {/* Top Status Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1192,7 +1236,7 @@ export function AdminBotSection() {
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
           <div className="text-[11px] text-[#E5E7EB]/50 font-medium">24h Leaderboard Auto-Sync</div>
           <div className="text-lg font-bold text-emerald-400">Enabled (Every 24h)</div>
-          <div className="text-[10px] text-white/40 font-mono">Channel #1557281277734813806</div>
+          <div className="text-[10px] text-white/40 font-mono">Channel #{customChannel}</div>
         </div>
       </div>
 
@@ -1224,6 +1268,7 @@ export function AdminBotSection() {
           </Button>
         </div>
       </div>
+
 
       {/* Authed Users Management Table */}
       <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">

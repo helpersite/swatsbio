@@ -96,8 +96,17 @@ def normalize_username(value: str) -> str:
 
 DISCORD_CLIENT_ID     = get_env("DISCORD_CLIENT_ID", "") or get_env("DISCORD_APP_ID", "") or ""
 DISCORD_CLIENT_SECRET = get_env("DISCORD_CLIENT_SECRET", "") or get_env("DISCORD_SECRET", "") or ""
-DISCORD_GUILD_ID      = get_env("DISCORD_GUILD_ID", "")
+DISCORD_BOT_TOKEN = get_env("DISCORD_BOT_TOKEN", "") or get_env("DISCORD_TOKEN", "")
+DISCORD_GUILD_ID  = get_env("DISCORD_GUILD_ID", "")
 DISCORD_LEADERBOARD_CHANNEL_ID = get_env("DISCORD_LEADERBOARD_CHANNEL_ID", "1557281277734813806")
+
+def file_url(path: Optional[str]) -> str:
+    if not path:
+        return ""
+    if path.startswith("http://") or path.startswith("https://") or path.startswith("/api/"):
+        return path
+    return f"/api/files/{path.lstrip('/')}"
+
 
 _env_discord_redirect = get_env("DISCORD_REDIRECT_URI", "") or get_env("DISCORD_REDIRECT_URL", "")
 BACKEND_PUBLIC_URL = get_env("BACKEND_PUBLIC_URL", "").strip().rstrip("/")
@@ -524,7 +533,12 @@ class CreateChannelIn(BaseModel):
     member_ids: list[str] = []
     icon_url: Optional[str] = None
 
+class CreateDmIn(BaseModel):
+    target_user_id: Optional[str] = None
+    username: Optional[str] = None
+
 class AddChannelMembersIn(BaseModel):
+
     member_ids: list[str] = Field(default_factory=list)
 
 class SendMessageIn(BaseModel):
@@ -925,19 +939,28 @@ def _shared_template_snapshot(row) -> dict:
 
 @api.get("/templates")
 async def list_shared_templates(limit: int = Query(100, ge=1, le=200), viewer: Optional[dict] = Depends(get_optional_current_user), db: AsyncSession = Depends(get_db)):
-    rows = await db.execute(text("""
+    conditions = ["t.visibility = 'public'"]
+    params = {"limit": limit}
+    if viewer:
+        params["viewer_id"] = viewer["id"]
+        params["viewer_role"] = viewer.get("role", "")
+        conditions.append("t.owner_id = :viewer_id")
+        conditions.append("(t.visibility = 'role' AND t.target_role = :viewer_role)")
+    
+    where_clause = " OR ".join(f"({c})" for c in conditions)
+    query_str = f"""
         SELECT t.id, t.owner_id, u.username AS owner_username, t.name, t.display_name,
                t.description, t.settings, t.links, t.downloads, t.created_at,
                t.visibility, t.target_role
         FROM shared_profile_templates t
         JOIN users u ON u.id = t.owner_id
-        WHERE t.visibility = 'public'
-           OR (:viewer_id IS NOT NULL AND t.owner_id = :viewer_id)
-           OR (t.visibility = 'role' AND :viewer_role IS NOT NULL AND t.target_role = :viewer_role)
+        WHERE {where_clause}
         ORDER BY t.created_at DESC
         LIMIT :limit
-    """), {"limit": limit, "viewer_id": viewer.get("id") if viewer else None, "viewer_role": viewer.get("role") if viewer else None})
+    """
+    rows = await db.execute(text(query_str), params)
     return [_shared_template_snapshot(row) for row in rows.fetchall()]
+
 
 @api.get("/template-roles")
 async def list_template_roles(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -1374,33 +1397,36 @@ def set_view_cookie(response: Response, user_id: str, fingerprint: str):
 async def register_profile_view(user: dict, request: Request, response: Response, db: AsyncSession) -> bool:
     if not user:
         return False
+    try:
+        cookie_name = f"swats_view_{user['id']}"
+        cookie_fingerprint = request.cookies.get(cookie_name)
+        fingerprint = get_view_fingerprint(request)
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
 
-    cookie_name = f"swats_view_{user['id']}"
-    cookie_fingerprint = request.cookies.get(cookie_name)
-    fingerprint = get_view_fingerprint(request)
-    cutoff = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+        if cookie_fingerprint == fingerprint:
+            return False
 
-    if cookie_fingerprint == fingerprint:
-        return False
+        recent = await db.execute(
+            text("SELECT id FROM view_events WHERE user_id = :uid AND fingerprint = :fp AND at >= :cutoff LIMIT 1"),
+            {"uid": user["id"], "fp": fingerprint, "cutoff": cutoff},
+        )
+        if recent.fetchone():
+            set_view_cookie(response, user["id"], fingerprint)
+            return False
 
-    recent = await db.execute(
-        text("SELECT id FROM view_events WHERE user_id = :uid AND fingerprint = :fp AND at >= :cutoff LIMIT 1"),
-        {"uid": user["id"], "fp": fingerprint, "cutoff": cutoff},
-    )
-    if recent.fetchone():
+        await db.execute(text("UPDATE users SET views = views + 1 WHERE id = :id"), {"id": user["id"]})
+        vid = str(uuid.uuid4())
+        await db.execute(
+            text("INSERT INTO view_events (id, user_id, fingerprint, at) VALUES (:id, :uid, :fp, :at)"),
+            {"id": vid, "uid": user["id"], "fp": fingerprint, "at": now_iso()},
+        )
+        await db.commit()
         set_view_cookie(response, user["id"], fingerprint)
+        user["views"] = (user.get("views") or 0) + 1
+        return True
+    except Exception as e:
+        logger.warning(f"Error registering view event: {e}")
         return False
-
-    await db.execute(text("UPDATE users SET views = views + 1 WHERE id = :id"), {"id": user["id"]})
-    vid = str(uuid.uuid4())
-    await db.execute(
-        text("INSERT INTO view_events (id, user_id, fingerprint, at) VALUES (:id, :uid, :fp, :at)"),
-        {"id": vid, "uid": user["id"], "fp": fingerprint, "at": now_iso()},
-    )
-    await db.commit()
-    set_view_cookie(response, user["id"], fingerprint)
-    user["views"] = (user.get("views") or 0) + 1
-    return True
 
 
 @api.get("/u/{username}")
@@ -1446,14 +1472,14 @@ async def community_members(db: AsyncSession = Depends(get_db)):
         SELECT id, username, display_name, description, settings, badges, views, created_at
         FROM users
         ORDER BY views DESC, created_at DESC
-        LIMIT 50
+        LIMIT 100
     """))
     members = []
     for r in rows.fetchall():
-        settings = _jload(r[4]) if r[4] else {}
+        settings = _j(r[4]) if r[4] else {}
         if not isinstance(settings, dict):
             settings = {}
-        badges = _jload(r[5]) if r[5] else []
+        badges = _j(r[5]) if r[5] else []
         if not isinstance(badges, list):
             badges = []
         pfp = settings.get("pfp")
@@ -2109,8 +2135,55 @@ async def get_channel_members(channel_id: str, user: dict = Depends(get_current_
     members = [build_social_user_card(u) for u in mapped_users if u]
     return {"channel_id": channel_id, "members": members, "total": len(members)}
 
+@api.post("/social/dm")
+async def start_or_get_direct_message(body: CreateDmIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    uid = user["id"]
+    target_id = (body.target_user_id or "").strip()
+    target_uname = (body.username or "").lstrip("@").strip().lower()
+
+    target_user = None
+    if target_id:
+        r = await db.execute(text("SELECT id, username, display_name, settings FROM users WHERE id = :id"), {"id": target_id})
+        target_user = r.fetchone()
+    elif target_uname:
+        r = await db.execute(text("SELECT id, username, display_name, settings FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u"), {"u": target_uname})
+        target_user = r.fetchone()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    f_uid = target_user[0]
+    if f_uid == uid:
+        raise HTTPException(status_code=400, detail="Cannot create direct message channel with yourself.")
+
+    cid = f"dm-{min(uid, f_uid)}-{max(uid, f_uid)}"
+    f_name = target_user[1] or target_user[0]
+    f_sett = _j(target_user[2]) if target_user[2] else {}
+    pfp = f_sett.get("pfp")
+    icon_url = pfp if pfp and (pfp.startswith("http://") or pfp.startswith("https://") or pfp.startswith("/api/")) else (f"/api/files/{pfp}" if pfp else f"https://api.dicebear.com/7.x/bottts/svg?seed={target_user[0]}")
+
+    # Check if exists
+    c_row = await db.execute(text("SELECT id FROM chat_channels WHERE id = :id"), {"id": cid})
+    if not c_row.fetchone():
+        await db.execute(text("""
+            INSERT INTO chat_channels (id, name, is_group, owner_id, members, icon_url, created_at)
+            VALUES (:id, :name, FALSE, :uid, :members, :icon, :ca)
+        """), {"id": cid, "name": f_name, "uid": uid, "members": _jdump([uid, f_uid]), "icon": icon_url, "ca": now_iso()})
+        await db.commit()
+
+    return {
+        "id": cid,
+        "name": f_name,
+        "is_group": False,
+        "owner_id": uid,
+        "members": [uid, f_uid],
+        "icon_url": icon_url,
+        "created_at": now_iso(),
+    }
+
 @api.post("/social/channels")
 async def create_chat_channel(body: CreateChannelIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+
     members = list(set([user["id"]] + (body.member_ids or [])))
     cid = str(uuid.uuid4())
     name = (body.name or "Group Chat").strip()
@@ -3023,7 +3096,10 @@ async def start_discord_gateway():
         logger.exception("Discord Gateway dependency missing; install backend requirements.")
         return
 
-    client = discord.Client(intents=discord.Intents.none())
+    intents = discord.Intents.default()
+    intents.members = False
+    intents.message_content = False
+    client = discord.Client(intents=intents)
     DISCORD_GATEWAY_CLIENT = client
 
     @client.event
@@ -3049,7 +3125,7 @@ async def start_discord_gateway():
             logger.exception("Discord Gateway stopped; check the bot token and server access.")
 
     DISCORD_GATEWAY_TASK = asyncio.create_task(run_gateway(), name="discord-gateway")
-DISCORD_BOT_TOKEN = get_env("DISCORD_BOT_TOKEN", "")
+
 
 @api.post("/connect/discord/check-booster")
 async def discord_check_booster(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -3368,10 +3444,48 @@ async def admin_bot_dashboard(admin: dict = Depends(require_admin), db: AsyncSes
         "users": authed_users[:50]
     }
 
+@api.post("/admin/bot/test-token")
+async def admin_bot_test_token(admin: dict = Depends(require_admin)):
+    if not DISCORD_BOT_TOKEN:
+        raise HTTPException(status_code=400, detail="DISCORD_BOT_TOKEN is not configured in Railway/Server environment variables.")
+    try:
+        r = requests.get(
+            "https://discord.com/api/v10/users/@me",
+            headers={"Authorization": f"Bot {DISCORD_BOT_TOKEN}"},
+            timeout=8
+        )
+        if r.status_code == 200:
+            bot_info = r.json()
+            # Fetch guilds
+            g_resp = requests.get(
+                "https://discord.com/api/v10/users/@me/guilds",
+                headers={"Authorization": f"Bot {DISCORD_BOT_TOKEN}"},
+                timeout=8
+            )
+            guilds = g_resp.json() if g_resp.status_code == 200 else []
+            return {
+                "ok": True,
+                "bot_user": bot_info,
+                "username": bot_info.get("username"),
+                "id": bot_info.get("id"),
+                "avatar": f"https://cdn.discordapp.com/avatars/{bot_info.get('id')}/{bot_info.get('avatar')}.png" if bot_info.get("avatar") else "",
+                "guild_count": len(guilds) if isinstance(guilds, list) else 0,
+                "guilds": guilds if isinstance(guilds, list) else [],
+                "target_guild_id": DISCORD_GUILD_ID,
+                "target_leaderboard_channel": DISCORD_LEADERBOARD_CHANNEL_ID,
+            }
+        else:
+            raise HTTPException(status_code=400, detail=f"Discord API returned status {r.status_code}: {r.text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to Discord API: {str(e)}")
+
 @api.post("/admin/bot/post-leaderboard")
 async def admin_bot_post_leaderboard(body: AdminBotLeaderboardIn, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     res = await post_discord_leaderboard(db, custom_channel=body.channel_id)
     return res
+
 
 @api.post("/admin/bot/send-dm")
 async def admin_bot_send_dm(body: AdminBotSendDmIn, admin: dict = Depends(require_admin)):
@@ -4118,7 +4232,7 @@ async def startup():
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS text_effect TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS reactions TEXT DEFAULT '{}'",
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE",
-            "ALTER TABLE chat_messages ADD COLUMN read_by TEXT DEFAULT '[]'",
+            "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS read_by TEXT DEFAULT '[]'",
             "ALTER TABLE IF EXISTS chat_channels ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS chat_channels ADD COLUMN IF NOT EXISTS is_group BOOLEAN DEFAULT FALSE",
             "ALTER TABLE IF EXISTS chat_channels ADD COLUMN IF NOT EXISTS owner_id TEXT DEFAULT ''",
@@ -4128,9 +4242,9 @@ async def startup():
             "ALTER TABLE IF EXISTS friendships ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'accepted'",
             "ALTER TABLE IF EXISTS friendships ADD COLUMN IF NOT EXISTS created_at TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS connections TEXT DEFAULT '{}'",
-            "ALTER TABLE users ADD COLUMN subdomain TEXT DEFAULT ''",
-            "ALTER TABLE shared_profile_templates ADD COLUMN visibility TEXT DEFAULT 'public'",
-            "ALTER TABLE shared_profile_templates ADD COLUMN target_role TEXT DEFAULT ''",
+            "ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS subdomain TEXT DEFAULT ''",
+            "ALTER TABLE IF EXISTS shared_profile_templates ADD COLUMN IF NOT EXISTS visibility TEXT DEFAULT 'public'",
+            "ALTER TABLE IF EXISTS shared_profile_templates ADD COLUMN IF NOT EXISTS target_role TEXT DEFAULT ''",
         ]
         for m_stmt in migration_stmts:
             try:
@@ -4141,6 +4255,7 @@ async def startup():
             await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_view_events_user_fp_time ON view_events(user_id, fingerprint, at)"))
         except Exception:
             pass
+
 
     async with SessionLocal() as db:
         # Seed admin users
