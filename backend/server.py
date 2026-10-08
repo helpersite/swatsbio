@@ -533,6 +533,9 @@ class SendMessageIn(BaseModel):
     media_type: Optional[str] = None
     text_effect: Optional[str] = "none"
 
+class ReactMessageIn(BaseModel):
+    emoji: str
+
 class DonationCheckoutIn(BaseModel):
     amount_usd: int
     name: Optional[str] = ""
@@ -1394,7 +1397,8 @@ async def register_profile_view(user: dict, request: Request, response: Response
 
 @api.get("/u/{username}")
 async def public_bio(username: str, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    row = await db.execute(text("SELECT * FROM users WHERE username = :u OR subdomain = :u LIMIT 1"), {"u": username.lower()})
+    clean_u = (username or "").lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
     user = row_to_user(row.fetchone())
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1405,7 +1409,8 @@ async def public_bio(username: str, request: Request, response: Response, db: As
 
 @api.get("/profile-preview/{username}")
 async def profile_preview(username: str, db: AsyncSession = Depends(get_db)):
-    row = await db.execute(text("SELECT * FROM users WHERE username = :u OR subdomain = :u LIMIT 1"), {"u": username.lower()})
+    clean_u = (username or "").lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
     user = row_to_user(row.fetchone())
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1413,7 +1418,8 @@ async def profile_preview(username: str, db: AsyncSession = Depends(get_db)):
 
 @api.post("/u/{username}/unlock")
 async def unlock_bio(username: str, body: UnlockIn, request: Request, response: Response, db: AsyncSession = Depends(get_db)):
-    row = await db.execute(text("SELECT * FROM users WHERE username = :u OR subdomain = :u LIMIT 1"), {"u": username.lower()})
+    clean_u = (username or "").lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
     user = row_to_user(row.fetchone())
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1787,14 +1793,14 @@ async def get_my_friends(user: dict = Depends(get_current_user), db: AsyncSessio
 
 @api.post("/social/friends/request")
 async def send_friend_request(body: FriendRequestIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    target_username = (body.username or "").strip().lower()
+    target_username = (body.username or "").lstrip("@").strip().lower()
     target_id = (body.user_id or "").strip()
 
     if not target_username and not target_id:
         raise HTTPException(status_code=400, detail="Username or user ID is required")
 
     if target_username:
-        target_row = await db.execute(text("SELECT * FROM users WHERE username = :u"), {"u": target_username})
+        target_row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": target_username})
     else:
         target_row = await db.execute(text("SELECT * FROM users WHERE id = :id"), {"id": target_id})
     
@@ -2083,7 +2089,7 @@ async def get_channel_messages(channel_id: str, limit: int = 100, user: dict = D
 
     rows = await db.execute(text("""
         SELECT m.id, m.channel_id, m.sender_id, m.content, m.media_url, m.media_type, m.text_effect, m.created_at,
-             m.read_by, u.username, u.display_name, u.role, u.badges, u.settings
+             m.read_by, m.reactions, m.pinned, u.username, u.display_name, u.role, u.badges, u.settings
         FROM chat_messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.channel_id = :cid
@@ -2113,6 +2119,8 @@ async def get_channel_messages(channel_id: str, limit: int = 100, user: dict = D
             "media_url": d.get("media_url"),
             "media_type": d.get("media_type"),
             "text_effect": d.get("text_effect") or "none",
+            "reactions": _j(d.get("reactions")) or {},
+            "pinned": bool(d.get("pinned")),
             "created_at": d["created_at"],
             "read_by": read_by,
             "sender": {
@@ -2147,8 +2155,8 @@ async def send_channel_message(channel_id: str, body: SendMessageIn, user: dict 
     ts = now_iso()
     
     await db.execute(text("""
-        INSERT INTO chat_messages (id, channel_id, sender_id, content, media_url, media_type, text_effect, created_at)
-        VALUES (:id, :cid, :sid, :content, :media_url, :media_type, :effect, :ca)
+        INSERT INTO chat_messages (id, channel_id, sender_id, content, media_url, media_type, text_effect, created_at, reactions, pinned)
+        VALUES (:id, :cid, :sid, :content, :media_url, :media_type, :effect, :ca, '{}', FALSE)
     """), {
         "id": mid,
         "cid": channel_id,
@@ -2173,6 +2181,8 @@ async def send_channel_message(channel_id: str, body: SendMessageIn, user: dict 
         "media_url": body.media_url or "",
         "media_type": body.media_type or "",
         "text_effect": body.text_effect or "none",
+        "reactions": {},
+        "pinned": False,
         "created_at": ts,
         "read_by": [],
         "sender": {
@@ -2196,11 +2206,50 @@ async def delete_channel_message(channel_id: str, message_id: str, user: dict = 
     message = message_row.fetchone()
     if not message:
         raise HTTPException(status_code=404, detail="Message not found.")
-    if message[0] != user["id"]:
+    if message[0] != user["id"] and user.get("role") != "admin" and channel[0] != user["id"]:
         raise HTTPException(status_code=403, detail="You can only delete your own messages.")
     await db.execute(text("DELETE FROM chat_messages WHERE id = :id"), {"id": message_id})
     await db.commit()
     return {"ok": True}
+
+@api.post("/social/channels/{channel_id}/messages/{message_id}/react")
+async def react_channel_message(channel_id: str, message_id: str, body: ReactMessageIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    msg_row = await db.execute(text("SELECT reactions FROM chat_messages WHERE id = :id AND channel_id = :cid"), {"id": message_id, "cid": channel_id})
+    row = msg_row.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Message not found.")
+    reactions = _j(row[0]) or {}
+    if not isinstance(reactions, dict):
+        reactions = {}
+    emoji = body.emoji.strip()
+    if not emoji:
+        raise HTTPException(status_code=400, detail="Emoji required")
+    uids = reactions.get(emoji, [])
+    if not isinstance(uids, list):
+        uids = []
+    if user["id"] in uids:
+        uids.remove(user["id"])
+    else:
+        uids.append(user["id"])
+    if uids:
+        reactions[emoji] = uids
+    else:
+        reactions.pop(emoji, None)
+    await db.execute(text("UPDATE chat_messages SET reactions = :r WHERE id = :id"), {"r": _jdump(reactions), "id": message_id})
+    await db.commit()
+    return {"ok": True, "reactions": reactions}
+
+@api.post("/social/channels/{channel_id}/messages/{message_id}/pin")
+async def pin_channel_message(channel_id: str, message_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    msg_row = await db.execute(text("SELECT pinned FROM chat_messages WHERE id = :id AND channel_id = :cid"), {"id": message_id, "cid": channel_id})
+    row = msg_row.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Message not found.")
+    curr_pinned = bool(row[0])
+    new_pinned = not curr_pinned
+    await db.execute(text("UPDATE chat_messages SET pinned = :p WHERE id = :id"), {"p": new_pinned, "id": message_id})
+    await db.commit()
+    return {"ok": True, "pinned": new_pinned}
 
 # ─────────────────────────────────────────
 # Admin
@@ -3869,6 +3918,8 @@ async def startup():
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS media_url TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS text_effect TEXT DEFAULT ''",
+            "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS reactions TEXT DEFAULT '{}'",
+            "ALTER TABLE IF EXISTS chat_messages ADD COLUMN IF NOT EXISTS pinned BOOLEAN DEFAULT FALSE",
             "ALTER TABLE chat_messages ADD COLUMN read_by TEXT DEFAULT '[]'",
             "ALTER TABLE IF EXISTS chat_channels ADD COLUMN IF NOT EXISTS name TEXT DEFAULT ''",
             "ALTER TABLE IF EXISTS chat_channels ADD COLUMN IF NOT EXISTS is_group BOOLEAN DEFAULT FALSE",

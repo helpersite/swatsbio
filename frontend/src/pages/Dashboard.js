@@ -21,6 +21,7 @@ import ProfileTemplatesSection from "@/pages/dashboard/ProfileTemplatesSection";
 import SocialSection from "@/pages/dashboard/SocialSection";
 import ToolsSection from "@/pages/dashboard/ToolsSection";
 import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection } from "@/pages/dashboard/Admin";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const SIDEBAR_CATEGORIES = [
   {
@@ -318,7 +319,9 @@ export default function Dashboard() {
       <main className="flex-1 p-4 sm:p-8 pt-18 lg:pt-6 overflow-x-hidden min-h-screen bg-[#08090d]">
         <div className="w-full max-w-[1900px] mx-auto">
           <div id={`section-${active}`} className="w-full">
-            {renderSection()}
+            <ErrorBoundary key={active}>
+              {renderSection()}
+            </ErrorBoundary>
           </div>
         </div>
       </main>

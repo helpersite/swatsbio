@@ -323,13 +323,21 @@ export default function PublicBio() {
   const { username: routeUsername } = useParams();
   const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
   const hostSubdomain = host.endsWith(".swats.bio") ? host.slice(0, -".swats.bio".length) : "";
-  const username = routeUsername || (hostSubdomain && hostSubdomain !== "www" && hostSubdomain !== "api" ? hostSubdomain : "");
+  const rawUser = routeUsername || (hostSubdomain && hostSubdomain !== "www" && hostSubdomain !== "api" ? hostSubdomain : "");
+  const username = (rawUser || "").replace(/^@+/, "").trim();
   const [bio, setBio] = useState(null);
   const [err, setErr] = useState(false);
   const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    api.get(`/u/${encodeURIComponent(username)}`).then(({ data }) => { setBio(data); if (!data.locked && !data.settings?.enter_screen?.enabled) setEntered(true); }).catch(() => setErr(true));
+    if (!username) return;
+    setErr(false);
+    api.get(`/u/${encodeURIComponent(username)}`)
+      .then(({ data }) => { 
+        setBio(data); 
+        if (!data.locked && !data.settings?.enter_screen?.enabled) setEntered(true); 
+      })
+      .catch(() => setErr(true));
   }, [username]);
 
   // Tab Title & Custom Favicon Effects

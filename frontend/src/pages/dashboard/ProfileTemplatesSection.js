@@ -10,17 +10,14 @@ import {
 import { toast } from "sonner";
 import { renderBioText } from "@/lib/textEffects";
 
-export const CURATED_TEMPLATES = [
+export const OFFICIAL_STYLE_PRESETS = [
   {
-    id: "curated_cyberpunk",
-    name: "Cyberpunk 2077",
+    id: "preset_cyberpunk",
+    name: "Cyber Neon Glow",
     category: "Cyber & Gaming",
-    tagline: "High-contrast neon cyan & magenta glitch aesthetics",
-    author: "Swats Studio",
-    downloads: 1420,
+    tagline: "High-contrast neon cyan & magenta glitch aesthetics with frosted glass",
     accent: "#00F0FF",
-    bg_gradient: "from-cyan-950/40 via-purple-950/40 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600",
+    bg_gradient: "from-cyan-950/60 via-purple-950/40 to-[#08090d]",
     settings: {
       accent_color: "#00F0FF",
       card_color: "#0c0e18",
@@ -40,15 +37,12 @@ export const CURATED_TEMPLATES = [
     },
   },
   {
-    id: "curated_minimal",
+    id: "preset_minimal",
     name: "Minimalist Slate",
     category: "Minimal",
-    tagline: "Ultra clean monochrome dark glass with crisp typography",
-    author: "Swats Studio",
-    downloads: 2190,
+    tagline: "Ultra clean monochrome dark glass with crisp minimalist typography",
     accent: "#E5E7EB",
-    bg_gradient: "from-slate-900/40 via-zinc-900/20 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600",
+    bg_gradient: "from-slate-900/60 via-zinc-900/40 to-[#08090d]",
     settings: {
       accent_color: "#FFFFFF",
       card_color: "#0f1117",
@@ -67,15 +61,12 @@ export const CURATED_TEMPLATES = [
     },
   },
   {
-    id: "curated_anime",
-    name: "Anime Neon Drift",
-    category: "Anime",
-    tagline: "Purple & rose celestial gradients with deep starfield",
-    author: "Swats Studio",
-    downloads: 1840,
+    id: "preset_anime",
+    name: "Violet Nebula",
+    category: "Anime & Cosmos",
+    tagline: "Purple & rose celestial gradients with deep starfield animations",
     accent: "#E879F9",
-    bg_gradient: "from-fuchsia-950/40 via-purple-950/40 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600",
+    bg_gradient: "from-fuchsia-950/60 via-purple-950/40 to-[#08090d]",
     settings: {
       accent_color: "#E879F9",
       card_color: "#130e1f",
@@ -95,15 +86,12 @@ export const CURATED_TEMPLATES = [
     },
   },
   {
-    id: "curated_developer",
-    name: "Developer Pro",
+    id: "preset_developer",
+    name: "Terminal Matrix",
     category: "Developer",
-    tagline: "Terminal aesthetics, Matrix rain & monospaced code blocks",
-    author: "Swats Studio",
-    downloads: 980,
+    tagline: "Terminal aesthetics, Matrix rain particle stream & monospaced layout",
     accent: "#10B981",
-    bg_gradient: "from-emerald-950/40 via-slate-950/40 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600",
+    bg_gradient: "from-emerald-950/60 via-slate-950/40 to-[#08090d]",
     settings: {
       accent_color: "#10B981",
       card_color: "#0a120e",
@@ -123,15 +111,12 @@ export const CURATED_TEMPLATES = [
     },
   },
   {
-    id: "curated_store",
-    name: "Store & Projects Hub",
+    id: "preset_store",
+    name: "Store & Projects Showcase",
     category: "Store & Projects",
-    tagline: "Product showcases, instant action buttons & deck slides",
-    author: "Swats Studio",
-    downloads: 1650,
+    tagline: "Product showcases, instant action buttons & multi-deck interactive slides",
     accent: "#5B8DB8",
-    bg_gradient: "from-sky-950/40 via-blue-950/30 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600",
+    bg_gradient: "from-sky-950/60 via-blue-950/40 to-[#08090d]",
     settings: {
       accent_color: "#5B8DB8",
       card_color: "#0c101c",
@@ -151,15 +136,12 @@ export const CURATED_TEMPLATES = [
     },
   },
   {
-    id: "curated_luxury",
-    name: "VIP Luxury Gold",
+    id: "preset_luxury",
+    name: "VIP Obsidian Gold",
     category: "Luxury VIP",
-    tagline: "Deep onyx obsidian with gold foil reflections & royal badges",
-    author: "Swats Studio",
-    downloads: 1310,
+    tagline: "Deep onyx obsidian with gold foil reflections, glowing border & royal badges",
     accent: "#F59E0B",
-    bg_gradient: "from-amber-950/40 via-yellow-950/20 to-[#08090d]",
-    preview_banner: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600",
+    bg_gradient: "from-amber-950/60 via-yellow-950/40 to-[#08090d]",
     settings: {
       accent_color: "#F59E0B",
       card_color: "#120e06",
@@ -203,19 +185,18 @@ export default function ProfileTemplatesSection() {
     return () => { active = false; };
   }, []);
 
-  const categories = ["All", "Official Presets", "Cyber & Gaming", "Minimal", "Anime", "Developer", "Store & Projects", "Luxury VIP", "My Published"];
+  const categories = ["All", "Style Presets", "Cyber & Gaming", "Minimal", "Anime & Cosmos", "Developer", "Store & Projects", "Luxury VIP", "My Published"];
 
   const allTemplates = [
-    ...CURATED_TEMPLATES.map((t) => ({ ...t, is_curated: true })),
+    ...OFFICIAL_STYLE_PRESETS.map((t) => ({ ...t, is_curated: true })),
     ...communityTemplates.map((t) => ({
       id: t.id,
       name: t.name,
       category: "Community",
-      tagline: t.description || `Shared by @${t.owner_username || "creator"}`,
+      tagline: t.description || `Shared template by @${t.owner_username || "creator"}`,
       author: `@${t.owner_username || "creator"}`,
-      downloads: t.downloads || 1,
       accent: t.settings?.accent_color || "#5B8DB8",
-      bg_gradient: "from-blue-950/30 to-[#08090d]",
+      bg_gradient: "from-blue-950/40 via-purple-950/20 to-[#08090d]",
       settings: t.settings || {},
       owner_id: t.owner_id,
       is_curated: false,
@@ -223,10 +204,10 @@ export default function ProfileTemplatesSection() {
   ];
 
   const filteredTemplates = allTemplates.filter((t) => {
-    const matchSearch = `${t.name} ${t.tagline} ${t.author}`.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = `${t.name} ${t.tagline}`.toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
     if (activeCategory === "All") return true;
-    if (activeCategory === "Official Presets") return t.is_curated;
+    if (activeCategory === "Style Presets") return t.is_curated;
     if (activeCategory === "My Published") return t.owner_id === user?.id;
     return t.category === activeCategory;
   });
@@ -238,11 +219,11 @@ export default function ProfileTemplatesSection() {
         const nextSettings = { ...(user?.settings || {}), ...template.settings };
         const { data } = await api.put("/profile/settings", nextSettings);
         setUser((prev) => ({ ...prev, settings: data }));
-        toast.success(`✨ Successfully equipped "${template.name}" theme!`);
+        toast.success(`✨ Successfully equipped "${template.name}" style preset!`);
       } else {
         const { data } = await api.post(`/templates/${template.id}/apply`);
         setUser(data.user);
-        toast.success(`✨ Successfully equipped "${template.name}" template!`);
+        toast.success(`✨ Successfully equipped "${template.name}" community template!`);
       }
       setPreviewTemplate(null);
     } catch (err) {
@@ -282,14 +263,14 @@ export default function ProfileTemplatesSection() {
   return (
     <div className="space-y-5">
       {/* Top Header */}
-      <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="text-[#5B8DB8]" size={18} />
-            <h1 className="text-base font-bold text-white font-display">Profile Templates & Aesthetic Presets</h1>
+            <h1 className="text-base font-bold text-white font-display">Profile Style Presets & Themes</h1>
           </div>
           <p className="text-xs text-[#E5E7EB]/50">
-            One-click apply professional bio layouts, animated backgrounds, custom card styles, and glowing text presets
+            One-click apply clean layouts, background FX, frosted glass themes, and glowing fonts directly to your live bio
           </p>
         </div>
         <Button
@@ -309,7 +290,7 @@ export default function ProfileTemplatesSection() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search templates by aesthetic, creator, or keyword..."
+              placeholder="Search style presets by layout, font, or keyword..."
               className="bg-[#0c0e18] border-white/10 pl-9 text-xs text-white placeholder:text-white/30 h-9 rounded-xl"
             />
           </div>
@@ -359,9 +340,13 @@ export default function ProfileTemplatesSection() {
                   >
                     {t.category}
                   </span>
-                  {t.is_curated && (
+                  {t.is_curated ? (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20">
-                      <Star size={10} className="fill-amber-400" /> Official
+                      <Star size={10} className="fill-amber-400" /> Official Preset
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-white/60 font-mono">
+                      {t.author}
                     </span>
                   )}
                 </div>
@@ -376,7 +361,7 @@ export default function ProfileTemplatesSection() {
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white">{t.name}</div>
-                    <div className="text-[10px] text-[#E5E7EB]/60">by {t.author}</div>
+                    <div className="text-[10px] text-[#E5E7EB]/60 font-mono">{t.settings?.font_family || "Default Font"}</div>
                   </div>
                 </div>
 
@@ -425,7 +410,7 @@ export default function ProfileTemplatesSection() {
                       <Loader2 size={12} className="animate-spin" />
                     ) : (
                       <>
-                        <Check size={12} /> Equip Theme
+                        <Check size={12} /> Equip Preset
                       </>
                     )}
                   </Button>
@@ -438,40 +423,59 @@ export default function ProfileTemplatesSection() {
 
       {/* Inspect / Preview Modal */}
       <Dialog open={Boolean(previewTemplate)} onOpenChange={(o) => !o && setPreviewTemplate(null)}>
-        <DialogContent className="w-[620px] max-w-[calc(100vw-2rem)] bg-[#0c0e15] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)]">
+        <DialogContent className="w-[620px] max-w-[calc(100vw-2rem)] bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)]">
           {previewTemplate && (
             <div className="space-y-4">
               <DialogTitle className="text-base font-bold text-white font-display flex items-center gap-2">
                 <Sparkles className="text-[#5B8DB8]" size={16} />
-                <span>Inspect Theme: {previewTemplate.name}</span>
+                <span>Inspect Preset: {previewTemplate.name}</span>
               </DialogTitle>
               <p className="text-xs text-[#E5E7EB]/60">{previewTemplate.tagline}</p>
 
               {/* Specs Breakdown */}
-              <div className="p-3.5 rounded-xl bg-[#080a10] border border-white/10 grid grid-cols-2 gap-2.5 text-xs">
-                <div><span className="text-white/40">Layout Deck:</span> <span className="text-white font-mono">{previewTemplate.settings?.layout}</span></div>
-                <div><span className="text-white/40">Accent Color:</span> <span className="font-mono text-white" style={{ color: previewTemplate.accent }}>{previewTemplate.settings?.accent_color}</span></div>
-                <div><span className="text-white/40">Background FX:</span> <span className="text-white font-mono">{previewTemplate.settings?.bg_effect}</span></div>
-                <div><span className="text-white/40">Avatar FX:</span> <span className="text-white font-mono">{previewTemplate.settings?.avatar_fx}</span></div>
-                <div><span className="text-white/40">Banner FX:</span> <span className="text-white font-mono">{previewTemplate.settings?.banner_fx}</span></div>
-                <div><span className="text-white/40">Text FX:</span> <span className="text-white font-mono">{previewTemplate.settings?.name_effect}</span></div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-[#07080c] p-3 rounded-xl border border-white/10 text-xs">
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Layout</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.layout || "classic"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Background FX</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.bg_effect || "none"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Font Family</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.font_family || "Inter"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Avatar Effect</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.avatar_fx || "none"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Name Glow FX</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.name_effect || "none"}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Card Opacity</span>
+                  <span className="text-white font-mono">{previewTemplate.settings?.card_opacity || 90}%</span>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setPreviewTemplate(null)}
-                  className="border-white/10 text-white hover:bg-white/5 text-xs rounded-xl"
+                  className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
                 >
                   Close
                 </Button>
                 <Button
                   type="button"
+                  disabled={applyingId === previewTemplate.id}
                   onClick={() => handleApply(previewTemplate)}
-                  className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-5 rounded-xl"
+                  className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
                 >
-                  Apply & Equip Now
+                  {applyingId === previewTemplate.id ? "Equipping..." : "Equip Live"}
                 </Button>
               </div>
             </div>
@@ -479,41 +483,38 @@ export default function ProfileTemplatesSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Publish Template Modal */}
+      {/* Publish Modal */}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
-        <DialogContent className="w-[460px] max-w-[calc(100vw-2rem)] bg-[#0c0e15] border border-[#2b384e] text-white p-5 rounded-2xl">
-          <form onSubmit={handlePublish} className="space-y-4">
-            <DialogTitle className="text-sm font-bold text-white font-display">
-              Publish Bio to Community Library
-            </DialogTitle>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Share your current colors, background FX, layout style, and decorations with all Swats.bio users.
-            </p>
-            <div className="space-y-1">
-              <label className="text-[11px] text-[#E5E7EB]/70">Template Title</label>
+        <DialogContent className="max-w-md bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)]">
+          <DialogTitle className="text-base font-bold text-white font-display flex items-center gap-2">
+            <Plus className="text-[#5B8DB8]" size={16} />
+            <span>Publish Current Bio as Template</span>
+          </DialogTitle>
+          <form onSubmit={handlePublish} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-xs text-white/70 font-semibold">Template Name</label>
               <Input
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g. Cyber Neon Dark v2"
-                className="bg-[#080a10] border-white/10 text-xs text-white"
-                required
+                placeholder="e.g. Neon Horizon"
+                className="bg-[#07080c] border-white/10 text-white text-xs h-9 rounded-xl"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setPublishOpen(false)}
-                className="border-white/10 text-white hover:bg-white/5 text-xs rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={publishing}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold rounded-xl"
+                disabled={publishing || !templateName.trim()}
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
               >
-                {publishing ? <Loader2 size={12} className="animate-spin" /> : "Publish to Library"}
+                {publishing ? "Publishing..." : "Publish to Library"}
               </Button>
             </div>
           </form>

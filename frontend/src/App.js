@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
 import { useDynamicTitle } from "@/hooks/useDynamicTitle";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Home from "@/pages/Home";
 import Legal from "@/pages/Legal";
 import Compare from "@/pages/Compare";
@@ -18,8 +19,9 @@ function AnimatedRoutes() {
   useDynamicTitle();
   const rootKey = location.pathname.startsWith("/dashboard") ? "/dashboard" : location.pathname;
   return (
-    <div key={rootKey} className="slide-in">
-      <Routes location={location}>
+    <ErrorBoundary>
+      <div key={rootKey} className="slide-in">
+        <Routes location={location}>
         <Route path="/" element={<SiteRoot />} />
         <Route path="/s" element={<Navigate to="/s/home" replace />} />
         <Route path="/s/home" element={<Home />} />
@@ -37,6 +39,7 @@ function AnimatedRoutes() {
         <Route path="/:username" element={<PublicBio />} />
       </Routes>
     </div>
+    </ErrorBoundary>
   );
 }
 
