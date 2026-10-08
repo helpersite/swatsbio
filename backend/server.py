@@ -1727,29 +1727,56 @@ def build_social_user_card(u: dict, friendship_id: str = None, status: str = "ac
         s = _j(s) or {}
     pfp = s.get("pfp")
     avatar_url = pfp if pfp and (pfp.startswith("http://") or pfp.startswith("https://") or pfp.startswith("/api/")) else (f"/api/files/{pfp}" if pfp else f"https://api.dicebear.com/7.x/bottts/svg?seed={u.get('username')}")
+    banner = s.get("banner") or s.get("banner_url") or ""
     badges = u.get("badges") or []
     if isinstance(badges, str):
         badges = _j(badges) or []
+    conn = u.get("connections") or {}
+    if isinstance(conn, str):
+        conn = _j(conn) or {}
     
     return {
         "id": u.get("id"),
         "user_id": u.get("id"),
         "username": u.get("username"),
         "display_name": u.get("display_name") or u.get("username"),
-        "description": u.get("description") or "",
+        "description": u.get("description") or s.get("bio") or "",
+        "bio": u.get("description") or s.get("bio") or "",
         "avatar_url": avatar_url,
         "avatar": avatar_url,
         "pfp": pfp,
+        "banner": banner,
+        "banner_url": banner,
         "role": u.get("role") or "user",
         "badges": badges,
         "views": u.get("views") or 0,
         "location": s.get("location") or "",
         "accent_color": s.get("accent_color") or "#5B8DB8",
+        "connections": conn,
         "friendship_id": friendship_id,
         "status": status,
         "is_incoming": is_incoming,
         "created_at": u.get("created_at"),
     }
+
+@api.get("/social/users/{user_id}")
+async def get_social_user_profile(user_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT * FROM users WHERE id = :id OR username = :id"), {"id": user_id})
+    target_user = row_to_user(row.fetchone())
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check friendship status if any
+    fs_row = await db.execute(text("""
+        SELECT id, status, user_id FROM friendships 
+        WHERE (user_id = :uid AND friend_id = :tid) OR (user_id = :tid AND friend_id = :uid)
+    """), {"uid": user["id"], "tid": target_user["id"]})
+    fs = fs_row.fetchone()
+    friendship_id = fs[0] if fs else None
+    status = fs[1] if fs else "none"
+    is_incoming = (fs[2] == target_user["id"] and status == "pending") if fs else False
+    
+    return build_social_user_card(target_user, friendship_id=friendship_id, status=status, is_incoming=is_incoming)
 
 @api.get("/social/friends")
 async def get_my_friends(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -1949,19 +1976,43 @@ async def get_public_friends(username: str, db: AsyncSession = Depends(get_db)):
 async def list_chat_channels(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     uid = user["id"]
     
-    # 1. Fetch group channels where user is in members
+    # 0. Ensure Swats Global Lounge exists in database
+    lounge_row = await db.execute(text("SELECT * FROM chat_channels WHERE id = 'community-general'"))
+    lounge = lounge_row.fetchone()
+    if not lounge:
+        await db.execute(text("""
+            INSERT INTO chat_channels (id, name, is_group, owner_id, members, icon_url, created_at)
+            VALUES ('community-general', 'Swats Global Lounge', TRUE, :uid, '[]', 'https://www.swats.bio/logo.png', :ca)
+        """), {"uid": uid, "ca": now_iso()})
+        await db.commit()
+
+    # 1. Fetch group channels where user is in members or is community-general
     all_channels_rows = await db.execute(text("SELECT * FROM chat_channels ORDER BY created_at DESC"))
     channels = []
     
     for r in all_channels_rows.fetchall():
         c_dict = dict(r._mapping)
         members = _j(c_dict.get("members")) or []
-        if uid in members:
+        is_global = c_dict["id"] == "community-general"
+        if is_global or uid in members:
             # Fetch latest message
             msg_row = await db.execute(text("SELECT * FROM chat_messages WHERE channel_id = :cid ORDER BY created_at DESC LIMIT 1"), {"cid": c_dict["id"]})
             latest_msg = msg_row.fetchone()
             c_dict["members"] = members
             c_dict["latest_message"] = dict(latest_msg._mapping) if latest_msg else None
+            
+            # If 1-on-1 DM, resolve the *other* user's display name and avatar dynamically
+            if not c_dict.get("is_group"):
+                other_uid = next((m for m in members if m != uid), None)
+                if other_uid:
+                    u_row = await db.execute(text("SELECT username, display_name, settings FROM users WHERE id = :id"), {"id": other_uid})
+                    u_other = u_row.fetchone()
+                    if u_other:
+                        c_dict["name"] = u_other[1] or u_other[0]
+                        u_sett = _j(u_other[2]) or {}
+                        pfp = u_sett.get("pfp")
+                        c_dict["icon_url"] = pfp if pfp and (pfp.startswith("http://") or pfp.startswith("https://") or pfp.startswith("/api/")) else (f"/api/files/{pfp}" if pfp else f"https://api.dicebear.com/7.x/bottts/svg?seed={u_other[0]}")
+            
             channels.append(c_dict)
 
     # 2. Ensure auto-DMs with all accepted friends
@@ -1991,6 +2042,15 @@ async def list_chat_channels(user: dict = Depends(get_current_user), db: AsyncSe
                 msg_row = await db.execute(text("SELECT * FROM chat_messages WHERE channel_id = :cid ORDER BY created_at DESC LIMIT 1"), {"cid": c_dict["id"]})
                 latest_msg = msg_row.fetchone()
                 c_dict["latest_message"] = dict(latest_msg._mapping) if latest_msg else None
+                
+                f_row = await db.execute(text("SELECT username, display_name, settings FROM users WHERE id = :id"), {"id": f_uid})
+                f_user = f_row.fetchone()
+                if f_user:
+                    c_dict["name"] = f_user[1] or f_user[0]
+                    f_sett = _j(f_user[2]) or {}
+                    pfp = f_sett.get("pfp")
+                    c_dict["icon_url"] = pfp if pfp and (pfp.startswith("http://") or pfp.startswith("https://") or pfp.startswith("/api/")) else (f"/api/files/{pfp}" if pfp else f"https://api.dicebear.com/7.x/bottts/svg?seed={f_user[0]}")
+                
                 channels.append(c_dict)
             else:
                 # Create a DM channel
@@ -1998,11 +2058,14 @@ async def list_chat_channels(user: dict = Depends(get_current_user), db: AsyncSe
                 f_row = await db.execute(text("SELECT username, display_name, settings FROM users WHERE id = :id"), {"id": f_uid})
                 f_user = f_row.fetchone()
                 f_name = f_user[1] or f_user[0] if f_user else "Friend"
+                f_sett = _j(f_user[2]) if f_user else {}
+                pfp = f_sett.get("pfp") if f_sett else None
+                icon_url = pfp if pfp and (pfp.startswith("http://") or pfp.startswith("https://") or pfp.startswith("/api/")) else (f"/api/files/{pfp}" if pfp else (f"https://api.dicebear.com/7.x/bottts/svg?seed={f_user[0]}" if f_user else ""))
                 
                 await db.execute(text("""
                     INSERT INTO chat_channels (id, name, is_group, owner_id, members, icon_url, created_at)
-                    VALUES (:id, :name, FALSE, :uid, :members, '', :ca)
-                """), {"id": cid, "name": f_name, "uid": uid, "members": _jdump([uid, f_uid]), "ca": now_iso()})
+                    VALUES (:id, :name, FALSE, :uid, :members, :icon, :ca)
+                """), {"id": cid, "name": f_name, "uid": uid, "members": _jdump([uid, f_uid]), "icon": icon_url, "ca": now_iso()})
                 await db.commit()
                 
                 channels.append({
@@ -2011,12 +2074,40 @@ async def list_chat_channels(user: dict = Depends(get_current_user), db: AsyncSe
                     "is_group": False,
                     "owner_id": uid,
                     "members": [uid, f_uid],
-                    "icon_url": "",
+                    "icon_url": icon_url,
                     "created_at": now_iso(),
                     "latest_message": None,
                 })
 
+    # Guarantee Swats Global Lounge is at the very top of channels list
+    channels.sort(key=lambda c: 0 if c["id"] == "community-general" else 1)
     return channels
+
+@api.get("/social/channels/{channel_id}/members")
+async def get_channel_members(channel_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if channel_id == "community-general":
+        # Swats Global Lounge shows EVERY registered user on the entire platform!
+        rows = await db.execute(text("SELECT * FROM users ORDER BY views DESC, created_at DESC LIMIT 150"))
+        all_users = [row_to_user(r) for r in rows.fetchall()]
+        members = [build_social_user_card(u) for u in all_users if u]
+        return {"channel_id": channel_id, "members": members, "total": len(members)}
+    
+    channel_row = await db.execute(text("SELECT owner_id, members, is_group FROM chat_channels WHERE id = :id"), {"id": channel_id})
+    channel = channel_row.fetchone()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Chat channel not found.")
+    
+    member_ids = _j(channel[1]) or []
+    if channel[0] and channel[0] not in member_ids:
+        member_ids.append(channel[0])
+    
+    if not member_ids:
+        return {"channel_id": channel_id, "members": [], "total": 0}
+        
+    users_rows = await db.execute(text("SELECT * FROM users WHERE id IN :ids"), {"ids": tuple(member_ids)})
+    mapped_users = [row_to_user(r) for r in users_rows.fetchall()]
+    members = [build_social_user_card(u) for u in mapped_users if u]
+    return {"channel_id": channel_id, "members": members, "total": len(members)}
 
 @api.post("/social/channels")
 async def create_chat_channel(body: CreateChannelIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -2074,6 +2165,8 @@ async def add_chat_channel_members(channel_id: str, body: AddChannelMembersIn, u
 
 @api.delete("/social/channels/{channel_id}")
 async def delete_chat_channel(channel_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if channel_id == "community-general":
+        raise HTTPException(status_code=400, detail="Cannot delete default community lounge.")
     row = await db.execute(text("SELECT is_group, owner_id FROM chat_channels WHERE id = :id"), {"id": channel_id})
     channel = row.fetchone()
     if not channel:
@@ -2087,13 +2180,14 @@ async def delete_chat_channel(channel_id: str, user: dict = Depends(get_current_
 
 @api.get("/social/channels/{channel_id}/messages")
 async def get_channel_messages(channel_id: str, limit: int = 100, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    channel_row = await db.execute(text("SELECT owner_id, members FROM chat_channels WHERE id = :id"), {"id": channel_id})
-    channel = channel_row.fetchone()
-    if not channel:
-        raise HTTPException(status_code=404, detail="Chat channel not found.")
-    channel_members = _j(channel[1]) or []
-    if user["id"] not in channel_members and channel[0] != user["id"]:
-        raise HTTPException(status_code=403, detail="You are not a member of this chat.")
+    if channel_id != "community-general":
+        channel_row = await db.execute(text("SELECT owner_id, members FROM chat_channels WHERE id = :id"), {"id": channel_id})
+        channel = channel_row.fetchone()
+        if not channel:
+            raise HTTPException(status_code=404, detail="Chat channel not found.")
+        channel_members = _j(channel[1]) or []
+        if user["id"] not in channel_members and channel[0] != user["id"]:
+            raise HTTPException(status_code=403, detail="You are not a member of this chat.")
 
     rows = await db.execute(text("""
         SELECT m.id, m.channel_id, m.sender_id, m.content, m.media_url, m.media_type, m.text_effect, m.created_at,
@@ -2147,13 +2241,14 @@ async def get_channel_messages(channel_id: str, limit: int = 100, user: dict = D
 
 @api.post("/social/channels/{channel_id}/messages")
 async def send_channel_message(channel_id: str, body: SendMessageIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    channel_row = await db.execute(text("SELECT owner_id, members FROM chat_channels WHERE id = :id"), {"id": channel_id})
-    channel = channel_row.fetchone()
-    if not channel:
-        raise HTTPException(status_code=404, detail="Chat channel not found.")
-    channel_members = _j(channel[1]) or []
-    if user["id"] not in channel_members and channel[0] != user["id"]:
-        raise HTTPException(status_code=403, detail="You are not a member of this chat.")
+    if channel_id != "community-general":
+        channel_row = await db.execute(text("SELECT owner_id, members FROM chat_channels WHERE id = :id"), {"id": channel_id})
+        channel = channel_row.fetchone()
+        if not channel:
+            raise HTTPException(status_code=404, detail="Chat channel not found.")
+        channel_members = _j(channel[1]) or []
+        if user["id"] not in channel_members and channel[0] != user["id"]:
+            raise HTTPException(status_code=403, detail="You are not a member of this chat.")
 
     content = (body.content or "").strip()
     if not content and not body.media_url:

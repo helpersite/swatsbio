@@ -12,7 +12,7 @@ import {
   Sparkles, Search, UserPlus, Check, X, Shield, Lock, Pin,
   MoreVertical, RefreshCw, Paperclip, Hash, Heart, Clock, UserCheck,
   UserX, ExternalLink, Circle, MessageCircle, Crown, LogOut, Copy,
-  Flame, Film, ChevronDown, CheckCheck
+  Flame, Film, ChevronDown, CheckCheck, Eye, MapPin, Calendar, AtSign
 } from "lucide-react";
 
 const EMOJI_CATEGORIES = [
@@ -22,7 +22,7 @@ const EMOJI_CATEGORIES = [
   },
   {
     name: "Smileys & Faces",
-    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥲", "🥹", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😏", "😒", "🙄", "😬", "😮‍💨", "🤥", "🫨", "🙂‍↔️", "🙂‍↕️", "😴", "🤤", "😪", "😮", "😯", "😲", "🥱", "😫", "😩", "🥺", "😢", "😭", "😮‍💨", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🫣", "🤗", "🫡", "👺", "👻", "👽", "🤖", "💩"]
+    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "🥲", "🥹", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🫡", "🤐", "🤨", "😐", "😑", "😶", "🫥", "😏", "😒", "🙄", "😬", "😮‍💨", "🤥", "🫨", "😴", "🤤", "😪", "😮", "😯", "😲", "🥱", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🫣", "👺", "👻", "👽", "🤖", "💩"]
   },
   {
     name: "Gaming & Cyber",
@@ -30,7 +30,7 @@ const EMOJI_CATEGORIES = [
   },
   {
     name: "VIP & Symbols",
-    emojis: ["👑", "💎", "⭐", "🌟", "✨", "💫", "⚡", "🔥", "💯", "💢", "💥", "💫", "💨", "🕊️", "🌹", "🥀", "🌺", "🌸", "🖤", "🩶", "🤍", "🤎", "💜", "💙", "🩵", "💚", "💛", "🧡", "❤️", "🩷", "💔", "❤️‍🔥", "❤️‍🩹", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️", "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓", "🆔", "⚛️"]
+    emojis: ["👑", "💎", "⭐", "🌟", "✨", "💫", "⚡", "🔥", "💯", "💢", "💥", "💫", "💨", "🕊️", "🌹", "🥀", "🌺", "🌸", "🖤", "🩶", "🤍", "🤎", "💜", "💙", "🩵", "💚", "💛", "🧡", "❤️", "🩷", "💔", "❤️‍🔥", "❤️‍🩹", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "🆔", "⚛️"]
   }
 ];
 
@@ -77,13 +77,20 @@ export default function SocialSection() {
   const [searchFilter, setSearchFilter] = useState("");
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
+  // Members Drawer & Profile Modal State
+  const [channelMembers, setChannelMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberSearchFilter, setMemberSearchFilter] = useState("");
+  const [showMembersDrawer, setShowMembersDrawer] = useState(true);
+  const [viewProfileUser, setViewProfileUser] = useState(null);
+  const [viewProfileLoading, setViewProfileLoading] = useState(false);
+
   // Popups & Menus
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [selectedGifCategory, setSelectedGifCategory] = useState("All");
   const [gifSearch, setGifSearch] = useState("");
   const [showFxPicker, setShowFxPicker] = useState(false);
-  const [showMembersDrawer, setShowMembersDrawer] = useState(false);
 
   // Context Menus
   const [contextMenu, setContextMenu] = useState(null); // { type: 'channel'|'message', x, y, data }
@@ -138,7 +145,7 @@ export default function SocialSection() {
         name: "Swats Global Lounge",
         is_group: true,
         icon_url: "https://www.swats.bio/logo.png",
-        description: "Official lounge for verified Swats.bio community"
+        description: "Official lounge for all Swats.bio members"
       };
 
       const finalChannels = list.some(c => c.id === "community-general") ? list : [defaultLounge, ...list];
@@ -172,15 +179,51 @@ export default function SocialSection() {
     }
   };
 
+  // Load Channel Members
+  const loadChannelMembers = async (cid) => {
+    if (!cid) return;
+    setMembersLoading(true);
+    try {
+      const { data } = await api.get(`/social/channels/${cid}/members`);
+      if (data && Array.isArray(data.members)) {
+        setChannelMembers(data.members);
+      } else {
+        setChannelMembers([]);
+      }
+    } catch {
+      setChannelMembers([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  // Open Full Profile Card Modal
+  const handleOpenUserProfile = async (targetUser) => {
+    if (!targetUser) return;
+    setViewProfileLoading(true);
+    setViewProfileUser(targetUser);
+    try {
+      const { data } = await api.get(`/social/users/${targetUser.id || targetUser.user_id || targetUser.username}`);
+      if (data) {
+        setViewProfileUser(data);
+      }
+    } catch {
+      // Keep optimistic user card
+    } finally {
+      setViewProfileLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadFriendsData();
     loadChannels();
   }, []);
 
-  // Polling for real-time live messages
+  // Polling for real-time live messages & load channel members
   useEffect(() => {
     if (!activeChannel?.id) return;
     loadMessages(activeChannel.id);
+    loadChannelMembers(activeChannel.id);
     const interval = setInterval(() => {
       loadMessages(activeChannel.id);
     }, 3000);
@@ -290,7 +333,7 @@ export default function SocialSection() {
 
   // Send Friend Request
   const handleSendFriendRequest = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const cleanUsername = addFriendUsername.replace(/^@+/, "").trim();
     if (!cleanUsername) return toast.error("Please enter a username");
     setAddingFriend(true);
@@ -341,26 +384,28 @@ export default function SocialSection() {
     }
   };
 
-  // Open / Start Direct Message with Friend
+  // Open / Start Direct Message with Friend or User
   const handleOpenDmWithFriend = async (friendUser) => {
     try {
       const { data } = await api.post("/social/channels", {
         name: friendUser.display_name || friendUser.username,
         is_group: false,
-        member_ids: [friendUser.id]
+        member_ids: [friendUser.id || friendUser.user_id]
       });
       const newChannel = {
         id: data.id,
         name: friendUser.display_name || friendUser.username,
         is_group: false,
-        icon_url: friendUser.avatar_url || "",
-        members: [user?.id, friendUser.id]
+        icon_url: friendUser.avatar_url || friendUser.avatar || "",
+        members: [user?.id, friendUser.id || friendUser.user_id]
       };
       setChannels((prev) => [newChannel, ...prev.filter(c => c.id !== newChannel.id)]);
       setActiveChannel(newChannel);
       setActiveTab("chat");
+      if (viewProfileUser) setViewProfileUser(null);
     } catch {
       setActiveTab("chat");
+      if (viewProfileUser) setViewProfileUser(null);
     }
   };
 
@@ -409,6 +454,7 @@ export default function SocialSection() {
       setShowAddMemberModal(false);
       setSelectedAddMemberIds([]);
       loadChannels();
+      loadChannelMembers(activeChannel.id);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to add members");
     } finally {
@@ -439,6 +485,18 @@ export default function SocialSection() {
     return `${f.username} ${f.display_name}`.toLowerCase().includes(searchFilter.toLowerCase());
   });
 
+  const filteredMembers = channelMembers.filter((m) => {
+    return `${m.username} ${m.display_name}`.toLowerCase().includes(memberSearchFilter.toLowerCase());
+  });
+
+  const staffMembers = useMemo(() => {
+    return filteredMembers.filter(m => m.role === "admin" || (Array.isArray(m.badges) && (m.badges.includes("admin") || m.badges.includes("staff"))));
+  }, [filteredMembers]);
+
+  const regularMembers = useMemo(() => {
+    return filteredMembers.filter(m => m.role !== "admin" && !(Array.isArray(m.badges) && (m.badges.includes("admin") || m.badges.includes("staff"))));
+  }, [filteredMembers]);
+
   const pinnedMessages = useMemo(() => {
     return messages.filter((m) => m.pinned);
   }, [messages]);
@@ -459,13 +517,13 @@ export default function SocialSection() {
           </div>
           <div>
             <h1 className="text-base font-bold text-white font-display flex items-center gap-2">
-              <span>Friends & Direct Messages</span>
+              <span>Friends & Community Lounge</span>
               <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] border border-[#5B8DB8]/30">
-                Live DM & Groups
+                Live Swats Network
               </span>
             </h1>
             <p className="text-xs text-[#E5E7EB]/50">
-              Connect with creators, chat in real-time, create group hubs, and share interactive media
+              Swats Global Lounge for all members, direct messages, custom group chats, and rich creator profiles
             </p>
           </div>
         </div>
@@ -512,7 +570,7 @@ export default function SocialSection() {
 
       {/* Main Container */}
       {activeTab === "chat" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[720px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[740px]">
           {/* ========================================================================= */}
           {/* LEFT CHANNEL / DM SIDEBAR                                                 */}
           {/* ========================================================================= */}
@@ -526,7 +584,7 @@ export default function SocialSection() {
                 <button
                   type="button"
                   onClick={() => setShowCreateGroupModal(true)}
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-[#5B8DB8] hover:text-white transition-all text-xs flex items-center gap-1 font-semibold"
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-[#5B8DB8] hover:text-white transition-all text-xs flex items-center gap-1 font-semibold cursor-pointer"
                   title="Create Group Chat"
                 >
                   <Plus size={14} />
@@ -549,6 +607,7 @@ export default function SocialSection() {
             <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
               {filteredChannels.map((c) => {
                 const isSelected = activeChannel?.id === c.id;
+                const isGlobal = c.id === "community-general";
                 const isGroup = c.is_group;
                 return (
                   <div
@@ -575,7 +634,7 @@ export default function SocialSection() {
                         <MediaDisplay src={c.icon_url} className="w-9 h-9 rounded-xl object-cover border border-white/10" />
                       ) : (
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#5B8DB8]/30 to-purple-600/30 border border-white/10 flex items-center justify-center font-bold text-xs text-white">
-                          {isGroup ? <Users size={16} /> : (c.name || "D").charAt(0).toUpperCase()}
+                          {isGlobal ? <Flame size={16} className="text-amber-400" /> : isGroup ? <Users size={16} /> : (c.name || "D").charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0c0e18]" />
@@ -587,33 +646,39 @@ export default function SocialSection() {
                         <span className={`text-xs font-bold truncate ${isSelected ? "text-white" : "text-[#E5E7EB]"}`}>
                           {c.name}
                         </span>
-                        {isGroup && (
+                        {isGlobal ? (
+                          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+                            Global
+                          </span>
+                        ) : isGroup ? (
                           <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold border border-purple-500/30">
                             Group
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       <p className="text-[11px] text-[#E5E7EB]/50 truncate mt-0.5">
-                        {c.latest_message?.content || (isGroup ? "Group lounge" : "Direct Message")}
+                        {c.latest_message?.content || (isGlobal ? "All Swats members" : isGroup ? "Group lounge" : "Direct Message")}
                       </p>
                     </div>
 
                     {/* Context Menu Trigger */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setContextMenu({
-                          type: "channel",
-                          x: e.clientX,
-                          y: e.clientY,
-                          data: c,
-                        });
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-white/60 hover:text-white transition-opacity"
-                    >
-                      <MoreVertical size={13} />
-                    </button>
+                    {!isGlobal && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenu({
+                            type: "channel",
+                            x: e.clientX,
+                            y: e.clientY,
+                            data: c,
+                          });
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-white/10 text-white/60 hover:text-white transition-opacity cursor-pointer"
+                      >
+                        <MoreVertical size={13} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -621,11 +686,11 @@ export default function SocialSection() {
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT CHAT WINDOW                                                         */}
+          {/* CENTER CHAT WINDOW & RIGHT MEMBER DRAWER                                 */}
           {/* ========================================================================= */}
-          <div className="lg:col-span-8 xl:col-span-9 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col overflow-hidden shadow-lg relative">
+          <div className={`${showMembersDrawer ? "lg:col-span-8 xl:col-span-9" : "lg:col-span-8 xl:col-span-9"} rounded-2xl bg-[#0c0e18] border border-white/10 flex overflow-hidden shadow-lg relative`}>
             {activeChannel ? (
-              <>
+              <div className="flex-1 flex flex-col min-w-0 h-full">
                 {/* Chat Top Header */}
                 <div className="p-3.5 border-b border-white/10 bg-[#07080c]/60 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -634,7 +699,7 @@ export default function SocialSection() {
                         <MediaDisplay src={activeChannel.icon_url} className="w-9 h-9 rounded-xl object-cover border border-white/10" />
                       ) : (
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#5B8DB8]/30 to-purple-600/30 border border-white/10 flex items-center justify-center font-bold text-xs text-white">
-                          {activeChannel.is_group ? <Users size={16} /> : (activeChannel.name || "D").charAt(0).toUpperCase()}
+                          {activeChannel.id === "community-general" ? <Flame size={16} className="text-amber-400" /> : activeChannel.is_group ? <Users size={16} /> : (activeChannel.name || "D").charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#07080c]" />
@@ -645,11 +710,15 @@ export default function SocialSection() {
                         <h2 className="text-sm font-bold text-white truncate font-display">
                           {activeChannel.name}
                         </h2>
-                        {activeChannel.is_group && (
-                          <span className="text-[10px] text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
-                            {(activeChannel.members || []).length || 2} Members
+                        {activeChannel.id === "community-general" ? (
+                          <span className="text-[10px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30 font-bold">
+                            {channelMembers.length || "All"} Community Members
                           </span>
-                        )}
+                        ) : activeChannel.is_group ? (
+                          <span className="text-[10px] text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30 font-bold">
+                            {channelMembers.length || (activeChannel.members || []).length || 2} Members
+                          </span>
+                        ) : null}
                       </div>
                       <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -660,14 +729,14 @@ export default function SocialSection() {
 
                   {/* Header Actions */}
                   <div className="flex items-center gap-1.5">
-                    {activeChannel.is_group && (
+                    {activeChannel.is_group && activeChannel.id !== "community-general" && (
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedAddMemberIds([]);
                           setShowAddMemberModal(true);
                         }}
-                        className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all border border-white/5"
+                        className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white text-xs font-semibold flex items-center gap-1 transition-all border border-white/5 cursor-pointer"
                         title="Invite Friends"
                       >
                         <UserPlus size={13} />
@@ -678,12 +747,15 @@ export default function SocialSection() {
                     <button
                       type="button"
                       onClick={() => setShowMembersDrawer(!showMembersDrawer)}
-                      className={`p-2 rounded-xl border transition-all text-xs flex items-center gap-1 ${
-                        showMembersDrawer ? "bg-[#5B8DB8] text-white border-[#5B8DB8]" : "bg-white/5 hover:bg-white/10 text-white/70 border-white/5"
+                      className={`p-2 rounded-xl border transition-all text-xs flex items-center gap-1.5 cursor-pointer ${
+                        showMembersDrawer ? "bg-[#5B8DB8] text-white border-[#5B8DB8] shadow-md" : "bg-white/5 hover:bg-white/10 text-white/70 border-white/5"
                       }`}
-                      title="Toggle Members Panel"
+                      title="Toggle Members Roster Panel"
                     >
                       <Users size={14} />
+                      <span className="text-xs font-semibold hidden md:inline">
+                        {channelMembers.length || ""}
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -737,65 +809,71 @@ export default function SocialSection() {
                           }}
                           className="group relative flex items-start gap-3 hover:bg-white/[0.02] p-2 rounded-xl transition-all"
                         >
-                          {/* Sender Avatar */}
-                          <div className="shrink-0 pt-0.5">
+                          {/* Sender Avatar with Profile Modal Trigger */}
+                          <div
+                            onClick={() => handleOpenUserProfile(m.sender)}
+                            className="shrink-0 pt-0.5 cursor-pointer hover:scale-105 transition-transform"
+                            title={`View @${m.sender?.username}'s profile`}
+                          >
                             <MediaDisplay
                               src={m.sender?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${m.sender?.username || "user"}`}
-                              className="w-9 h-9 rounded-xl object-cover border border-white/10"
+                              className="w-9 h-9 rounded-xl object-cover border border-white/10 hover:border-[#5B8DB8]"
                             />
                           </div>
 
                           {/* Message Content */}
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-white hover:underline cursor-pointer">
-                                {m.sender?.display_name || m.sender?.username || "Anonymous"}
+                              <span
+                                onClick={() => handleOpenUserProfile(m.sender)}
+                                className="text-xs font-bold text-white hover:text-[#5B8DB8] cursor-pointer truncate transition-colors flex items-center gap-1.5"
+                              >
+                                <span>{m.sender?.display_name || m.sender?.username}</span>
+                                {m.sender?.role === "admin" && (
+                                  <Crown size={12} className="text-amber-400 shrink-0" title="Admin" />
+                                )}
                               </span>
-                              {m.sender?.role === "admin" && (
-                                <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-0.5">
-                                  <Crown size={9} /> Admin
-                                </span>
-                              )}
-                              <span className="text-[10px] text-[#E5E7EB]/40 font-mono">
-                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              <span className="text-[10px] text-[#5B8DB8] font-mono">
+                                @{m.sender?.username}
+                              </span>
+                              <span className="text-[10px] text-white/30">
+                                {m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
                               </span>
                               {m.pinned && (
-                                <span className="flex items-center gap-0.5 text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.2 rounded font-semibold border border-amber-400/20">
-                                  <Pin size={10} /> Pinned
-                                </span>
+                                <Pin size={11} className="text-amber-400 ml-1" title="Pinned" />
                               )}
                             </div>
 
-                            {/* Message Text */}
+                            {/* Text Message */}
                             {m.content && (
-                              <div className={`text-xs text-[#E5E7EB] leading-relaxed break-words ${effectClass}`}>
+                              <div className={`text-xs text-white/90 break-words leading-relaxed ${effectClass}`}>
                                 {m.content}
                               </div>
                             )}
 
-                            {/* Media Display */}
+                            {/* Media Attachment */}
                             {m.media_url && (
-                              <div className="mt-2 max-w-md rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-lg">
+                              <div className="mt-2 max-w-sm rounded-xl overflow-hidden border border-white/10 bg-black/40">
                                 {m.media_type === "video" ? (
-                                  <video src={fileUrl(m.media_url)} controls className="max-h-64 w-full object-cover" />
+                                  <video src={fileUrl(m.media_url)} controls className="w-full max-h-60 object-cover" />
                                 ) : (
-                                  <img src={fileUrl(m.media_url)} alt="Attachment" className="max-h-64 w-full object-contain cursor-pointer hover:scale-[1.01] transition-transform" />
+                                  <img src={fileUrl(m.media_url)} alt="Attachment" className="w-full max-h-60 object-cover" />
                                 )}
                               </div>
                             )}
 
-                            {/* Reaction Pills Underneath */}
+                            {/* Reactions Pill Display */}
                             {Object.keys(reactions).length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-1.5">
+                              <div className="flex flex-wrap gap-1 mt-1.5 pt-1">
                                 {Object.entries(reactions).map(([emoji, uids]) => {
-                                  const reactedByMe = Array.isArray(uids) && uids.includes(user?.id);
+                                  const hasReacted = Array.isArray(uids) && uids.includes(user?.id);
                                   return (
                                     <button
                                       key={emoji}
                                       type="button"
                                       onClick={() => handleReactMessage(m.id, emoji)}
-                                      className={`px-2 py-0.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-all cursor-pointer ${
-                                        reactedByMe
+                                      className={`px-2 py-0.5 rounded-lg border text-xs flex items-center gap-1 transition-all cursor-pointer ${
+                                        hasReacted
                                           ? "bg-[#5B8DB8]/30 border-[#5B8DB8] text-white"
                                           : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
                                       }`}
@@ -814,7 +892,7 @@ export default function SocialSection() {
                             <button
                               type="button"
                               onClick={() => handleReactMessage(m.id, "🔥")}
-                              className="p-1 hover:bg-white/10 rounded text-xs"
+                              className="p-1 hover:bg-white/10 rounded text-xs cursor-pointer"
                               title="React 🔥"
                             >
                               🔥
@@ -822,7 +900,7 @@ export default function SocialSection() {
                             <button
                               type="button"
                               onClick={() => handleReactMessage(m.id, "❤️")}
-                              className="p-1 hover:bg-white/10 rounded text-xs"
+                              className="p-1 hover:bg-white/10 rounded text-xs cursor-pointer"
                               title="React ❤️"
                             >
                               ❤️
@@ -830,7 +908,7 @@ export default function SocialSection() {
                             <button
                               type="button"
                               onClick={() => handleReactMessage(m.id, "👑")}
-                              className="p-1 hover:bg-white/10 rounded text-xs"
+                              className="p-1 hover:bg-white/10 rounded text-xs cursor-pointer"
                               title="React 👑"
                             >
                               👑
@@ -838,7 +916,7 @@ export default function SocialSection() {
                             <button
                               type="button"
                               onClick={() => handlePinMessage(m.id)}
-                              className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white"
+                              className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white cursor-pointer"
                               title={m.pinned ? "Unpin message" : "Pin message"}
                             >
                               <Pin size={12} className={m.pinned ? "text-amber-400" : ""} />
@@ -849,7 +927,7 @@ export default function SocialSection() {
                                 navigator.clipboard.writeText(m.content);
                                 toast.success("Copied message text");
                               }}
-                              className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white"
+                              className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white cursor-pointer"
                               title="Copy text"
                             >
                               <Copy size={12} />
@@ -858,7 +936,7 @@ export default function SocialSection() {
                               <button
                                 type="button"
                                 onClick={() => handleDeleteMessage(m.id)}
-                                className="p-1 hover:bg-red-500/20 text-red-400 rounded"
+                                className="p-1 hover:bg-red-500/20 text-red-400 rounded cursor-pointer"
                                 title="Delete message"
                               >
                                 <Trash2 size={12} />
@@ -879,7 +957,7 @@ export default function SocialSection() {
                     <div className="absolute left-4 bottom-16 w-80 bg-[#0c0e18] border border-white/15 rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-40 space-y-2">
                       <div className="flex items-center justify-between pb-1 border-b border-white/10">
                         <span className="text-xs font-bold text-[#5B8DB8] uppercase tracking-wider">Discord Emojis</span>
-                        <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-white/40 hover:text-white">
+                        <button type="button" onClick={() => setShowEmojiPicker(false)} className="text-white/40 hover:text-white cursor-pointer">
                           <X size={13} />
                         </button>
                       </div>
@@ -912,7 +990,7 @@ export default function SocialSection() {
                     <div className="absolute left-12 bottom-16 w-96 bg-[#0c0e18] border border-white/15 rounded-2xl p-3 shadow-[0_20px_50px_rgba(0,0,0,0.9)] z-40 space-y-2">
                       <div className="flex items-center justify-between pb-1 border-b border-white/10">
                         <span className="text-xs font-bold text-[#5B8DB8] uppercase tracking-wider">GIF Studio</span>
-                        <button type="button" onClick={() => setShowGifPicker(false)} className="text-white/40 hover:text-white">
+                        <button type="button" onClick={() => setShowGifPicker(false)} className="text-white/40 hover:text-white cursor-pointer">
                           <X size={13} />
                         </button>
                       </div>
@@ -1041,7 +1119,7 @@ export default function SocialSection() {
                           setShowEmojiPicker(false);
                           setShowGifPicker(false);
                         }}
-                        className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1 border ${
+                        className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1 border cursor-pointer ${
                           selectedEffect !== "none"
                             ? "bg-[#5B8DB8] text-white border-[#5B8DB8]"
                             : "bg-white/5 text-white/50 hover:text-white border-white/10"
@@ -1062,17 +1140,147 @@ export default function SocialSection() {
                     </Button>
                   </form>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-white/40">
+              <div className="h-full flex-1 flex items-center justify-center text-xs text-white/40">
                 Select a channel or direct message to start chatting
+              </div>
+            )}
+
+            {/* ===================================================================== */}
+            {/* RIGHT SIDE MEMBERS ROSTER DRAWER (Live Community / Channel Members)   */}
+            {/* ===================================================================== */}
+            {showMembersDrawer && activeChannel && (
+              <div className="w-64 border-l border-white/10 bg-[#07080c]/90 flex flex-col h-full shrink-0">
+                <div className="p-3 border-b border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#5B8DB8] flex items-center gap-1.5">
+                      <Users size={12} />
+                      <span>{activeChannel.id === "community-general" ? "Community Roster" : "Channel Members"}</span>
+                    </span>
+                    <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-white/60 font-mono">
+                      {channelMembers.length}
+                    </span>
+                  </div>
+                  <Input
+                    value={memberSearchFilter}
+                    onChange={(e) => setMemberSearchFilter(e.target.value)}
+                    placeholder="Search members..."
+                    className="h-7 text-[11px] bg-[#0c0e18] border-white/10 rounded-lg text-white"
+                  />
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 space-y-3 scrollbar-thin">
+                  {membersLoading ? (
+                    <div className="text-center py-6 text-xs text-white/40 animate-pulse">
+                      Loading members...
+                    </div>
+                  ) : filteredMembers.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-white/40">
+                      No members found
+                    </div>
+                  ) : (
+                    <>
+                      {/* Staff / Leadership Group */}
+                      {staffMembers.length > 0 && (
+                        <div className="space-y-1">
+                          <div className="px-2 text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+                            <Crown size={11} /> Leadership & Staff — {staffMembers.length}
+                          </div>
+                          {staffMembers.map((m) => (
+                            <div
+                              key={m.id || m.user_id}
+                              onClick={() => handleOpenUserProfile(m)}
+                              className="p-1.5 rounded-xl hover:bg-white/10 transition-all cursor-pointer flex items-center justify-between group"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="relative shrink-0">
+                                  <MediaDisplay
+                                    src={m.avatar_url || m.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${m.username}`}
+                                    className="w-7 h-7 rounded-lg object-cover border border-white/10"
+                                  />
+                                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-[#0c0e18]" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold text-white truncate flex items-center gap-1">
+                                    <span className="truncate">{m.display_name || m.username}</span>
+                                    <Crown size={10} className="text-amber-400 shrink-0" />
+                                  </div>
+                                  <div className="text-[10px] text-[#5B8DB8] font-mono truncate">
+                                    @{m.username}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenDmWithFriend(m);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-[#5B8DB8]/20 hover:bg-[#5B8DB8] text-white transition-all cursor-pointer"
+                                title="Send Direct Message"
+                              >
+                                <MessageSquare size={11} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Community Members Group */}
+                      <div className="space-y-1">
+                        <div className="px-2 text-[10px] uppercase font-bold text-white/40 tracking-wider">
+                          Members — {regularMembers.length}
+                        </div>
+                        {regularMembers.map((m) => (
+                          <div
+                            key={m.id || m.user_id}
+                            onClick={() => handleOpenUserProfile(m)}
+                            className="p-1.5 rounded-xl hover:bg-white/10 transition-all cursor-pointer flex items-center justify-between group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="relative shrink-0">
+                                <MediaDisplay
+                                  src={m.avatar_url || m.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${m.username}`}
+                                  className="w-7 h-7 rounded-lg object-cover border border-white/10"
+                                />
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-[#0c0e18]" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-white truncate">
+                                  {m.display_name || m.username}
+                                </div>
+                                <div className="text-[10px] text-white/40 font-mono truncate">
+                                  @{m.username}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDmWithFriend(m);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 rounded-lg bg-[#5B8DB8]/20 hover:bg-[#5B8DB8] text-white transition-all cursor-pointer"
+                              title="Send Direct Message"
+                            >
+                              <MessageSquare size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
       ) : (
         /* ========================================================================= */
-        /* FRIENDS TAB & REQUEST MANAGER                                             */
+        /* FRIENDS TAB & RICH PROFILE CARDS                                          */
         /* ========================================================================= */
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -1081,7 +1289,7 @@ export default function SocialSection() {
                 type="button"
                 onClick={() => setFriendsSubTab("all")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  friendsSubTab === "all" ? "bg-[#5B8DB8] text-white" : "text-white/60 hover:text-white bg-[#0c0e18]"
+                  friendsSubTab === "all" ? "bg-[#5B8DB8] text-white shadow-md" : "text-white/60 hover:text-white bg-[#0c0e18]"
                 }`}
               >
                 All Friends ({friends.length})
@@ -1090,7 +1298,7 @@ export default function SocialSection() {
                 type="button"
                 onClick={() => setFriendsSubTab("incoming")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer relative ${
-                  friendsSubTab === "incoming" ? "bg-[#5B8DB8] text-white" : "text-white/60 hover:text-white bg-[#0c0e18]"
+                  friendsSubTab === "incoming" ? "bg-[#5B8DB8] text-white shadow-md" : "text-white/60 hover:text-white bg-[#0c0e18]"
                 }`}
               >
                 Incoming Requests
@@ -1104,7 +1312,7 @@ export default function SocialSection() {
                 type="button"
                 onClick={() => setFriendsSubTab("outgoing")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  friendsSubTab === "outgoing" ? "bg-[#5B8DB8] text-white" : "text-white/60 hover:text-white bg-[#0c0e18]"
+                  friendsSubTab === "outgoing" ? "bg-[#5B8DB8] text-white shadow-md" : "text-white/60 hover:text-white bg-[#0c0e18]"
                 }`}
               >
                 Sent Requests ({outgoingRequests.length})
@@ -1114,53 +1322,96 @@ export default function SocialSection() {
 
           {/* Tab Subcontent */}
           {friendsSubTab === "all" && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
               {filteredFriends.length === 0 ? (
                 <div className="col-span-full p-8 rounded-2xl bg-[#0c0e18] border border-white/10 text-center space-y-2">
                   <Users className="mx-auto text-white/30" size={32} />
                   <div className="text-sm font-bold text-white">No friends yet</div>
-                  <p className="text-xs text-[#E5E7EB]/50">Click "Add Friend" at the top to connect with creators.</p>
+                  <p className="text-xs text-[#E5E7EB]/50">Click "Add Friend" at the top to connect with creators across Swats.bio.</p>
                 </div>
               ) : (
                 filteredFriends.map((f) => (
                   <div
-                    key={f.id}
-                    className="p-3.5 rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/50 transition-all flex flex-col justify-between space-y-3 group shadow-lg"
+                    key={f.id || f.user_id}
+                    className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/50 transition-all flex flex-col justify-between overflow-hidden group shadow-lg"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <MediaDisplay
-                          src={f.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${f.username}`}
-                          className="w-10 h-10 rounded-xl object-cover border border-white/10"
-                        />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0c0e18]" />
+                    {/* Header Banner Cover */}
+                    <div className="h-16 w-full bg-gradient-to-r from-[#1c2438] via-[#243352] to-[#1a233a] relative overflow-hidden">
+                      {f.banner || f.banner_url ? (
+                        <MediaDisplay src={f.banner || f.banner_url} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#5B8DB8]/30 to-purple-600/30" />
+                      )}
+                      <div className="absolute top-2 right-2">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFriend(f.friendship_id)}
+                          className="p-1 rounded-lg bg-black/50 hover:bg-red-500/80 text-white/70 hover:text-white transition-all cursor-pointer"
+                          title="Remove Friend"
+                        >
+                          <Trash2 size={12} />
+                        </button>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-white truncate">
+                    </div>
+
+                    {/* Card Profile Info */}
+                    <div className="p-3.5 pt-0 space-y-2.5 relative">
+                      <div className="flex items-end justify-between -mt-6">
+                        <div
+                          onClick={() => handleOpenUserProfile(f)}
+                          className="relative cursor-pointer hover:scale-105 transition-transform"
+                        >
+                          <MediaDisplay
+                            src={f.avatar_url || f.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${f.username}`}
+                            className="w-12 h-12 rounded-xl object-cover border-2 border-[#0c0e18] shadow-md"
+                          />
+                          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-[#0c0e18]" />
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {Array.isArray(f.badges) && f.badges.slice(0, 3).map((b) => (
+                            <span key={b} className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[#5B8DB8] font-bold">
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => handleOpenUserProfile(f)}
+                        className="cursor-pointer space-y-0.5"
+                      >
+                        <div className="text-xs font-bold text-white truncate group-hover:text-[#5B8DB8] transition-colors">
                           {f.display_name || f.username}
                         </div>
                         <div className="text-[10px] text-[#5B8DB8] font-mono truncate">
                           @{f.username}
                         </div>
+                        {f.description || f.bio ? (
+                          <p className="text-[11px] text-white/60 line-clamp-2 mt-1">
+                            {f.description || f.bio}
+                          </p>
+                        ) : null}
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
-                      <Button
-                        type="button"
-                        onClick={() => handleOpenDmWithFriend(f)}
-                        className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-7 rounded-lg gap-1 cursor-pointer"
-                      >
-                        <MessageSquare size={12} /> Message
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFriend(f.friendship_id)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-all"
-                        title="Remove Friend"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                        <Button
+                          type="button"
+                          onClick={() => handleOpenDmWithFriend(f)}
+                          className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-7 rounded-lg gap-1 cursor-pointer"
+                        >
+                          <MessageSquare size={12} /> Message
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleOpenUserProfile(f)}
+                          className="border-white/10 hover:bg-white/5 text-white/80 text-xs font-semibold h-7 px-2.5 rounded-lg cursor-pointer"
+                        >
+                          Profile
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1232,7 +1483,7 @@ export default function SocialSection() {
                     <button
                       type="button"
                       onClick={() => handleRemoveFriend(req.friendship_id)}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400"
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-400 cursor-pointer"
                       title="Cancel Request"
                     >
                       <X size={13} />
@@ -1243,6 +1494,118 @@ export default function SocialSection() {
             </div>
           )}
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* DISCORD-STYLE USER PROFILE MODAL (Inspect Any User)                       */}
+      {/* ========================================================================= */}
+      {viewProfileUser && (
+        <Dialog open={!!viewProfileUser} onOpenChange={() => setViewProfileUser(null)}>
+          <DialogContent className="max-w-md bg-[#0c0e18] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,0.95)] overflow-hidden">
+            {/* Header Banner */}
+            <div className="h-28 w-full bg-gradient-to-r from-[#1c2438] via-[#2a3a5e] to-[#1a233a] relative overflow-hidden">
+              {viewProfileUser.banner || viewProfileUser.banner_url ? (
+                <MediaDisplay src={viewProfileUser.banner || viewProfileUser.banner_url} className="w-full h-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-[#5B8DB8]/30 via-purple-600/30 to-blue-900/40" />
+              )}
+              <button
+                type="button"
+                onClick={() => setViewProfileUser(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 hover:bg-black text-white/80 hover:text-white transition-all cursor-pointer z-10"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Profile Avatar & Primary Badges */}
+            <div className="px-5 pb-5 pt-0 space-y-4 relative">
+              <div className="flex items-end justify-between -mt-10">
+                <div className="relative">
+                  <MediaDisplay
+                    src={viewProfileUser.avatar_url || viewProfileUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${viewProfileUser.username}`}
+                    className="w-20 h-20 rounded-2xl object-cover border-4 border-[#0c0e18] shadow-2xl bg-[#0c0e18]"
+                  />
+                  <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#0c0e18]" />
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    onClick={() => handleOpenDmWithFriend(viewProfileUser)}
+                    className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-3.5 rounded-xl shadow-md gap-1.5 cursor-pointer"
+                  >
+                    <MessageSquare size={13} /> Send DM
+                  </Button>
+                  <a
+                    href={`/${viewProfileUser.username}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 transition-all text-xs flex items-center gap-1"
+                    title="Open Live Public Bio"
+                  >
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              </div>
+
+              {/* Identity & Badges */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-white flex items-center gap-1.5 font-display">
+                    <span>{viewProfileUser.display_name || viewProfileUser.username}</span>
+                    {viewProfileUser.role === "admin" && (
+                      <Crown size={14} className="text-amber-400" title="Admin" />
+                    )}
+                  </h3>
+                  <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[#5B8DB8]">
+                    {viewProfileUser.role || "user"}
+                  </span>
+                </div>
+                <div className="text-xs text-[#5B8DB8] font-mono flex items-center gap-1">
+                  <AtSign size={12} />
+                  <span>{viewProfileUser.username}</span>
+                </div>
+              </div>
+
+              {/* Custom Badges Pills */}
+              {Array.isArray(viewProfileUser.badges) && viewProfileUser.badges.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 rounded-xl bg-[#07080c] border border-white/10">
+                  {viewProfileUser.badges.map((b) => (
+                    <span
+                      key={b}
+                      className="text-[10px] px-2 py-0.5 rounded-lg bg-[#5B8DB8]/15 border border-[#5B8DB8]/30 text-[#5B8DB8] font-bold uppercase tracking-wider"
+                    >
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Bio Description Box */}
+              <div className="space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider font-bold text-white/40">About Me</div>
+                <div className="p-3 rounded-xl bg-[#07080c] border border-white/10 text-xs text-white/90 leading-relaxed min-h-[48px]">
+                  {viewProfileUser.description || viewProfileUser.bio || (
+                    <span className="text-white/30 italic">No bio description provided yet.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats Footer */}
+              <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-white/60">
+                <div className="p-2 rounded-xl bg-[#07080c] border border-white/10 flex items-center gap-2">
+                  <Eye size={13} className="text-[#5B8DB8]" />
+                  <span>{viewProfileUser.views || 0} Profile Views</span>
+                </div>
+                <div className="p-2 rounded-xl bg-[#07080c] border border-white/10 flex items-center gap-2">
+                  <Calendar size={13} className="text-[#5B8DB8]" />
+                  <span>Swats Member</span>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* ========================================================================= */}
@@ -1280,16 +1643,18 @@ export default function SocialSection() {
               >
                 <Plus size={13} /> Create Group Chat
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handleDeleteChannel(contextMenu.data.id);
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 text-red-400 flex items-center gap-2 cursor-pointer"
-              >
-                <Trash2 size={13} /> Delete / Close Chat
-              </button>
+              {contextMenu.data.id !== "community-general" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeleteChannel(contextMenu.data.id);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 text-red-400 flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 size={13} /> Delete / Close Chat
+                </button>
+              )}
             </>
           )}
 
@@ -1362,14 +1727,14 @@ export default function SocialSection() {
                 type="button"
                 variant="outline"
                 onClick={() => setShowAddFriendModal(false)}
-                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={addingFriend || !addFriendUsername.trim()}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md cursor-pointer"
               >
                 {addingFriend ? "Sending..." : "Send Friend Request"}
               </Button>
@@ -1402,23 +1767,24 @@ export default function SocialSection() {
               <label className="text-xs text-white/70 font-semibold">Select Friends to Add ({selectedGroupMembers.length})</label>
               <div className="max-h-48 overflow-y-auto space-y-1 bg-[#07080c] p-2 rounded-xl border border-white/10 scrollbar-thin">
                 {friends.length === 0 ? (
-                  <div className="text-xs text-white/40 p-2 text-center">No friends available to add.</div>
+                  <div className="text-xs text-white/40 p-3 text-center">Add friends first to create group chats!</div>
                 ) : (
                   friends.map((f) => {
-                    const isChecked = selectedGroupMembers.includes(f.id);
+                    const isChecked = selectedGroupMembers.includes(f.id || f.user_id);
                     return (
                       <div
-                        key={f.id}
+                        key={f.id || f.user_id}
                         onClick={() => {
-                          if (isChecked) setSelectedGroupMembers((prev) => prev.filter((id) => id !== f.id));
-                          else setSelectedGroupMembers((prev) => [...prev, f.id]);
+                          const fid = f.id || f.user_id;
+                          if (isChecked) setSelectedGroupMembers((prev) => prev.filter((id) => id !== fid));
+                          else setSelectedGroupMembers((prev) => [...prev, fid]);
                         }}
                         className={`p-2 rounded-lg flex items-center justify-between text-xs cursor-pointer transition-all ${
                           isChecked ? "bg-[#5B8DB8]/20 text-white border border-[#5B8DB8]/30" : "hover:bg-white/5 text-white/70"
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <MediaDisplay src={f.avatar_url} className="w-6 h-6 rounded-md object-cover" />
+                          <MediaDisplay src={f.avatar_url || f.avatar} className="w-6 h-6 rounded-md object-cover" />
                           <span className="font-bold truncate">{f.display_name || f.username}</span>
                         </div>
                         {isChecked && <Check size={14} className="text-[#5B8DB8]" />}
@@ -1434,16 +1800,16 @@ export default function SocialSection() {
                 type="button"
                 variant="outline"
                 onClick={() => setShowCreateGroupModal(false)}
-                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={creatingGroup || !groupName.trim() || selectedGroupMembers.length === 0}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md cursor-pointer"
               >
-                {creatingGroup ? "Creating..." : "Create Group"}
+                {creatingGroup ? "Creating..." : "Create Group Chat"}
               </Button>
             </div>
           </form>
@@ -1461,26 +1827,27 @@ export default function SocialSection() {
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="max-h-56 overflow-y-auto space-y-1 bg-[#07080c] p-2 rounded-xl border border-white/10 scrollbar-thin">
-              {friends.filter(f => !(activeChannel?.members || []).includes(f.id)).length === 0 ? (
+              {friends.filter(f => !(activeChannel?.members || []).includes(f.id || f.user_id)).length === 0 ? (
                 <div className="text-xs text-white/40 p-3 text-center">All your friends are already in this group!</div>
               ) : (
                 friends
-                  .filter(f => !(activeChannel?.members || []).includes(f.id))
+                  .filter(f => !(activeChannel?.members || []).includes(f.id || f.user_id))
                   .map((f) => {
-                    const isChecked = selectedAddMemberIds.includes(f.id);
+                    const fid = f.id || f.user_id;
+                    const isChecked = selectedAddMemberIds.includes(fid);
                     return (
                       <div
-                        key={f.id}
+                        key={fid}
                         onClick={() => {
-                          if (isChecked) setSelectedAddMemberIds((prev) => prev.filter((id) => id !== f.id));
-                          else setSelectedAddMemberIds((prev) => [...prev, f.id]);
+                          if (isChecked) setSelectedAddMemberIds((prev) => prev.filter((id) => id !== fid));
+                          else setSelectedAddMemberIds((prev) => [...prev, fid]);
                         }}
                         className={`p-2 rounded-lg flex items-center justify-between text-xs cursor-pointer transition-all ${
                           isChecked ? "bg-[#5B8DB8]/20 text-white border border-[#5B8DB8]/30" : "hover:bg-white/5 text-white/70"
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <MediaDisplay src={f.avatar_url} className="w-6 h-6 rounded-md object-cover" />
+                          <MediaDisplay src={f.avatar_url || f.avatar} className="w-6 h-6 rounded-md object-cover" />
                           <span className="font-bold truncate">{f.display_name || f.username}</span>
                         </div>
                         {isChecked && <Check size={14} className="text-[#5B8DB8]" />}
@@ -1495,7 +1862,7 @@ export default function SocialSection() {
                 type="button"
                 variant="outline"
                 onClick={() => setShowAddMemberModal(false)}
-                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
@@ -1503,7 +1870,7 @@ export default function SocialSection() {
                 type="button"
                 disabled={addingMembers || selectedAddMemberIds.length === 0}
                 onClick={handleAddMembersToGroup}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md cursor-pointer"
               >
                 {addingMembers ? "Adding..." : "Add to Group"}
               </Button>
