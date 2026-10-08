@@ -1600,12 +1600,14 @@ function TacticalAudioPlayer({ bio, accent, widthClass, placement = "bottom" }) 
 
 function getAvatarShape(style) {
   switch (style) {
-    case "square": return { borderRadius: "0px" };
-    case "squircle": return { borderRadius: "28%" };
-    case "rounded": return { borderRadius: "1.25rem" };
-    case "hexagon": return { clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" };
-    case "diamond": return { clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)" };
-    case "circle": default: return { borderRadius: "9999px" };
+    case "square": return { borderRadius: "4px", overflow: "hidden" };
+    case "squircle": return { borderRadius: "28%", overflow: "hidden" };
+    case "rounded": return { borderRadius: "1.25rem", overflow: "hidden" };
+    case "hexagon": return { clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)", overflow: "hidden" };
+    case "diamond": return { clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)", overflow: "hidden" };
+    case "star": return { clipPath: "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)", overflow: "hidden" };
+    case "octagon": return { clipPath: "polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)", overflow: "hidden" };
+    case "circle": default: return { borderRadius: "9999px", overflow: "hidden" };
   }
 }
 
@@ -1751,6 +1753,7 @@ function BadgeItem({ badgeData, badgeId, accent, displayStyle = {} }) {
   const size = Math.min(44, Math.max(20, Number(displayStyle.size) || 28));
   const borderRadius = displayStyle.shape === "square" ? "4px" : displayStyle.shape === "rounded" ? "9px" : "9999px";
   const glow = displayStyle.glow === false ? "none" : `0 0 ${Math.max(4, glowIntensity / 2)}px ${glowColor || col}44`;
+  const tooltipMode = displayStyle.tooltip_style || displayStyle.tooltip || "normal";
 
   const updatePos = () => {
     if (badgeRef.current) {
@@ -1803,49 +1806,64 @@ function BadgeItem({ badgeData, badgeId, accent, displayStyle = {} }) {
         />
       </span>
 
-      {/* Floating Rich Tooltip rendered directly into document.body via Portal so it NEVER gets clipped by card overflow */}
+      {/* Floating Rich Tooltip rendered directly into document.body via Portal */}
       {hovered && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed pointer-events-none z-[999999] -translate-x-1/2 -translate-y-full mb-2 animate-in fade-in zoom-in-95 duration-150 drop-shadow-2xl"
+          className="fixed pointer-events-none z-[999999] -translate-x-1/2 -translate-y-full mb-1.5 animate-in fade-in duration-150 drop-shadow-2xl"
           style={{
-            top: coords.top - 8,
+            top: coords.top - (tooltipMode === "mini" ? 4 : 8),
             left: coords.left,
-            minWidth: "180px",
-            maxWidth: "280px",
           }}
         >
-          <div
-            className="p-2.5 rounded-xl text-left shadow-2xl backdrop-blur-2xl"
-            style={{
-              background: "rgba(10, 12, 16, 0.98)",
-              border: `1px solid ${col}66`,
-              boxShadow: `0 12px 35px rgba(0,0,0,0.95), 0 0 20px ${glowColor || col}44`,
-            }}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-                style={{ background: `${col}25`, color: col, border: `1px solid ${col}44` }}
-              >
-                <Ic size={11} />
-              </span>
-              <span className="text-xs font-bold truncate text-white" style={{ textShadow: `0 0 10px ${col}66` }}>
+          {tooltipMode === "mini" ? (
+            /* Mini Tooltip: Pure crisp text only, zero background, zero box */
+            <div className="text-xs font-bold text-white tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)] whitespace-nowrap text-center bg-transparent border-0 p-0 shadow-none select-none">
+              {name}
+            </div>
+          ) : tooltipMode === "basic" ? (
+            /* Basic Tooltip: Sleek dark pill with badge name */
+            <div>
+              <div className="px-2.5 py-1 rounded-lg bg-[#0c0e14]/95 border border-white/15 text-xs font-semibold text-white shadow-xl backdrop-blur-md whitespace-nowrap text-center">
                 {name}
-              </span>
+              </div>
+              <div className="w-2 h-2 rotate-45 mx-auto -mt-1 bg-[#0c0e14]/95 border-r border-b border-white/15" />
             </div>
-            <div className="text-[11px] leading-snug text-[#E5E7EB]/90 font-normal">
-              {desc}
+          ) : (
+            /* Normal Tooltip: Full glowing rich card with icon preview & description */
+            <div style={{ minWidth: "180px", maxWidth: "280px" }}>
+              <div
+                className="p-2.5 rounded-xl text-left shadow-2xl backdrop-blur-2xl"
+                style={{
+                  background: "rgba(10, 12, 16, 0.98)",
+                  border: `1px solid ${col}66`,
+                  boxShadow: `0 12px 35px rgba(0,0,0,0.95), 0 0 20px ${glowColor || col}44`,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: `${col}25`, color: col, border: `1px solid ${col}44` }}
+                  >
+                    <Ic size={11} />
+                  </span>
+                  <span className="text-xs font-bold truncate text-white" style={{ textShadow: `0 0 10px ${col}66` }}>
+                    {name}
+                  </span>
+                </div>
+                <div className="text-[11px] leading-snug text-[#E5E7EB]/90 font-normal">
+                  {desc}
+                </div>
+              </div>
+              <div
+                className="w-2.5 h-2.5 rotate-45 mx-auto -mt-1.5"
+                style={{
+                  background: "rgba(10, 12, 16, 0.98)",
+                  borderRight: `1px solid ${col}66`,
+                  borderBottom: `1px solid ${col}66`,
+                }}
+              />
             </div>
-          </div>
-          {/* Tooltip Arrow */}
-          <div
-            className="w-2.5 h-2.5 rotate-45 mx-auto -mt-1.5"
-            style={{
-              background: "rgba(10, 12, 16, 0.98)",
-              borderRight: `1px solid ${col}66`,
-              borderBottom: `1px solid ${col}66`,
-            }}
-          />
+          )}
         </div>,
         document.body
       )}
@@ -1855,7 +1873,10 @@ function BadgeItem({ badgeData, badgeId, accent, displayStyle = {} }) {
 
 function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
   const s = bio?.settings || {};
-  const displayStyle = s.badge_style || {};
+  const displayStyle = {
+    tooltip_style: s.badge_tooltip_style || "normal",
+    ...(s.badge_style || {}),
+  };
   const badgeLayout = layoutOverride || s.badge_layout || "classic";
   const shownIds = Array.isArray(s.badges_shown) ? s.badges_shown.map((id) => String(id)) : [];
   const systemBadges = (badges || []).filter((b) => {
@@ -2248,7 +2269,8 @@ function BioCard({ bio }) {
   const linkBg = s.link_color_all ? sharedLinkColor : s.link_bg_color;
   const linkText = s.link_color_all ? (s.link_text_color || "#F5F7FA") : s.link_text_color;
   const cardBorder = s.card_border_color;
-  const avatarShape = getAvatarShape(s.avatar_style);
+  const avatarShape = getAvatarShape(s.avatar_style || s.pfp_shape || s.avatar_shape || "circle");
+  const spotifyFormat = s.spotify_presence_format || s.spotify_presence_style || s.presence?.spotify_format || "card";
   const cardShape = getCardShape(s.card_shape);
   const numCardAlpha = s.card_alpha !== undefined && s.card_alpha !== null
     ? (typeof s.card_alpha === "number" ? s.card_alpha : parseFloat(s.card_alpha))
@@ -2577,7 +2599,7 @@ function BioCard({ bio }) {
               {(s.presence?.discord || s.presence?.spotify) && (
                 <div className="mt-5 pt-4 border-t border-white/10 space-y-3">
                   {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-                  {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} />}
+                  {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
                 </div>
               )}
 
@@ -2803,7 +2825,7 @@ function BioCard({ bio }) {
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {/* 2x2 Grid of square tiles */}
             {cardLinks.length > 0 && (
@@ -2868,7 +2890,7 @@ function BioCard({ bio }) {
             </div>
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -2904,7 +2926,7 @@ function BioCard({ bio }) {
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -2943,7 +2965,7 @@ function BioCard({ bio }) {
               {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             </div>
             <div className="space-y-2.5">
-              {s.presence?.spotify && <NowPlaying username={bio.username} />}
+              {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
               {cardLinks.map((l, i) => (
                 <LinkCard
@@ -2983,7 +3005,7 @@ function BioCard({ bio }) {
             </div>
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -3038,7 +3060,7 @@ function BioCard({ bio }) {
 
             {/* Right Links & Media Stream */}
             <div className="space-y-3">
-              {s.presence?.spotify && <NowPlaying username={bio.username} />}
+              {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
               {cardLinks.length > 0 && (
                 <RenderLinksContainer
@@ -3087,7 +3109,7 @@ function BioCard({ bio }) {
             </div>
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -3135,7 +3157,7 @@ function BioCard({ bio }) {
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -3212,7 +3234,7 @@ function BioCard({ bio }) {
             {bio.description && <div className="mx-auto mt-3 max-w-md text-sm leading-relaxed" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</div>}
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
             {cardLinks.length > 0 && (
               <RenderLinksContainer
                 links={cardLinks}
@@ -3247,7 +3269,7 @@ function BioCard({ bio }) {
               {bio.description && <p className="text-sm leading-relaxed" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</p>}
               <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
               {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-              {s.presence?.spotify && <NowPlaying username={bio.username} />}
+              {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
             </div>
             <div className="grid min-w-0 grid-cols-2 content-start gap-2.5">
               {cardLinks.map((link, index) => (
@@ -3333,7 +3355,7 @@ function BioCard({ bio }) {
 }
 
 
-function NowPlaying({ username, accent, discordId }) {
+function NowPlaying({ username, accent, discordId, format = "card" }) {
   const [np, setNp] = useState(null);
   const [showLyrics, setShowLyrics] = useState(false);
   const lyricsRef = useRef(null);
@@ -3408,6 +3430,106 @@ function NowPlaying({ username, accent, discordId }) {
     disabled: "Spotify presence is turned off.",
   };
 
+  /* 1. MINIMAL PILL FORMAT */
+  if (format === "pill") {
+    return (
+      <div className="mt-3 flex justify-center">
+        <a
+          href={isPlaying ? np.url : undefined}
+          target={isPlaying ? "_blank" : undefined}
+          rel="noreferrer"
+          data-testid="spotify-now-playing"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border backdrop-blur-xl text-xs font-semibold transition-all hover:scale-105"
+          style={{
+            background: "rgba(10,12,16,0.9)",
+            borderColor: "rgba(29,185,84,0.4)",
+            boxShadow: "0 0 15px rgba(29,185,84,0.2)",
+          }}
+        >
+          <SiSpotify size={14} className="text-[#1DB954] shrink-0 animate-pulse" />
+          {isPlaying ? (
+            <span className="truncate max-w-[220px] text-white">
+              <span className="font-bold">{np.track}</span> <span className="text-[#E5E7EB]/60 font-normal">by {np.artist}</span>
+            </span>
+          ) : (
+            <span className="text-white/60 text-[11px]">Spotify Inactive</span>
+          )}
+        </a>
+      </div>
+    );
+  }
+
+  /* 2. STATUS TICKER FORMAT */
+  if (format === "ticker") {
+    return (
+      <div className="mt-3 overflow-hidden rounded-xl border border-[#1DB954]/30 bg-black/70 p-2.5 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1 rounded-md bg-[#1DB954]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#1DB954] uppercase tracking-wider shrink-0">
+            <SiSpotify size={10} /> NOW
+          </span>
+          <div className="flex-1 overflow-hidden whitespace-nowrap">
+            {isPlaying ? (
+              <a href={np.url} target="_blank" rel="noreferrer" className="inline-block text-xs font-bold text-white hover:text-[#1DB954] transition-colors">
+                {np.track} — {np.artist} {np.album ? `• ${np.album}` : ""}
+              </a>
+            ) : (
+              <span className="text-xs text-white/50">{idleMessages[np.state] || "No track currently playing on Spotify"}</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* 3. COMPACT ROW PLAYER FORMAT */
+  if (format === "compact") {
+    return (
+      <div className="mt-3 text-left">
+        <div
+          data-testid="spotify-now-playing"
+          className="flex items-center gap-2.5 p-2 rounded-xl border backdrop-blur-xl transition-all duration-200 hover:border-[#1DB954]/60"
+          style={{
+            background: "rgba(10,12,16,0.88)",
+            borderColor: "rgba(29,185,84,0.3)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.4), 0 0 12px rgba(29,185,84,0.1)",
+          }}
+        >
+          <div className="relative w-9 h-9 rounded-lg overflow-hidden shrink-0 border border-[#1DB954]/40">
+            {np.album_art ? (
+              <img src={np.album_art} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-[#1DB954]/20 flex items-center justify-center text-[#1DB954]">
+                <SiSpotify size={16} />
+              </div>
+            )}
+            {isPlaying && <span className="absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full bg-[#1DB954] ring-1 ring-black animate-pulse" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[9px] font-bold text-[#1DB954] flex items-center gap-1 uppercase tracking-wider">
+                <SiSpotify size={9} />
+                <span>{isPlaying ? "Playing" : "Spotify"}</span>
+              </span>
+              {isPlaying && (
+                <span className="text-[9px] font-mono text-[#E5E7EB]/50">
+                  {formatAudioTime(currentSec)} / {formatAudioTime(totalSec)}
+                </span>
+              )}
+            </div>
+            {isPlaying ? (
+              <a href={np.url} target="_blank" rel="noreferrer" className="text-xs font-bold text-white hover:text-[#1DB954] transition-colors truncate block">
+                {np.track} <span className="text-[10px] text-[#E5E7EB]/60 font-normal">• {np.artist}</span>
+              </a>
+            ) : (
+              <div className="text-[11px] text-[#E5E7EB]/65">{idleMessages[np.state] || "Nothing playing"}</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* 4. RICH FULL CARD FORMAT (Default) */
   return (
     <div className="mt-4 text-left">
       <div

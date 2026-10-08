@@ -13,8 +13,12 @@ import {
   Image as ImageIcon, MousePointer2, Music, Save,
   Upload, Trash2, Plus, ExternalLink, Sparkles, Eye,
   LayoutGrid, Sliders, Check, Palette, Layers, Wand2, Flame,
-  Edit3, Shield, Star, Gamepad2, ArrowRight, Wand, X
+  Edit3, Shield, Star, Gamepad2, ArrowRight, Wand, X,
+  Radio, Volume2, VolumeX, ListMusic, Music2, Play, Pause,
+  Disc, SlidersHorizontal, Share2, MoveHorizontal, MoveVertical,
+  AlignLeft, AlignCenter, AlignRight, FileText
 } from "lucide-react";
+import { SiSpotify, SiDiscord } from "react-icons/si";
 import CustomColorPicker from "@/components/ColorPicker";
 import { MediaAssetModal } from "@/components/MediaAssetModal";
 import { AvatarEffectsModal } from "@/components/AvatarEffectsModal";
@@ -59,6 +63,39 @@ export const CARD_WIDTHS = [
   { v: "md", l: "Standard (460px)" },
   { v: "lg", l: "Large (540px)" },
   { v: "wide", l: "Ultra-Wide (680px)" },
+];
+
+export const PFP_FRAME_SHAPES = [
+  { v: "circle", l: "Circle (Default)" },
+  { v: "squircle", l: "Squircle (28%)" },
+  { v: "rounded", l: "Rounded (20px)" },
+  { v: "square", l: "Tactical Square (4px)" },
+  { v: "hexagon", l: "Hexagon (6-Sided)" },
+  { v: "diamond", l: "Diamond (4-Point)" },
+  { v: "star", l: "Star (10-Point)" },
+  { v: "octagon", l: "Octagon (8-Sided)" },
+];
+
+export const BADGE_TOOLTIP_STYLES = [
+  { v: "normal", l: "Normal (Rich Glowing Card)" },
+  { v: "basic", l: "Basic (Dark Pill)" },
+  { v: "mini", l: "Mini (Pure Text - No Background)" },
+];
+
+export const SPOTIFY_PRESENCE_FORMATS = [
+  { v: "card", l: "Rich Card (Full Artwork & Timeline)" },
+  { v: "compact", l: "Compact Player (Horizontal Row)" },
+  { v: "pill", l: "Minimalist Pill (Glowing Status)" },
+  { v: "ticker", l: "Marquee Ticker (Animated Marquee)" },
+];
+
+export const AUDIO_PLAYER_STYLES = [
+  { v: "bottom_dock", l: "Bottom Dock (Fixed Floating Bar)" },
+  { v: "top_dock", l: "Top Dock (Fixed Floating Bar)" },
+  { v: "incard", l: "Incard (Embedded In Bio Card)" },
+  { v: "compact_pill", l: "Compact Floating Pill" },
+  { v: "floating_widget", l: "Floating Draggable Widget" },
+  { v: "none", l: "Invisible (Background Audio Only)" },
 ];
 
 export const SOCIAL_ICON_STYLES = [
@@ -115,8 +152,8 @@ export function Panel({ title, children, className = "" }) {
   return (
     <div className={`p-4 sm:p-5 rounded-2xl bg-[#0c0e15] border border-white/10 shadow-lg space-y-4 ${className}`}>
       {title && (
-        <div className="text-xs font-bold uppercase tracking-wider text-[#5B8DB8] border-b border-white/5 pb-2">
-          {title}
+        <div className="text-xs font-bold uppercase tracking-wider text-[#5B8DB8] border-b border-white/5 pb-2 flex items-center justify-between">
+          <span>{title}</span>
         </div>
       )}
       {children}
@@ -124,10 +161,13 @@ export function Panel({ title, children, className = "" }) {
   );
 }
 
-export function ToggleRow({ label, checked, onChange, testid }) {
+export function ToggleRow({ label, description, checked, onChange, testid }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1.5">
-      <span className="text-xs text-[#E5E7EB]/80 font-medium">{label}</span>
+      <div>
+        <span className="text-xs text-[#E5E7EB]/85 font-medium block">{label}</span>
+        {description && <span className="text-[10px] text-[#E5E7EB]/45 block mt-0.5">{description}</span>}
+      </div>
       <Switch data-testid={testid} checked={checked} onCheckedChange={onChange} />
     </div>
   );
@@ -157,7 +197,7 @@ export function SelectRow({ label, value, onChange, options }) {
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-xs text-[#E5E7EB]/70 font-medium shrink-0">{label}</span>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-8 text-xs bg-[#080a10] border-white/10 text-white w-48 rounded-xl">
+        <SelectTrigger className="h-8 text-xs bg-[#080a10] border-white/10 text-white w-52 rounded-xl">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="bg-[#0c0e15] border-white/10 text-white text-xs rounded-xl">
@@ -176,7 +216,7 @@ export function ColorRow({ label, value, onChange }) {
   return (
     <div className="flex items-center justify-between gap-4 py-1">
       <span className="text-xs text-[#E5E7EB]/70 font-medium">{label}</span>
-      <div className="w-48">
+      <div className="w-52">
         <CustomColorPicker value={value} onChange={onChange} label={label} />
       </div>
     </div>
@@ -279,11 +319,83 @@ export default function Editor({ initialTab = "profile" }) {
 
   const patch = (k, v) => setS((p) => ({ ...p, [k]: v }));
 
+  const patchAudio = (key, val) => {
+    setS((p) => ({
+      ...p,
+      audio: {
+        ...(p.audio || {}),
+        [key]: val,
+      },
+    }));
+  };
+
+  const patchPresence = (key, val) => {
+    setS((p) => ({
+      ...p,
+      presence: {
+        ...(p.presence || {}),
+        [key]: val,
+      },
+    }));
+  };
+
   const uploadFile = async (file) => {
     const fd = new FormData();
     fd.append("file", file);
     const { data } = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
     return data.url;
+  };
+
+  // Audio Track Manager Helpers
+  const audioTracks = Array.isArray(s.audio?.tracks) ? s.audio.tracks : [];
+
+  const handleAddAudioTrack = () => {
+    const newTr = {
+      id: `track_${Date.now()}`,
+      name: "New Audio Track",
+      artist: displayName || username || "Artist",
+      url: "",
+      cover: "",
+      lyrics: "",
+    };
+    patchAudio("tracks", [...audioTracks, newTr]);
+    toast.success("Added new audio track!");
+  };
+
+  const handleUpdateAudioTrack = (index, field, val) => {
+    const updated = [...audioTracks];
+    updated[index] = { ...updated[index], [field]: val };
+    patchAudio("tracks", updated);
+  };
+
+  const handleRemoveAudioTrack = (index) => {
+    const updated = audioTracks.filter((_, i) => i !== index);
+    patchAudio("tracks", updated);
+    toast.success("Track removed");
+  };
+
+  const handleUploadTrackFile = async (index, file) => {
+    try {
+      const url = await uploadFile(file);
+      const cleanName = file.name.replace(/\.[^/.]+$/, "");
+      handleUpdateAudioTrack(index, "url", url);
+      if (!audioTracks[index]?.name || audioTracks[index]?.name === "New Audio Track") {
+        handleUpdateAudioTrack(index, "name", cleanName);
+      }
+      toast.success("Audio file uploaded successfully!");
+    } catch {
+      toast.error("Failed to upload audio file");
+    }
+  };
+
+  const handleUploadTrackCover = async (index, file) => {
+    try {
+      const url = await uploadFile(file);
+      handleUpdateAudioTrack(index, "cover", url);
+      toast.success("Cover art uploaded!");
+    } catch {
+      toast.error("Failed to upload cover art");
+    }
   };
 
   const save = async () => {
@@ -341,7 +453,7 @@ export default function Editor({ initialTab = "profile" }) {
       {/* Top Header & Save Bar */}
       <Header
         title="Customization Studio"
-        subtitle="Full bio customization: profile visuals, animated effects, card layout & slideshow deck."
+        subtitle="Visuals, animations, positioning, audio player, Spotify presence & badge tooltips."
         action={
           <div className="flex items-center gap-3">
             <a
@@ -364,7 +476,7 @@ export default function Editor({ initialTab = "profile" }) {
       />
 
       {/* Subtabs Bar */}
-      <div className="flex items-center gap-2 border-b border-white/10 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2">
         <button
           type="button"
           onClick={() => setEditorCategory("profile")}
@@ -374,7 +486,7 @@ export default function Editor({ initialTab = "profile" }) {
               : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
           }`}
         >
-          <Palette size={14} /> Main Profile
+          <Palette size={14} /> Main Profile & Assets
         </button>
         <button
           type="button"
@@ -385,12 +497,34 @@ export default function Editor({ initialTab = "profile" }) {
               : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
           }`}
         >
-          <Layers size={14} /> Layout & Deck
+          <Layers size={14} /> Layout & Positioning
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorCategory("audio")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            editorCategory === "audio"
+              ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20"
+              : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <Music size={14} /> Audio Player Studio
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorCategory("presence")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            editorCategory === "presence"
+              ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20"
+              : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <SiSpotify size={14} className="text-[#1DB954]" /> Live Presence & Spotify
         </button>
       </div>
 
       {/* ========================================================================= */}
-      {/* SUBTAB 1: MAIN PROFILE                                                    */}
+      {/* SUBTAB 1: MAIN PROFILE & ASSETS                                           */}
       {/* ========================================================================= */}
       {editorCategory === "profile" && (
         <div className="space-y-6">
@@ -528,6 +662,43 @@ export default function Editor({ initialTab = "profile" }) {
             </div>
           </Panel>
 
+          {/* PFP Shape & Badge Tooltip Styling */}
+          <Panel title="Avatar Frame Shape & Accolade Tooltips">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="PFP Frame Shape"
+                  value={s.avatar_style || s.pfp_shape || "circle"}
+                  onChange={(v) => {
+                    patch("avatar_style", v);
+                    patch("pfp_shape", v);
+                  }}
+                  options={PFP_FRAME_SHAPES}
+                />
+                <div className="text-[11px] text-[#E5E7EB]/50">
+                  Select your profile frame silhouette. Applies clean geometrical clipping with glowing borders.
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="Badge Tooltip Mode"
+                  value={s.badge_tooltip_style || s.badge_style?.tooltip_style || "normal"}
+                  onChange={(v) => {
+                    patch("badge_tooltip_style", v);
+                    setS((p) => ({ ...p, badge_style: { ...(p.badge_style || {}), tooltip_style: v } }));
+                  }}
+                  options={BADGE_TOOLTIP_STYLES}
+                />
+                <div className="text-[11px] text-[#E5E7EB]/50">
+                  • <b>Normal:</b> Glowing card with description & icon.<br />
+                  • <b>Basic:</b> Minimal dark badge pill.<br />
+                  • <b>Mini:</b> Zero background, pure crisp glowing text only.
+                </div>
+              </div>
+            </div>
+          </Panel>
+
           {/* Profile Identity Text Inputs with Integrated [ ✨ FX ] Trigger */}
           <Panel title="Profile Identity & Typography">
             <div className="space-y-4">
@@ -656,7 +827,7 @@ export default function Editor({ initialTab = "profile" }) {
       )}
 
       {/* ========================================================================= */}
-      {/* SUBTAB 2: LAYOUT & SLIDESHOW DECK                                         */}
+      {/* SUBTAB 2: LAYOUT & POSITIONING                                            */}
       {/* ========================================================================= */}
       {editorCategory === "layout" && (
         <div className="space-y-6">
@@ -704,117 +875,139 @@ export default function Editor({ initialTab = "profile" }) {
             </div>
           </Panel>
 
-          {/* DEDICATED SETTINGS FOR SELECTED LAYOUT */}
-          <Panel title={`Custom Configuration · ${CARD_LAYOUTS.find((cl) => cl.v === activeLayout)?.l || "Layout"} Mode`}>
-            <div className="p-4 rounded-xl bg-[#080a10] border border-white/10 space-y-4">
-              {activeLayout === "bento_grid" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SelectRow
-                    label="Bento Columns"
-                    value={s.bento_cols || "2"}
-                    onChange={(v) => patch("bento_cols", v)}
-                    options={[
-                      { v: "2", l: "2 Columns Balanced" },
-                      { v: "3", l: "3 Columns Dense" },
-                    ]}
-                  />
-                  <SliderRow
-                    label="Bento Tile Gap Spacing"
-                    value={s.bento_gap || 12}
-                    min={6}
-                    max={28}
-                    suffix="px"
-                    onChange={(v) => patch("bento_gap", v)}
-                  />
+          {/* DEDICATED CUSTOM POSITIONING & ALIGNMENT CONTROLS */}
+          <Panel title="Element Positioning & Alignment Overrides">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Avatar Positioning */}
+              <div className="p-4 rounded-xl bg-[#080a10] border border-white/5 space-y-3">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <MoveVertical size={13} className="text-[#5B8DB8]" /> Avatar Dimensions & Alignment
                 </div>
-              )}
+                <SelectRow
+                  label="Avatar Alignment"
+                  value={s.avatar_alignment || "center"}
+                  onChange={(v) => patch("avatar_alignment", v)}
+                  options={[
+                    { v: "left", l: "Left Aligned" },
+                    { v: "center", l: "Centered" },
+                    { v: "right", l: "Right Aligned" },
+                  ]}
+                />
+                <SliderRow
+                  label="Avatar Size Scale"
+                  value={s.avatar_size || 96}
+                  min={48}
+                  max={140}
+                  suffix="px"
+                  onChange={(v) => patch("avatar_size", v)}
+                />
+                <SliderRow
+                  label="Avatar Vertical Offset (Y)"
+                  value={s.avatar_offset_y || 0}
+                  min={-40}
+                  max={40}
+                  suffix="px"
+                  onChange={(v) => patch("avatar_offset_y", v)}
+                />
+              </div>
 
-              {activeLayout === "floating_glass" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SliderRow
-                    label="Frosted Glass Backdrop Blur"
-                    value={s.bg_blur !== undefined ? s.bg_blur : 24}
-                    min={4}
-                    max={48}
-                    suffix="px"
-                    onChange={(v) => patch("bg_blur", v)}
-                  />
-                  <SliderRow
-                    label="Glass Surface Opacity"
-                    value={(s.card_alpha !== undefined ? s.card_alpha : 0.75) * 100}
-                    suffix="%"
-                    onChange={(v) => patch("card_alpha", v / 100)}
-                  />
+              {/* Title & Name Positioning */}
+              <div className="p-4 rounded-xl bg-[#080a10] border border-white/5 space-y-3">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <MoveHorizontal size={13} className="text-[#5B8DB8]" /> Title & Typography Alignment
                 </div>
-              )}
+                <SelectRow
+                  label="Display Name Alignment"
+                  value={s.title_alignment || "center"}
+                  onChange={(v) => patch("title_alignment", v)}
+                  options={[
+                    { v: "left", l: "Left Aligned" },
+                    { v: "center", l: "Centered" },
+                    { v: "right", l: "Right Aligned" },
+                  ]}
+                />
+                <SelectRow
+                  label="Bio Description Alignment"
+                  value={s.desc_alignment || "center"}
+                  onChange={(v) => patch("desc_alignment", v)}
+                  options={[
+                    { v: "left", l: "Left Aligned" },
+                    { v: "center", l: "Centered" },
+                    { v: "right", l: "Right Aligned" },
+                  ]}
+                />
+                <SliderRow
+                  label="Title Font Size"
+                  value={s.title_size || 24}
+                  min={16}
+                  max={42}
+                  suffix="px"
+                  onChange={(v) => patch("title_size", v)}
+                />
+                <SliderRow
+                  label="Title Vertical Offset (Y)"
+                  value={s.title_offset_y || 0}
+                  min={-30}
+                  max={30}
+                  suffix="px"
+                  onChange={(v) => patch("title_offset_y", v)}
+                />
+              </div>
 
-              {activeLayout === "split_left" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SelectRow
-                    label="Column Ratio Split"
-                    value={s.split_ratio || "50_50"}
-                    onChange={(v) => patch("split_ratio", v)}
-                    options={[
-                      { v: "50_50", l: "50% Profile / 50% Links" },
-                      { v: "40_60", l: "40% Profile / 60% Links" },
-                      { v: "60_40", l: "60% Profile / 40% Links" },
-                    ]}
-                  />
-                  <SelectRow
-                    label="Sidebar Dock Side"
-                    value={s.split_dock || "left"}
-                    onChange={(v) => patch("split_dock", v)}
-                    options={[
-                      { v: "left", l: "Left Docked" },
-                      { v: "right", l: "Right Docked" },
-                    ]}
-                  />
+              {/* Badges & Social Placement */}
+              <div className="p-4 rounded-xl bg-[#080a10] border border-white/5 space-y-3">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <Sparkles size={13} className="text-[#5B8DB8]" /> Badges Placement & Align
                 </div>
-              )}
+                <SelectRow
+                  label="Badges Alignment"
+                  value={s.badges_alignment || "center"}
+                  onChange={(v) => patch("badges_alignment", v)}
+                  options={[
+                    { v: "left", l: "Left Aligned" },
+                    { v: "center", l: "Centered" },
+                    { v: "right", l: "Right Aligned" },
+                  ]}
+                />
+                <SelectRow
+                  label="Badges Placement"
+                  value={s.badges_position || "below_name"}
+                  onChange={(v) => patch("badges_position", v)}
+                  options={[
+                    { v: "below_name", l: "Below Name & Username" },
+                    { v: "below_desc", l: "Below Bio Description" },
+                    { v: "above_avatar", l: "Above Avatar" },
+                  ]}
+                />
+              </div>
 
-
-
-              {activeLayout === "slideshow" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SelectRow
-                    label="Deck Transition Style"
-                    value={s.slideshow_transition || "slide"}
-                    onChange={(v) => patch("slideshow_transition", v)}
-                    options={[
-                      { v: "slide", l: "Smooth Horizontal Slide" },
-                      { v: "fade", l: "Crossfade Blend" },
-                      { v: "3d", l: "3D Perspective Lift" },
-                    ]}
-                  />
-                  <SliderRow
-                    label="Auto-Play Interval"
-                    value={s.slideshow_speed || 6}
-                    min={3}
-                    max={20}
-                    suffix="s"
-                    onChange={(v) => patch("slideshow_speed", v)}
-                  />
+              {/* Social Icons & Views Counter */}
+              <div className="p-4 rounded-xl bg-[#080a10] border border-white/5 space-y-3">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <Share2 size={13} className="text-[#5B8DB8]" /> Social Icons & Views Placement
                 </div>
-              )}
-
-              {(activeLayout === "classic" || activeLayout === "minimal" || activeLayout === "banner_left" || activeLayout === "grid_tiles") && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SliderRow
-                    label="Card Border Radius"
-                    value={s.card_radius !== undefined ? s.card_radius : 24}
-                    min={0}
-                    max={48}
-                    suffix="px"
-                    onChange={(v) => patch("card_radius", v)}
-                  />
-                  <SelectRow
-                    label="Card Material Style"
-                    value={s.card_style || "solid"}
-                    onChange={(v) => patch("card_style", v)}
-                    options={CARD_STYLES}
-                  />
-                </div>
-              )}
+                <SelectRow
+                  label="Social Icons Alignment"
+                  value={s.icons_alignment || "center"}
+                  onChange={(v) => patch("icons_alignment", v)}
+                  options={[
+                    { v: "left", l: "Left Aligned" },
+                    { v: "center", l: "Centered" },
+                    { v: "right", l: "Right Aligned" },
+                  ]}
+                />
+                <SelectRow
+                  label="Views Badge Placement"
+                  value={s.views_position || "below_name"}
+                  onChange={(v) => patch("views_position", v)}
+                  options={[
+                    { v: "below_name", l: "Below Name" },
+                    { v: "above_avatar", l: "Above Avatar" },
+                    { v: "bottom_card", l: "Bottom of Card" },
+                    { v: "none", l: "Hidden" },
+                  ]}
+                />
+              </div>
             </div>
           </Panel>
 
@@ -859,6 +1052,273 @@ export default function Editor({ initialTab = "profile" }) {
                   value={s.accent_color || "#5B8DB8"}
                   onChange={(v) => patch("accent_color", v)}
                 />
+              </div>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB 3: AUDIO PLAYER STUDIO                                             */}
+      {/* ========================================================================= */}
+      {editorCategory === "audio" && (
+        <div className="space-y-6">
+          <Panel title="Audio Player Controls & Style Settings">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Audio Player"
+                  description="Stream custom background music on profile load"
+                  checked={s.audio?.display !== false}
+                  onChange={(v) => patchAudio("display", v)}
+                />
+                <SelectRow
+                  label="Audio Player Style"
+                  value={s.audio?.style || s.audio?.card_style || "bottom_dock"}
+                  onChange={(v) => {
+                    patchAudio("style", v);
+                    patchAudio("card_style", v);
+                  }}
+                  options={AUDIO_PLAYER_STYLES}
+                />
+                <SliderRow
+                  label="Default Volume"
+                  value={s.audio?.volume !== undefined ? s.audio.volume : 65}
+                  min={0}
+                  max={100}
+                  suffix="%"
+                  onChange={(v) => patchAudio("volume", v)}
+                />
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Autoplay on Load"
+                  description="Attempts instant playback upon page visit"
+                  checked={s.audio?.autoplay !== false}
+                  onChange={(v) => patchAudio("autoplay", v)}
+                />
+                <ToggleRow
+                  label="Loop Playlist"
+                  description="Continuous playback loop"
+                  checked={s.audio?.loop !== false}
+                  onChange={(v) => patchAudio("loop", v)}
+                />
+                <ToggleRow
+                  label="Shuffle / Random Order"
+                  description="Randomize track order upon load"
+                  checked={s.audio?.randomize === true}
+                  onChange={(v) => patchAudio("randomize", v)}
+                />
+                <ToggleRow
+                  label="Show Synced Lyrics Button"
+                  description="Enable animated lyrics popup"
+                  checked={s.audio?.show_lyrics !== false}
+                  onChange={(v) => patchAudio("show_lyrics", v)}
+                />
+              </div>
+            </div>
+          </Panel>
+
+          {/* Audio Playlist Manager */}
+          <Panel title={`Audio Tracks Playlist (${audioTracks.length})`}>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-[#E5E7EB]/70">
+                  Upload MP3 files or paste direct audio streaming URLs.
+                </span>
+                <Button
+                  type="button"
+                  onClick={handleAddAudioTrack}
+                  className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-3.5 h-8 rounded-xl gap-1.5 shadow-sm"
+                >
+                  <Plus size={14} /> Add Audio Track
+                </Button>
+              </div>
+
+              {audioTracks.length === 0 ? (
+                <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 bg-[#080a10]/50 space-y-2">
+                  <Music2 size={32} className="mx-auto text-white/30" />
+                  <div className="text-xs font-semibold text-white/70">No Audio Tracks Configured</div>
+                  <p className="text-[11px] text-white/40 max-w-sm mx-auto">
+                    Click "Add Audio Track" to upload custom MP3 background music with synchronized lyrics.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleAddAudioTrack}
+                    className="mt-2 bg-white/10 hover:bg-white/20 text-white text-xs rounded-xl"
+                  >
+                    <Plus size={13} className="mr-1" /> Add First Track
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {audioTracks.map((tr, idx) => (
+                    <div
+                      key={tr.id || idx}
+                      className="p-4 rounded-2xl bg-[#080a10] border border-white/10 space-y-3 relative group"
+                    >
+                      <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] text-[10px] font-bold font-mono flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <span className="text-xs font-bold text-white truncate max-w-[200px]">
+                            {tr.name || "Untitled Track"}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAudioTrack(idx)}
+                          className="text-white/40 hover:text-red-400 p-1 transition-colors"
+                          title="Remove Track"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-[#E5E7EB]/70">Track Title</Label>
+                          <Input
+                            value={tr.name || ""}
+                            onChange={(e) => handleUpdateAudioTrack(idx, "name", e.target.value)}
+                            placeholder="Song name"
+                            className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-[#E5E7EB]/70">Artist Name</Label>
+                          <Input
+                            value={tr.artist || ""}
+                            onChange={(e) => handleUpdateAudioTrack(idx, "artist", e.target.value)}
+                            placeholder="Artist / Composer"
+                            className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Audio File (MP3 Upload or URL)</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={tr.url || ""}
+                            onChange={(e) => handleUpdateAudioTrack(idx, "url", e.target.value)}
+                            placeholder="https://...mp3"
+                            className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl flex-1"
+                          />
+                          <label className="h-8 px-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0">
+                            <Upload size={12} />
+                            <span>Upload MP3</span>
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) handleUploadTrackFile(idx, e.target.files[0]);
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Synced Lyrics (.LRC format or lines)</Label>
+                        <Textarea
+                          value={tr.lyrics || ""}
+                          onChange={(e) => handleUpdateAudioTrack(idx, "lyrics", e.target.value)}
+                          rows={2}
+                          placeholder="[00:12.00] Line 1&#10;[00:18.50] Line 2"
+                          className="bg-[#050609] border-white/10 text-white text-xs rounded-xl resize-none font-mono"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB 4: LIVE PRESENCE & SPOTIFY                                         */}
+      {/* ========================================================================= */}
+      {editorCategory === "presence" && (
+        <div className="space-y-6">
+          {/* Spotify Presence Format */}
+          <Panel title="Spotify Real-Time Listening Presence">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Show Spotify Live Presence"
+                  description="Streams real-time Spotify listening card from connected account"
+                  checked={s.presence?.spotify !== false}
+                  onChange={(v) => patchPresence("spotify", v)}
+                />
+                <SelectRow
+                  label="Spotify Display Format"
+                  value={s.spotify_presence_format || s.spotify_presence_style || s.presence?.spotify_format || "card"}
+                  onChange={(v) => {
+                    patch("spotify_presence_format", v);
+                    patch("spotify_presence_style", v);
+                    patchPresence("spotify_format", v);
+                  }}
+                  options={SPOTIFY_PRESENCE_FORMATS}
+                />
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#080a10] border border-white/5 space-y-2">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <SiSpotify size={14} className="text-[#1DB954]" /> Format Preview Details
+                </div>
+                <div className="text-[11px] text-[#E5E7EB]/60 space-y-1">
+                  <div>• <b>Rich Card:</b> Album art, equalizer bars, clickable title & live timeline.</div>
+                  <div>• <b>Compact Player:</b> Sleek horizontal row player with cover & progress.</div>
+                  <div>• <b>Minimalist Pill:</b> Glowing floating pill with live track title.</div>
+                  <div>• <b>Marquee Ticker:</b> Full-width animated scrolling status bar.</div>
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+          {/* Discord Presence */}
+          <Panel title="Discord Live Presence & Assets">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Show Discord Presence Widget"
+                  description="Live status, avatar and rich presence activity badge"
+                  checked={s.presence?.discord !== false}
+                  onChange={(v) => patchPresence("discord", v)}
+                />
+                <ToggleRow
+                  label="Use Discord PFP as Profile Avatar"
+                  description="Sync live Discord avatar automatically"
+                  checked={s.presence?.use_discord_pfp === true}
+                  onChange={(v) => patchPresence("use_discord_pfp", v)}
+                />
+                <ToggleRow
+                  label="Show Discord Role Badge"
+                  description="Display verified member badge next to presence"
+                  checked={s.presence?.show_discord_badge !== false}
+                  onChange={(v) => patchPresence("show_discord_badge", v)}
+                />
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Discord Banner Cover URL</Label>
+                  <Input
+                    value={s.discord_larp_banner || ""}
+                    onChange={(e) => patch("discord_larp_banner", e.target.value)}
+                    placeholder="https://...banner.png"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                  />
+                </div>
+                <div className="text-[11px] text-[#E5E7EB]/50">
+                  Custom cover header displayed inside the Discord interactive presence modal card.
+                </div>
               </div>
             </div>
           </Panel>

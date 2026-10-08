@@ -1146,6 +1146,16 @@ export function BadgesSection() {
             onChange={(value) => setBadgeStyle((style) => ({ ...style, shape: value }))}
             options={[{ v: "circle", l: "Circle" }, { v: "rounded", l: "Rounded square" }, { v: "square", l: "Square" }]}
           />
+          <SelectRow
+            label="Tooltip mode"
+            value={badgeStyle.tooltip_style || user.settings?.badge_tooltip_style || "normal"}
+            onChange={(value) => setBadgeStyle((style) => ({ ...style, tooltip_style: value }))}
+            options={[
+              { v: "normal", l: "Normal (Rich Glowing Card)" },
+              { v: "basic", l: "Basic (Dark Pill)" },
+              { v: "mini", l: "Mini (Pure Text - No Background)" },
+            ]}
+          />
         </div>
         <div>
           <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1.5">
