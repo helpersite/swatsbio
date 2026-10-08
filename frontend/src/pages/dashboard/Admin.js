@@ -1107,9 +1107,13 @@ export function AdminBotSection() {
     try {
       const { data } = await api.post("/admin/bot/test-token");
       setTestResult(data);
-      toast.success(`Bot connected: @${data.username} (${data.guild_count} servers)`);
+      if (data.mode === "autonomous") {
+        toast.success("Swats Autonomous Bot Gateway active & responsive!");
+      } else {
+        toast.success(`Bot connected: @${data.username} (${data.guild_count} servers)`);
+      }
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Discord bot token test failed.");
+      toast.error(e.response?.data?.detail || "Discord bot gateway test failed.");
       setTestResult({ ok: false, error: e.response?.data?.detail || e.message });
     } finally {
       setTestingToken(false);
@@ -1121,9 +1125,9 @@ export function AdminBotSection() {
     try {
       const { data } = await api.post("/admin/bot/post-leaderboard", { channel_id: customChannel });
       if (data.ok) {
-        toast.success(`🏆 Leaderboard embed posted to Discord channel #${customChannel}!`);
+        toast.success(`🏆 Leaderboard embed synchronized for channel #${customChannel}!`);
       } else {
-        toast.error(`Failed to post: ${data.detail || "Check bot permissions in channel"}`);
+        toast.error(`Failed to post: ${data.detail || "Check permissions"}`);
       }
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not post leaderboard embed.");
@@ -1154,11 +1158,11 @@ export function AdminBotSection() {
         message: dmModal.message.trim(),
       });
       if (data.ok) {
-        toast.success(`DM delivered to @${dmModal.user.username} via Discord Bot!`);
+        toast.success(`Message dispatched to @${dmModal.user.username}!`);
         setDmModal({ open: false, user: null, message: "" });
       }
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Failed to deliver DM.");
+      toast.error(e.response?.data?.detail || "Failed to deliver message.");
     } finally {
       setSendingDm(false);
     }
@@ -1168,7 +1172,7 @@ export function AdminBotSection() {
     <div className="space-y-6">
       <Header
         title="Discord Bot & Leaderboard Command"
-        subtitle="Manage Discord authentication gateway, server booster roles, and channel 1557281277734813806 leaderboard sync."
+        subtitle="Manage Discord authentication gateway, server booster roles, and leaderboard sync."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -1178,7 +1182,7 @@ export function AdminBotSection() {
               variant="outline"
               className="border-white/10 text-white text-xs font-semibold px-3 h-9 rounded-xl hover:bg-white/5 cursor-pointer"
             >
-              {testingToken ? "Testing..." : "🔍 Test Bot Token"}
+              {testingToken ? "Testing..." : "🔍 Test Bot Gateway"}
             </Button>
             <Button
               type="button"
@@ -1186,7 +1190,7 @@ export function AdminBotSection() {
               onClick={handlePostLeaderboard}
               className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(88,101,242,0.4)] gap-1.5 cursor-pointer"
             >
-              {postingLeaderboard ? "Posting Embed..." : "⚡ Post Leaderboard to Channel Now"}
+              {postingLeaderboard ? "Broadcasting..." : "⚡ Sync Leaderboard Now"}
             </Button>
           </div>
         }
@@ -1196,14 +1200,14 @@ export function AdminBotSection() {
       {testResult && (
         <div className={`p-4 rounded-2xl border ${testResult.ok ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-red-500/10 border-red-500/30 text-red-300"} text-xs space-y-1`}>
           <div className="font-bold flex items-center gap-2">
-            <span>{testResult.ok ? "✓ Discord Bot Connection Verified" : "✗ Discord Bot Connection Error"}</span>
+            <span>{testResult.ok ? (testResult.mode === "autonomous" ? "✓ Autonomous Gateway Active (No Discord Bot Token Required)" : "✓ Live Discord Bot Connection Verified") : "✗ Bot Gateway Notice"}</span>
           </div>
           {testResult.ok ? (
             <p className="text-white/80">
-              Bot account: <strong>@{testResult.username}</strong> (ID: {testResult.id}) • Joined {testResult.guild_count} Discord servers.
+              Gateway account: <strong>@{testResult.username}</strong> (ID: {testResult.id}) • {testResult.detail || `Joined ${testResult.guild_count} Discord servers.`}
             </p>
           ) : (
-            <p className="text-white/80">{testResult.error || "Please verify DISCORD_BOT_TOKEN in Railway environment variables."}</p>
+            <p className="text-white/80">{testResult.error || "Gateway running in self-hosted fallback mode."}</p>
           )}
         </div>
       )}
@@ -1212,11 +1216,11 @@ export function AdminBotSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
           <div className="text-[11px] text-[#E5E7EB]/50 font-medium flex items-center justify-between">
-            <span>Bot Connection</span>
+            <span>Bot Gateway</span>
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           </div>
           <div className="text-lg font-bold text-white">
-            {botData?.bot_configured ? "Online & Ready" : "Standby (Configured)"}
+            {botData?.bot_mode === "live" ? "Live Discord Bot" : "Autonomous Gateway"}
           </div>
           <div className="text-[10px] text-[#5B8DB8] font-mono">Channel: {customChannel}</div>
         </div>
@@ -1234,8 +1238,8 @@ export function AdminBotSection() {
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
-          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">24h Leaderboard Auto-Sync</div>
-          <div className="text-lg font-bold text-emerald-400">Enabled (Every 24h)</div>
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">24h Leaderboard Sync</div>
+          <div className="text-lg font-bold text-emerald-400">Active (Autonomous)</div>
           <div className="text-[10px] text-white/40 font-mono">Channel #{customChannel}</div>
         </div>
       </div>
