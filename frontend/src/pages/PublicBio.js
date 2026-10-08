@@ -2855,23 +2855,12 @@ function BioCard({ bio }) {
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} />}
-          </div>
-        )}
 
+            {/* 2x2 Grid of square tiles */}
             {cardLinks.length > 0 && (
-              <RenderLinksContainer
-                links={cardLinks}
-                accent={accent}
-                linkBg={linkBg}
-                linkText={linkText}
-                cardBorder={cardBorder}
-                rightBtnStyle={linkBtnStyle}
-                linkLayoutStyle={s.link_layout_style}
-                linkAnimation={s.link_animation}
-                iconNoBg={iconNoBg}
-                showPresenceModal={showPresenceModal}
-                onPresenceClick={handlePresenceClick}
-              />
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mt-6">
+                {cardLinks.map((l, i) => <LinkTile key={l.id} l={l} accent={accent} index={i} linkBg={linkBg} linkText={linkText} cardBorder={cardBorder} animation={s.link_animation} iconNoBg={iconNoBg} onPresenceClick={showPresenceModal ? handlePresenceClick : null} />)}
+              </div>
             )}
           </div>
         )}
