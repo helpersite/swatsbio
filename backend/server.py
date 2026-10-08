@@ -536,6 +536,14 @@ class SendMessageIn(BaseModel):
 class ReactMessageIn(BaseModel):
     emoji: str
 
+class TemplateIn(BaseModel):
+    name: str
+    visibility: Optional[str] = "public"
+    display_name: Optional[str] = ""
+    description: Optional[str] = ""
+    settings: Optional[dict] = {}
+    links: Optional[list] = []
+
 class DonationCheckoutIn(BaseModel):
     amount_usd: int
     name: Optional[str] = ""
@@ -2250,6 +2258,101 @@ async def pin_channel_message(channel_id: str, message_id: str, user: dict = Dep
     await db.execute(text("UPDATE chat_messages SET pinned = :p WHERE id = :id"), {"p": new_pinned, "id": message_id})
     await db.commit()
     return {"ok": True, "pinned": new_pinned}
+
+# ─────────────────────────────────────────
+# Templates
+# ─────────────────────────────────────────
+@api.get("/templates")
+async def list_templates(limit: int = 100, db: AsyncSession = Depends(get_db)):
+    try:
+        rows = await db.execute(text("""
+            SELECT t.id, t.owner_id, t.name, t.display_name, t.description, t.settings, t.links, t.downloads, t.created_at, t.visibility, t.target_role,
+                   u.username as owner_username, u.display_name as owner_display_name
+            FROM shared_profile_templates t
+            LEFT JOIN users u ON t.owner_id = u.id
+            WHERE t.visibility = 'public'
+            ORDER BY t.downloads DESC, t.created_at DESC
+            LIMIT :lim
+        """), {"lim": limit})
+        res = []
+        for r in rows.fetchall():
+            d = dict(r._mapping)
+            d["settings"] = _j(d.get("settings")) or {}
+            d["links"] = _j(d.get("links")) or []
+            res.append(d)
+        return res
+    except Exception as e:
+        logger.warning(f"Error listing templates: {e}")
+        return []
+
+@api.post("/templates")
+async def create_template(body: TemplateIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    tid = str(uuid.uuid4())
+    ts = now_iso()
+    name = (body.name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Template name required")
+    await db.execute(text("""
+        INSERT INTO shared_profile_templates (id, owner_id, name, display_name, description, settings, links, downloads, created_at, visibility, target_role)
+        VALUES (:id, :uid, :name, :dn, :desc, :settings, :links, 0, :ca, :vis, '')
+    """), {
+        "id": tid,
+        "uid": user["id"],
+        "name": name,
+        "dn": body.display_name or "",
+        "desc": body.description or "",
+        "settings": _jdump(body.settings or {}),
+        "links": _jdump(body.links or []),
+        "ca": ts,
+        "vis": body.visibility or "public"
+    })
+    await db.commit()
+    return {
+        "id": tid,
+        "owner_id": user["id"],
+        "owner_username": user["username"],
+        "name": name,
+        "display_name": body.display_name or "",
+        "description": body.description or "",
+        "settings": body.settings or {},
+        "links": body.links or [],
+        "downloads": 0,
+        "created_at": ts
+    }
+
+@api.post("/templates/{template_id}/apply")
+async def apply_template(template_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT * FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    tmpl = row.fetchone()
+    if not tmpl:
+        raise HTTPException(status_code=404, detail="Template not found")
+    t_dict = dict(tmpl._mapping)
+    t_settings = _j(t_dict.get("settings")) or {}
+    
+    user_settings = user.get("settings") or {}
+    updated_settings = {**user_settings, **t_settings}
+    
+    await db.execute(text("UPDATE users SET settings = :s WHERE id = :id"), {
+        "s": _jdump(updated_settings),
+        "id": user["id"]
+    })
+    await db.execute(text("UPDATE shared_profile_templates SET downloads = downloads + 1 WHERE id = :id"), {"id": template_id})
+    await db.commit()
+    
+    user["settings"] = updated_settings
+    return {"ok": True, "user": public_user(user)}
+
+@api.delete("/templates/{template_id}")
+async def delete_template(template_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT owner_id FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    tmpl = row.fetchone()
+    if not tmpl:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if tmpl[0] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete template")
+    await db.execute(text("DELETE FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    await db.commit()
+    return {"ok": True}
 
 # ─────────────────────────────────────────
 # Admin
