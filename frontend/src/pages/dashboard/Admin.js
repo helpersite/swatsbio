@@ -13,7 +13,7 @@ import { LineChart, Line, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Resp
 import { toast } from "sonner";
 import {
   MoreVertical, Trash2, Award, ExternalLink, Copy, Plus, Globe, Save,
-  Search, Shield, ShieldAlert, ShieldCheck, Check, CheckSquare, Square, Eye, Sparkles, UserCheck, Crown, Activity, X, Link2
+  Search, Shield, ShieldAlert, ShieldCheck, Check, CheckSquare, Square, Eye, Sparkles, UserCheck, Crown, Activity, X, Link2, Sliders, LogIn
 } from "lucide-react";
 import { SiSpotify, SiDiscord } from "react-icons/si";
 import { brandIcon } from "@/lib/brandIcons";
@@ -92,6 +92,29 @@ export function AdminUsers() {
     await api.delete(`/admin/users/${id}`);
     load();
     toast.success("User deleted.");
+  };
+
+  const swapToUserDashboard = async (u) => {
+    try {
+      const res = await api.post(`/admin/impersonate/${u.id}`);
+      if (res.data?.token) {
+        // Save current admin credentials so admin can return seamlessly
+        const currentToken = localStorage.getItem("token") || "";
+        const currentUser = localStorage.getItem("user") || "";
+        localStorage.setItem("admin_impersonator_token", currentToken);
+        localStorage.setItem("admin_impersonator_user", currentUser);
+        localStorage.setItem("admin_impersonating_target", JSON.stringify(u));
+        
+        // Update auth state with user's token
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+        
+        toast.success(`Swapped into @${u.username}'s dashboard!`);
+        window.location.href = "/dashboard/profile";
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Could not swap to user dashboard");
+    }
   };
 
   const openManager = (u) => {
@@ -339,9 +362,17 @@ export function AdminUsers() {
                   <div className="flex items-center justify-end gap-1.5">
                     <Button
                       size="sm"
+                      onClick={() => swapToUserDashboard(u)}
+                      className="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40 text-xs h-8 px-2.5 rounded-lg gap-1.5 font-semibold transition-all hover:scale-105"
+                      title="Swap into user's dashboard to edit their profile directly"
+                    >
+                      <Sliders size={13} className="text-emerald-400" /> Swap to Dash
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => openManager(u)}
-                      className="border-[#4A6B8A]/40 hover:border-[#5B8DB8] text-xs h-8 px-3 rounded-lg gap-1.5"
+                      className="border-[#4A6B8A]/40 hover:border-[#5B8DB8] text-xs h-8 px-2.5 rounded-lg gap-1.5"
                     >
                       <Award size={13} className="text-[#5B8DB8]" /> Manage
                     </Button>
@@ -352,6 +383,9 @@ export function AdminUsers() {
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="bg-[#161a22] border-[#4A6B8A]/40 text-[#E5E7EB]">
+                        <DropdownMenuItem onClick={() => swapToUserDashboard(u)} className="text-emerald-400 focus:text-emerald-300 font-semibold">
+                          <Sliders size={14} className="mr-2 text-emerald-400" /> Swap to User's Dashboard
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => window.open(`/${encodeURIComponent(u.username)}`, "_blank")}>
                           <ExternalLink size={14} className="mr-2" /> View Public Bio
                         </DropdownMenuItem>

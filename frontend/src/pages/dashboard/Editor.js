@@ -16,7 +16,7 @@ import {
   Edit3, Shield, Star, Gamepad2, ArrowRight, Wand, X,
   Radio, Volume2, VolumeX, ListMusic, Music2, Play, Pause,
   Disc, SlidersHorizontal, Share2, MoveHorizontal, MoveVertical,
-  AlignLeft, AlignCenter, AlignRight, FileText
+  AlignLeft, AlignCenter, AlignRight, FileText, DoorOpen, Lock, KeyRound, Monitor
 } from "lucide-react";
 import { SiSpotify, SiDiscord } from "react-icons/si";
 import CustomColorPicker from "@/components/ColorPicker";
@@ -87,6 +87,33 @@ export const SPOTIFY_PRESENCE_FORMATS = [
   { v: "compact", l: "Compact Player (Horizontal Row)" },
   { v: "pill", l: "Minimalist Pill (Glowing Status)" },
   { v: "ticker", l: "Marquee Ticker (Animated Marquee)" },
+];
+
+export const ENTRY_SCREEN_STYLES = [
+  { v: "minimal", l: "Minimal Pill", desc: "Pill badge with pulsing accent beacon" },
+  { v: "glass", l: "Frosted Glass Card", desc: "Interactive frosted card with glowing icon" },
+  { v: "cyber", l: "Cyberpunk Tactical HUD", desc: "Corner-bracketed HUD with glowing neon border" },
+  { v: "hologram", l: "Sci-Fi Hologram Beacon", desc: "Circular pulsating holographic emitter" },
+  { v: "terminal", l: "Hacker Console", desc: "Monospace CLI prompt with interactive prompt" },
+  { v: "fingerprint", l: "Biometric Touch Sensor", desc: "Tactile biometric scanner with radar ring" },
+  { v: "gate", l: "Security Vault Gate", desc: "Shield gate with restricted access status" },
+];
+
+export const ENTRY_EXIT_ANIMATIONS = [
+  { v: "fade_out", l: "Smooth Fade (Default)" },
+  { v: "zoom_out", l: "Deep Warp Zoom Out" },
+  { v: "slide_up", l: "Cinematic Slide Up" },
+  { v: "glitch_exit", l: "Cyber Matrix Glitch" },
+  { v: "curtain_split", l: "Curtain Split Open" },
+];
+
+export const ENTRY_PARTICLES = [
+  { v: "none", l: "None (Clean Background)" },
+  { v: "stars", l: "Stars Particles" },
+  { v: "matrix", l: "Matrix Code Rain" },
+  { v: "snow", l: "Soft Snowfall" },
+  { v: "sparks", l: "Electric Sparks" },
+  { v: "sakura", l: "Sakura Petals" },
 ];
 
 export const AUDIO_PLAYER_STYLES = [
@@ -339,6 +366,16 @@ export default function Editor({ initialTab = "profile" }) {
     }));
   };
 
+  const patchEnterScreen = (key, val) => {
+    setS((p) => ({
+      ...p,
+      enter_screen: {
+        ...(p.enter_screen || {}),
+        [key]: val,
+      },
+    }));
+  };
+
   const uploadFile = async (file) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -520,6 +557,17 @@ export default function Editor({ initialTab = "profile" }) {
           }`}
         >
           <SiSpotify size={14} className="text-[#1DB954]" /> Live Presence & Spotify
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorCategory("lander")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            editorCategory === "lander"
+              ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20"
+              : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <DoorOpen size={14} className="text-[#5B8DB8]" /> Lander & Entry Screen
         </button>
       </div>
 
@@ -1316,9 +1364,186 @@ export default function Editor({ initialTab = "profile" }) {
                     className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
                   />
                 </div>
-                <div className="text-[11px] text-[#E5E7EB]/50">
-                  Custom cover header displayed inside the Discord interactive presence modal card.
+                <div className="space-y-1 pt-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Discord User ID Override (Snowflake)</Label>
+                  <Input
+                    value={s.presence?.discord_user_id || s.discord_user_id || ""}
+                    onChange={(e) => {
+                      patchPresence("discord_user_id", e.target.value.trim());
+                      patch("discord_user_id", e.target.value.trim());
+                    }}
+                    placeholder="e.g. 102938475610293847"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                  <div className="text-[10px] text-[#E5E7EB]/45">
+                    Stream live Discord status & Spotify via Lanyard WebSocket even without OAuth.
+                  </div>
                 </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB 5: LANDER / ENTRY SCREEN STUDIO                                    */}
+      {/* ========================================================================= */}
+      {editorCategory === "lander" && (
+        <div className="space-y-6">
+          <Panel title="Lander & Entry Gate Settings">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <ToggleRow
+                label="Enable Lander / Entry Screen"
+                description="Prompt visitors with an interactive entrance screen"
+                checked={s.enter_screen?.enabled === true}
+                onChange={(v) => patchEnterScreen("enabled", v)}
+              />
+              <ToggleRow
+                label="Audio Chime on Entrance"
+                description="Play a subtle synth harmonic chime when entering"
+                checked={s.enter_screen?.sound === true}
+                onChange={(v) => patchEnterScreen("sound", v)}
+              />
+              <ToggleRow
+                label="Stealth Pure Black Background"
+                description="Hide profile wallpaper until visitor enters"
+                checked={s.enter_screen?.no_bg === true}
+                onChange={(v) => patchEnterScreen("no_bg", v)}
+              />
+            </div>
+          </Panel>
+
+          {/* Entry Style Selector */}
+          <Panel title="Entrance Style & Visual Interface">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {ENTRY_SCREEN_STYLES.map((st) => {
+                const isSelected = (s.enter_screen?.style || "minimal") === st.v;
+                return (
+                  <button
+                    key={st.v}
+                    type="button"
+                    onClick={() => patchEnterScreen("style", st.v)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-[#5B8DB8]/15 border-[#5B8DB8] shadow-[0_0_20px_rgba(91,141,184,0.25)] ring-1 ring-[#5B8DB8]"
+                        : "bg-[#080a10] border-white/5 hover:border-white/20 hover:bg-white/5"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-bold text-white">{st.l}</span>
+                        {isSelected && <Check size={14} className="text-[#5B8DB8]" />}
+                      </div>
+                      <p className="text-[11px] text-[#E5E7EB]/60 leading-relaxed">{st.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Exit Transition Animation</Label>
+                <Select
+                  value={s.enter_screen?.exit_animation || "fade_out"}
+                  onValueChange={(v) => patchEnterScreen("exit_animation", v)}
+                >
+                  <SelectTrigger className="bg-[#07090e] border-white/10 text-white rounded-xl text-xs h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0b0e14] border-white/10 text-white">
+                    {ENTRY_EXIT_ANIMATIONS.map((ea) => (
+                      <SelectItem key={ea.v} value={ea.v} className="text-xs">{ea.l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Lander Ambient Particle Effect</Label>
+                <Select
+                  value={s.enter_screen?.particle_effect || "none"}
+                  onValueChange={(v) => patchEnterScreen("particle_effect", v)}
+                >
+                  <SelectTrigger className="bg-[#07090e] border-white/10 text-white rounded-xl text-xs h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0b0e14] border-white/10 text-white">
+                    {ENTRY_PARTICLES.map((ep) => (
+                      <SelectItem key={ep.v} value={ep.v} className="text-xs">{ep.l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Panel>
+
+          {/* Typography & Copy */}
+          <Panel title="Lander Typography & Custom Copy">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#E5E7EB]/80">Header Title (Supports Effects)</Label>
+                <Input
+                  value={s.enter_screen?.header || ""}
+                  onChange={(e) => patchEnterScreen("header", e.target.value)}
+                  placeholder="e.g. SWATS.BIO // ACCESS"
+                  className="bg-[#07090e] border-white/10 text-white rounded-xl text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#E5E7EB]/80">Subtitle / Instruction Prompt</Label>
+                <Input
+                  value={s.enter_screen?.subtitle || ""}
+                  onChange={(e) => patchEnterScreen("subtitle", e.target.value)}
+                  placeholder="e.g. Click anywhere or press enter to proceed"
+                  className="bg-[#07090e] border-white/10 text-white rounded-xl text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#E5E7EB]/80">Enter Button Trigger Text</Label>
+                <Input
+                  value={s.enter_screen?.text || ""}
+                  onChange={(e) => patchEnterScreen("text", e.target.value)}
+                  placeholder="e.g. ENTER BIO"
+                  className="bg-[#07090e] border-white/10 text-white rounded-xl text-xs h-9"
+                />
+              </div>
+            </div>
+          </Panel>
+
+          {/* Blur & Dim Sliders */}
+          <Panel title="Lander Blur & Dimming Filters">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white">Background Blur</span>
+                  <span className="text-[#5B8DB8] font-mono">{s.enter_screen?.blur ?? 12}px</span>
+                </div>
+                <Slider
+                  min={0}
+                  max={40}
+                  step={1}
+                  value={[Number(s.enter_screen?.blur ?? 12)]}
+                  onValueChange={([v]) => patchEnterScreen("blur", v)}
+                />
+                <p className="text-[10px] text-[#E5E7EB]/50">Amount of backdrop blur applied behind the entrance screen.</p>
+              </div>
+
+              <div className="space-y-2 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white">Background Darkness / Dim</span>
+                  <span className="text-[#5B8DB8] font-mono">{s.enter_screen?.dim ?? 50}%</span>
+                </div>
+                <Slider
+                  min={0}
+                  max={95}
+                  step={5}
+                  value={[Number(s.enter_screen?.dim ?? 50)]}
+                  onValueChange={([v]) => patchEnterScreen("dim", v)}
+                />
+                <p className="text-[10px] text-[#E5E7EB]/50">Opacity overlay dimming the wallpaper while on the lander screen.</p>
               </div>
             </div>
           </Panel>

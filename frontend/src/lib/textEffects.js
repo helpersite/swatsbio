@@ -73,10 +73,24 @@ function ShuffleText({ text }) {
 export function stripEffectSyntax(text) {
   if (!text || typeof text !== "string") return "";
   let clean = text;
+  // 1. Strip bracketed effect tags: [:sparkle#3845FF:koni:sparkle:], [:glow:koni:], [:neon#3845FF:koni:]
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):([a-zA-Z0-9_#-]+):\]/g, "$2");
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):\]/g, "$2");
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):\]/g, "");
+  // 2. Strip unbracketed tags: :sparkle#3845FF:koni:sparkle:, :glow:koni:glow:, :waveflow:koni:
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):/g, "$2");
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):/g, "$2");
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):/g, "");
-  clean = clean.replace(/\*\*|--|\*/g, "");
+  // 3. Strip BBCode-like tags
+  clean = clean.replace(/\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire|badge|font)[^\]]*\]/gi, "");
+  // 4. Strip markdown link format [text](url) -> text
+  clean = clean.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
+  // 5. Strip markdown formatting
+  clean = clean.replace(/\*\*|--|\*|_|~|`/g, "");
+  // 6. Clean outer brackets / parentheses like [koni] -> koni
+  clean = clean.replace(/^\[+([^\]]+)\]+$/, "$1");
+  clean = clean.replace(/^\(+([^\)]+)\)+$/, "$1");
+  clean = clean.replace(/\s+/g, " ");
   return clean.trim();
 }
 

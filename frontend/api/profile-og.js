@@ -26,6 +26,24 @@ function isVideo(value) {
   return /\.(mp4|webm|mov|m4v|ogg)([?#]|$)/i.test(value || "");
 }
 
+function stripEffectSyntax(text) {
+  if (!text || typeof text !== "string") return "";
+  let clean = text;
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):([a-zA-Z0-9_#-]+):\]/g, "$2");
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):\]/g, "$2");
+  clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):\]/g, "");
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):/g, "$2");
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):/g, "$2");
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):/g, "");
+  clean = clean.replace(/\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire|badge|font)[^\]]*\]/gi, "");
+  clean = clean.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
+  clean = clean.replace(/\*\*|--|\*|_|~|`/g, "");
+  clean = clean.replace(/^\[+([^\]]+)\]+$/, "$1");
+  clean = clean.replace(/^\(+([^\)]+)\)+$/, "$1");
+  clean = clean.replace(/\s+/g, " ");
+  return clean.trim();
+}
+
 module.exports = async function profileOg(req, res) {
   let username = String(req.query.username || "").trim().toLowerCase();
   try { username = decodeURIComponent(username); } catch {}
@@ -72,11 +90,13 @@ module.exports = async function profileOg(req, res) {
     ].filter((value) => value && value !== "invisible" && !isVideo(value));
     
     const image = mediaUrl(candidates[0]) || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`;
-    const displayName = bio.display_name || bio.username || username;
-    const title = settings.meta_title || `${displayName} (@${username}) • Swats.bio`;
+    const rawDisplayName = bio.display_name || bio.username || username;
+    const displayName = stripEffectSyntax(rawDisplayName) || username;
+    const rawTitle = settings.meta_title || `${displayName} (@${username}) • Swats.bio`;
+    const title = stripEffectSyntax(rawTitle) || `${displayName} (@${username}) • Swats.bio`;
     const views = Number(bio.views || 0).toLocaleString();
     const rawDesc = settings.meta_desc || bio.description || `View @${username}'s official bio, social links, and music on Swats.bio.`;
-    const description = rawDesc.replace(/:[a-zA-Z0-9_-]+:/g, "").slice(0, 300);
+    const description = (stripEffectSyntax(rawDesc) || `View @${username}'s official profile on Swats.bio.`).slice(0, 300);
     const themeColor = settings.meta_theme_color || settings.accent_color || "#5B8DB8";
     const pageUrl = `https://swats.bio/${encodeURIComponent(username)}`;
     const oembedUrl = `${BACKEND_URL}/api/oembed?username=${encodeURIComponent(username)}&format=json`;

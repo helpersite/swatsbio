@@ -21,6 +21,7 @@ import ProfileTemplatesSection from "@/pages/dashboard/ProfileTemplatesSection";
 import ToolsSection from "@/pages/dashboard/ToolsSection";
 import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection, AdminOAuthInspector } from "@/pages/dashboard/Admin";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { toast } from "sonner";
 
 const SIDEBAR_CATEGORIES = [
   {
@@ -123,6 +124,21 @@ export default function Dashboard() {
 
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+
+  const isImpersonating = typeof window !== "undefined" && Boolean(localStorage.getItem("admin_impersonator_token"));
+  const returnToAdmin = () => {
+    const adminToken = localStorage.getItem("admin_impersonator_token");
+    const adminUser = localStorage.getItem("admin_impersonator_user");
+    if (adminToken) {
+      localStorage.setItem("token", adminToken);
+      if (adminUser) localStorage.setItem("user", adminUser);
+      localStorage.removeItem("admin_impersonator_token");
+      localStorage.removeItem("admin_impersonator_user");
+      localStorage.removeItem("admin_impersonating_target");
+      toast.success("Returned to Admin Control Panel!");
+      window.location.href = "/dashboard/admin-users";
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) navigate("/auth");
@@ -318,6 +334,35 @@ export default function Dashboard() {
       {/* Main Workspace Stage (Solid Background, wide container) */}
       <main className="flex-1 p-3 sm:p-6 lg:p-8 pt-18 lg:pt-6 overflow-x-hidden min-h-screen bg-[#08090d]">
         <div className="w-full max-w-[1900px] mx-auto">
+          {/* Admin Impersonation Floating Notification */}
+          {isImpersonating && (
+            <div className="mb-5 p-3.5 px-4.5 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-emerald-600/10 to-transparent border border-emerald-500/40 flex flex-wrap items-center justify-between gap-3 shadow-[0_0_25px_rgba(16,185,129,0.15)]">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+                  <UserCheck size={18} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Admin Impersonation Mode</span>
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-300 font-mono text-[10px] uppercase font-bold">
+                      ACTIVE
+                    </span>
+                  </div>
+                  <div className="text-xs text-emerald-200/70 mt-0.5">
+                    Currently managing and editing the dashboard for <strong className="text-white">@{user.username}</strong> ({user.email}).
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={returnToAdmin}
+                className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs h-8 px-4 rounded-xl shadow-lg shadow-emerald-500/20 cursor-pointer transition-all hover:scale-105"
+              >
+                Return to Admin Panel &rarr;
+              </Button>
+            </div>
+          )}
+
           <div id={`section-${active}`} className="w-full bg-[#0c0e18]/90 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-2xl shadow-black/80">
             <ErrorBoundary key={active}>
               {renderSection()}

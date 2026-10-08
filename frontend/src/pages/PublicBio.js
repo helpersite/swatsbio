@@ -492,14 +492,14 @@ function EnterScreen({ bio, username, onUnlock }) {
   const [unlockedFade, setUnlockedFade] = useState(false);
   const needsPassword = bio.locked;
   const style = es.password_style || "text";
-  const entryStyle = "minimal";
-  const exitAnim = "fade_out";
+  const entryStyle = es.style || "minimal";
+  const exitAnim = es.exit_animation || "fade_out";
   const entryBlur = Number(es.blur ?? 12);
   const dimPct = Number(es.dim ?? 50) / 100;
   const entryHeaderText = (es.header || "").toString().trim();
   const entrySubtitle = (es.subtitle || "").toString().trim();
   const entryButtonText = stripEffectSyntax(es.text || "Click or press enter to continue").trim() || "Click or press enter to continue";
-  const bgParticleEffect = "none";
+  const bgParticleEffect = es.particle_effect || "none";
 
   const bannerUrl = fileUrl(s.backgrounds?.[0] || s.banner);
 
@@ -2022,27 +2022,77 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
   const [lanyard, setLanyard] = useState(null);
 
   useEffect(() => {
-    if (!discord?.id) return;
+    const discordId = discord?.id || discord?.user_id;
+    if (!discordId) return;
+
+    let ws = null;
+    let heartbeatInterval = null;
     let alive = true;
+
+    // 1. Initial REST fetch for instant response
     const fetchLanyard = () => {
-      fetch(`https://api.lanyard.rest/v1/users/${discord.id}`)
+      fetch(`https://api.lanyard.rest/v1/users/${discordId}`)
         .then((res) => res.json())
         .then((data) => {
-          if (alive && data?.success) setLanyard(data.data);
+          if (alive && data?.success && data?.data) {
+            setLanyard(data.data);
+          }
         })
         .catch(() => {});
     };
     fetchLanyard();
-    const timer = setInterval(fetchLanyard, 8000);
-    return () => { alive = false; clearInterval(timer); };
-  }, [discord?.id]);
+
+    // 2. Real-time Lanyard WebSocket connection
+    try {
+      ws = new WebSocket("wss://api.lanyard.rest/socket");
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const { op, t, d } = payload;
+          if (op === 1) {
+            // Hello opcode -> start heartbeat and subscribe
+            const interval = d.heartbeat_interval || 30000;
+            heartbeatInterval = setInterval(() => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ op: 3 }));
+              }
+            }, interval);
+
+            ws.send(JSON.stringify({
+              op: 2,
+              d: { subscribe_to_id: discordId }
+            }));
+          } else if (op === 0 && (t === "INIT_STATE" || t === "PRESENCE_UPDATE")) {
+            if (alive && d) {
+              setLanyard(d);
+            }
+          }
+        } catch (e) {}
+      };
+      ws.onerror = () => {};
+    } catch (e) {}
+
+    const pollingTimer = setInterval(fetchLanyard, 12000);
+
+    return () => {
+      alive = false;
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      if (pollingTimer) clearInterval(pollingTimer);
+      if (ws) {
+        try { ws.close(); } catch (e) {}
+      }
+    };
+  }, [discord?.id, discord?.user_id]);
 
   const liveStatus = lanyard?.discord_status || discord.status || discord.presence?.status || "offline";
-  const liveAvatar = lanyard?.discord_user?.avatar
-    ? `https://cdn.discordapp.com/avatars/${discord.id}/${lanyard.discord_user.avatar}.png`
+  const userObj = lanyard?.discord_user;
+  const liveAvatar = userObj?.avatar
+    ? `https://cdn.discordapp.com/avatars/${discord.id || userObj.id}/${userObj.avatar}.${userObj.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
     : discord.avatar;
-  const liveName = lanyard?.discord_user?.global_name || lanyard?.discord_user?.username || discord.global_name || discord.username || "Discord";
-  const activity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || lanyard?.activities?.find((a) => a.type === 4);
+  const liveName = userObj?.global_name || userObj?.username || discord.global_name || discord.username || "Discord";
+  const customStatus = lanyard?.activities?.find((a) => a.type === 4);
+  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3);
+  const spotify = lanyard?.spotify;
 
   const statusMap = {
     online: { label: "online", bg: "rgba(34,197,94,0.18)", border: "rgba(34,197,94,0.6)", color: "#86efac" },
@@ -2073,17 +2123,29 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
       </div>
 
       <div className="text-left min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/50">Discord</div>
-        <div className="text-xs text-[#E5E7EB] font-medium truncate">{liveName}</div>
-        {activity && (
-          <div className="text-[10px] text-white/60 truncate mt-0.5 font-mono">
-            {activity.type === 4 ? (activity.state || activity.name) : `${activity.type === 1 ? "Streaming" : activity.type === 2 ? "Listening to" : activity.type === 3 ? "Watching" : "Playing"} ${activity.name}`}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/50 font-bold">Discord</span>
+          {customStatus?.state && (
+            <span className="text-[10px] text-white/50 truncate max-w-[140px] italic">
+              — {customStatus.state}
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-[#E5E7EB] font-bold truncate">{liveName}</div>
+        {spotify ? (
+          <div className="text-[10px] text-emerald-400 truncate mt-0.5 font-mono flex items-center gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Listening to {spotify.song} — {spotify.artist}</span>
           </div>
-        )}
+        ) : mainActivity ? (
+          <div className="text-[10px] text-white/70 truncate mt-0.5 font-mono">
+            {mainActivity.type === 1 ? "Streaming" : mainActivity.type === 2 ? "Listening to" : mainActivity.type === 3 ? "Watching" : "Playing"} <strong className="text-white font-semibold">{mainActivity.name}</strong>
+          </div>
+        ) : null}
       </div>
 
       {showBadge && (
-        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full border shrink-0" style={{ background: visual.bg, borderColor: visual.border, color: visual.color }}>
+        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full border shrink-0 font-mono uppercase" style={{ background: visual.bg, borderColor: visual.border, color: visual.color }}>
           {visual.label}
         </span>
       )}

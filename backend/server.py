@@ -699,11 +699,24 @@ def strip_effect_syntax(text: str) -> str:
     if not text:
         return ""
     clean = str(text)
+    # 1. Strip bracketed effect tags: [:sparkle#3845FF:koni:sparkle:], [:glow:koni:], [:neon#3845FF:koni:]
+    clean = re.sub(r'\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):([a-zA-Z0-9_#-]+):\]', r'\2', clean)
+    clean = re.sub(r'\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):\]', r'\2', clean)
+    clean = re.sub(r'\[:([a-zA-Z0-9_#-]+):\]', '', clean)
+    # 2. Strip unbracketed effect tags: :sparkle#3845FF:koni:sparkle:, :glow:koni:glow:, :waveflow:koni:
     clean = re.sub(r':([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):', r'\2', clean)
     clean = re.sub(r':([a-zA-Z0-9_#-]+):([^:\n]+):', r'\2', clean)
     clean = re.sub(r':([a-zA-Z0-9_#-]+):', '', clean)
-    clean = re.sub(r'\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire)[^\]]*\]', '', clean, flags=re.IGNORECASE)
+    # 3. Strip BBCode-like bracket tags: [glow#fff]text[/glow], [b]text[/b], [badge]text[/badge]
+    clean = re.sub(r'\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire|badge|font)[^\]]*\]', '', clean, flags=re.IGNORECASE)
+    # 4. Strip markdown link format [text](url) -> text
+    clean = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', clean)
+    # 5. Strip markdown bold/italic/strikethrough/code markers
     clean = re.sub(r'[\*\_~`]', '', clean)
+    # 6. Clean outer/stray brackets or parenthesis around words like [koni] -> koni
+    clean = re.sub(r'^\[+([^\]]+)\]+$', r'\1', clean.strip())
+    clean = re.sub(r'^\(+([^\)]+)\)+$', r'\1', clean.strip())
+    clean = re.sub(r'\s+', ' ', clean)
     return clean.strip()
 
 def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse:
@@ -717,7 +730,8 @@ def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse
     else:
         settings = _j(user.get("settings")) or {}
         display_name = strip_effect_syntax(user.get("display_name") or username) or username
-        meta_title = settings.get("meta_title") or f"{display_name} (@{username}) • Swats.bio"
+        raw_title = settings.get("meta_title") or f"{display_name} (@{username}) • Swats.bio"
+        meta_title = strip_effect_syntax(raw_title) or f"{display_name} (@{username}) • Swats.bio"
         raw_desc = settings.get("meta_desc") or user.get("description") or f"View @{username}'s official bio, social links, and music on Swats.bio."
         meta_desc = strip_effect_syntax(raw_desc)
         if not meta_desc:
@@ -2723,6 +2737,24 @@ async def admin_users(admin: dict = Depends(require_admin), db: AsyncSession = D
     rows = await db.execute(text("SELECT * FROM users ORDER BY created_at DESC"))
     return [public_user(row_to_user(r)) for r in rows.fetchall()]
 
+@api.post("/admin/impersonate/{user_id}")
+async def admin_impersonate_user(user_id: str, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT * FROM users WHERE id = :id"), {"id": user_id})
+    target_user = row_to_user(row.fetchone())
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    token = create_access_token(target_user["id"], target_user["email"])
+    return {
+        "ok": True,
+        "token": token,
+        "user": public_user(target_user),
+        "impersonating": True,
+        "target_username": target_user["username"],
+        "target_id": target_user["id"],
+        "original_admin_id": admin["id"],
+        "original_admin_username": admin["username"],
+    }
+
 @api.put("/admin/users/{user_id}")
 async def admin_update_user(user_id: str, body: AdminUserUpdate, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     row = await db.execute(text("SELECT * FROM users WHERE id = :id"), {"id": user_id})
@@ -4313,12 +4345,17 @@ async def spotify_login_root_alias(user: dict = Depends(get_current_user)):
 def render_metadata_html(user_data: Optional[dict], raw_username: str) -> str:
     username = raw_username.lstrip("@").strip().lower()
     if user_data:
-        display_name = user_data.get("display_name") or user_data.get("username") or username
+        raw_dname = user_data.get("display_name") or user_data.get("username") or username
+        display_name = strip_effect_syntax(raw_dname) or username
         st = user_data.get("settings") or {}
         bio_url = f"https://swats.bio/{user_data.get('username', username)}"
         
-        meta_title = st.get("meta_title") or f"{display_name} (@{user_data.get('username', username)}) • Swats.bio"
-        meta_desc = st.get("meta_desc") or user_data.get("description") or "Explore my official links, social channels, and exclusive content on Swats.bio."
+        raw_title = st.get("meta_title") or f"{display_name} (@{user_data.get('username', username)}) • Swats.bio"
+        meta_title = strip_effect_syntax(raw_title) or f"{display_name} (@{user_data.get('username', username)}) • Swats.bio"
+        raw_desc = st.get("meta_desc") or user_data.get("description") or "Explore my official links, social channels, and exclusive content on Swats.bio."
+        meta_desc = strip_effect_syntax(raw_desc)
+        if not meta_desc:
+            meta_desc = f"View @{username}'s official profile on Swats.bio."
         meta_theme_color = st.get("meta_theme_color") or st.get("accent_color") or "#5B8DB8"
         if not meta_theme_color.startswith("#"):
             meta_theme_color = f"#{meta_theme_color}"
@@ -4328,7 +4365,7 @@ def render_metadata_html(user_data: Optional[dict], raw_username: str) -> str:
             meta_image = f"https://www.swats.bio{meta_image}"
             
         twitter_card = st.get("twitter_card") or "summary_large_image"
-        meta_keywords = st.get("meta_keywords") or f"swats bio, biolink, {username}, creator, gaming, social"
+        meta_keywords = strip_effect_syntax(st.get("meta_keywords") or f"swats bio, biolink, {username}, creator, gaming, social")
     else:
         display_name = username
         bio_url = f"https://swats.bio/{username}"
