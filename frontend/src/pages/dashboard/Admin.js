@@ -1437,3 +1437,351 @@ export function AdminBotSection() {
   );
 }
 
+// ──────────────────────────────────────────────
+// OAUTH & CONNECTED ACCOUNTS INSPECTOR (SPOTIFY & DISCORD)
+// ──────────────────────────────────────────────
+export function AdminOAuthInspector() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all"); // "all" | "spotify" | "discord" | "both" | "boosters"
+  const [probingUser, setProbingUser] = useState(null);
+  const [probeResult, setProbeResult] = useState(null);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get("/admin/users");
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (err) {
+      toast.error("Failed to load user roster.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleProbeSpotify = async (u) => {
+    setProbingUser(u.username);
+    setProbeResult(null);
+    try {
+      const { data } = await api.get(`/u/${encodeURIComponent(u.username)}/nowplaying`);
+      setProbeResult({ username: u.username, data });
+      if (data?.playing) {
+        toast.success(`Active playback detected for @${u.username}: ${data.track}`);
+      } else {
+        toast.info(`Spotify probe for @${u.username}: ${data?.state || "Idle / Not playing"}`);
+      }
+    } catch (err) {
+      toast.error(`Could not probe Spotify for @${u.username}`);
+    } finally {
+      setProbingUser(null);
+    }
+  };
+
+  const copyText = (t, label = "Copied") => {
+    navigator.clipboard.writeText(t);
+    toast.success(`${label} copied to clipboard!`);
+  };
+
+  // Stats calculation
+  const totalUsers = users.length;
+  const spotifyUsers = users.filter((u) => u.connections?.spotify?.id || u.connections?.spotify?.display_name || u.connections?.spotify?.access_token);
+  const discordUsers = users.filter((u) => u.connections?.discord?.id || u.connections?.discord?.username);
+  const dualUsers = users.filter((u) => (u.connections?.spotify?.id || u.connections?.spotify?.access_token) && u.connections?.discord?.id);
+  const boosterUsers = users.filter((u) => u.is_booster || u.role === "vip" || (u.badges || []).includes("booster"));
+
+  const filteredUsers = users.filter((u) => {
+    const hasSpotify = !!(u.connections?.spotify?.id || u.connections?.spotify?.display_name || u.connections?.spotify?.access_token);
+    const hasDiscord = !!(u.connections?.discord?.id || u.connections?.discord?.username);
+
+    if (filter === "spotify" && !hasSpotify) return false;
+    if (filter === "discord" && !hasDiscord) return false;
+    if (filter === "both" && (!hasSpotify || !hasDiscord)) return false;
+    if (filter === "boosters" && !u.is_booster && !(u.badges || []).includes("booster")) return false;
+
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      (u.username || "").toLowerCase().includes(q) ||
+      (u.display_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.connections?.spotify?.display_name || "").toLowerCase().includes(q) ||
+      (u.connections?.spotify?.id || "").toLowerCase().includes(q) ||
+      (u.connections?.discord?.username || "").toLowerCase().includes(q) ||
+      (u.connections?.discord?.id || "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="space-y-6">
+      <Header
+        title="OAuth & Connected Accounts Inspector"
+        subtitle="Live telemetry and identity verification across all linked Spotify and Discord accounts."
+        action={
+          <Button
+            type="button"
+            onClick={loadUsers}
+            disabled={loading}
+            className="rounded-xl bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold gap-2"
+          >
+            <ShieldCheck size={15} /> Refresh Accounts
+          </Button>
+        }
+      />
+
+      {/* Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-[#0c0e15] border border-white/10 space-y-1">
+          <div className="flex items-center justify-between text-xs text-white/50">
+            <span>Spotify Connected</span>
+            <SiSpotify className="text-[#1DB954]" size={16} />
+          </div>
+          <div className="text-2xl font-black text-white font-mono">{spotifyUsers.length}</div>
+          <div className="text-[11px] text-white/40">{Math.round((spotifyUsers.length / Math.max(1, totalUsers)) * 100)}% of total users</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e15] border border-white/10 space-y-1">
+          <div className="flex items-center justify-between text-xs text-white/50">
+            <span>Discord Connected</span>
+            <SiDiscord className="text-[#5865F2]" size={16} />
+          </div>
+          <div className="text-2xl font-black text-white font-mono">{discordUsers.length}</div>
+          <div className="text-[11px] text-white/40">{Math.round((discordUsers.length / Math.max(1, totalUsers)) * 100)}% of total users</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e15] border border-white/10 space-y-1">
+          <div className="flex items-center justify-between text-xs text-white/50">
+            <span>Dual Connected</span>
+            <Sparkles className="text-amber-400" size={16} />
+          </div>
+          <div className="text-2xl font-black text-white font-mono">{dualUsers.length}</div>
+          <div className="text-[11px] text-white/40">Spotify + Discord linked</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e15] border border-white/10 space-y-1">
+          <div className="flex items-center justify-between text-xs text-white/50">
+            <span>Server Boosters</span>
+            <Crown className="text-purple-400" size={16} />
+          </div>
+          <div className="text-2xl font-black text-white font-mono">{boosterUsers.length}</div>
+          <div className="text-[11px] text-white/40">Active VIP perks enabled</div>
+        </div>
+      </div>
+
+      {/* Control Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#0c0e15] border border-white/10">
+        <div className="relative flex-1 max-w-md">
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search Spotify display name, Discord ID, username..."
+            className="pl-9 bg-[#08090d] border-white/10 text-xs rounded-xl h-9 text-white font-mono"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          {[
+            { id: "all", label: `All Users (${totalUsers})` },
+            { id: "spotify", label: `Spotify (${spotifyUsers.length})` },
+            { id: "discord", label: `Discord (${discordUsers.length})` },
+            { id: "both", label: `Both (${dualUsers.length})` },
+            { id: "boosters", label: `Boosters (${boosterUsers.length})` },
+          ].map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                filter === f.id
+                  ? "bg-[#5B8DB8] text-white shadow"
+                  : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Accounts Table */}
+      <div className="p-4 rounded-2xl bg-[#0c0e15] border border-white/10 overflow-x-auto shadow-2xl">
+        <table className="w-full text-left text-xs min-w-[850px]">
+          <thead>
+            <tr className="border-b border-white/10 text-white/45 uppercase tracking-wider font-mono text-[10px]">
+              <th className="pb-3 px-2">Swats Operator</th>
+              <th className="pb-3 px-2">Spotify Linked Account</th>
+              <th className="pb-3 px-2">Discord Linked Account</th>
+              <th className="pb-3 px-2">Booster / Role</th>
+              <th className="pb-3 px-2 text-right">Telemetry Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-white/40">
+                  No connected accounts matched your filter criteria.
+                </td>
+              </tr>
+            ) : (
+              filteredUsers.map((u) => {
+                const sp = u.connections?.spotify;
+                const dc = u.connections?.discord;
+                const hasSpotify = !!(sp?.id || sp?.display_name || sp?.access_token);
+                const hasDiscord = !!(dc?.id || dc?.username);
+
+                return (
+                  <tr key={u.id} className="hover:bg-white/[0.02] transition-colors">
+                    {/* Operator */}
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={fileUrl(u.settings?.pfp) || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`}
+                          alt=""
+                          className="w-8 h-8 rounded-full border border-white/10 object-cover"
+                        />
+                        <div>
+                          <div className="font-bold text-white flex items-center gap-1.5">
+                            <span>{stripEffectSyntax(u.display_name || u.username)}</span>
+                            {u.verified && <span className="text-emerald-400 text-[10px]">✓</span>}
+                          </div>
+                          <div className="text-[11px] text-white/45 font-mono">@{u.username}</div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Spotify Column */}
+                    <td className="py-3 px-2">
+                      {hasSpotify ? (
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-[#1DB954]/20 border border-[#1DB954]/40 flex items-center justify-center text-[#1DB954] shrink-0">
+                            <SiSpotify size={13} />
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate flex items-center gap-1.5">
+                              <span>{sp.display_name || sp.id || "Connected"}</span>
+                              {sp.product && (
+                                <span className="px-1.5 py-0.2 rounded bg-[#1DB954]/20 text-[#1DB954] text-[9px] font-mono font-bold uppercase">
+                                  {sp.product}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-white/40 font-mono truncate">
+                              ID: {sp.id || "OAuth Token Active"} {sp.country ? `• ${sp.country}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-white/30 text-[11px] italic font-mono">Not linked</span>
+                      )}
+                    </td>
+
+                    {/* Discord Column */}
+                    <td className="py-3 px-2">
+                      {hasDiscord ? (
+                        <div className="flex items-center gap-2">
+                          {dc.avatar ? (
+                            <img
+                              src={dc.avatar.startsWith("http") ? dc.avatar : `https://cdn.discordapp.com/avatars/${dc.id}/${dc.avatar}.png`}
+                              alt=""
+                              className="w-6 h-6 rounded-full border border-[#5865F2]/40 object-cover"
+                            />
+                          ) : (
+                            <span className="w-6 h-6 rounded-lg bg-[#5865F2]/20 border border-[#5865F2]/40 flex items-center justify-center text-[#5865F2] shrink-0">
+                              <SiDiscord size={13} />
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate flex items-center gap-1.5">
+                              <span>{dc.global_name || dc.username || "Discord User"}</span>
+                            </div>
+                            <div className="text-[10px] text-white/40 font-mono truncate flex items-center gap-1">
+                              <span>{dc.id}</span>
+                              <button
+                                type="button"
+                                onClick={() => copyText(dc.id, "Discord ID")}
+                                className="text-white/30 hover:text-white"
+                                title="Copy Discord ID"
+                              >
+                                <Copy size={10} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-white/30 text-[11px] italic font-mono">Not linked</span>
+                      )}
+                    </td>
+
+                    {/* Booster / Access Role */}
+                    <td className="py-3 px-2">
+                      <div className="flex items-center gap-1.5">
+                        {u.is_booster || (u.badges || []).includes("booster") ? (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Crown size={10} /> Booster
+                          </span>
+                        ) : null}
+                        <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-white/70 text-[10px] font-semibold uppercase">
+                          {u.role || "User"}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-3 px-2 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {hasSpotify && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleProbeSpotify(u)}
+                            disabled={probingUser === u.username}
+                            className="h-7 px-2.5 text-[11px] font-bold bg-[#1DB954]/20 hover:bg-[#1DB954] text-[#1DB954] hover:text-black border border-[#1DB954]/30 rounded-lg cursor-pointer"
+                          >
+                            <Activity size={11} className="mr-1" />
+                            {probingUser === u.username ? "Probing..." : "Probe Spotify"}
+                          </Button>
+                        )}
+                        <a
+                          href={`/${u.username}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-7 px-2 text-[11px] bg-white/5 hover:bg-white/10 text-white/70 hover:text-white rounded-lg flex items-center justify-center border border-white/10"
+                        >
+                          <ExternalLink size={12} />
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Live Probe Feedback Banner */}
+      {probeResult && (
+        <div className="p-4 rounded-2xl bg-[#080a10] border border-[#1DB954]/40 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-white flex items-center gap-2">
+              <SiSpotify className="text-[#1DB954]" size={14} />
+              <span>Probe Result for @{probeResult.username}</span>
+            </span>
+            <button onClick={() => setProbeResult(null)} className="text-white/40 hover:text-white">
+              <X size={13} />
+            </button>
+          </div>
+          <pre className="text-[11px] font-mono text-white/80 bg-black/60 p-3 rounded-xl overflow-x-auto border border-white/5">
+            {JSON.stringify(probeResult.data, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+

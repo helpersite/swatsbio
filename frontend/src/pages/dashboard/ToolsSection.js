@@ -414,25 +414,31 @@ export default function ToolsSection() {
   ];
 
   // ──────────────────────────────────────────────
-  // 10. CLOUDFLARE PROTECTION & DNS GUIDE
+  // 10. IP & GEOIP THREAT OSINT INVESTIGATOR
   // ──────────────────────────────────────────────
-  const [domainInput, setDomainInput] = useState("");
-  const [dnsResult, setDnsResult] = useState(null);
+  const [ipInput, setIpInput] = useState("");
+  const [ipLoading, setIpLoading] = useState(false);
+  const [ipResult, setIpResult] = useState(null);
 
-  const handleCheckDns = (e) => {
-    e.preventDefault();
-    if (!domainInput.trim()) return;
-    const clean = domainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    setDnsResult({
-      domain: clean,
-      cnameTarget: "swatsbio-production.up.railway.app",
-      status: "Configured for Cloudflare Proxy",
-      recommendedCname: `CNAME  ${clean}  ->  swatsbio-production.up.railway.app  (Proxied - Orange Cloud ☁️)`,
-      recommendedA: `A  ${clean}  ->  Railway / Custom Edge IP`,
-      sslMode: "Full (Strict)",
-      botFightMode: "Enabled"
-    });
-    toast.success("Cloudflare DNS configuration generated!");
+  const handleLookupIp = async (e, customTarget) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const query = customTarget !== undefined ? customTarget : ipInput.trim();
+    setIpLoading(true);
+    try {
+      const targetUrl = query ? `https://ipapi.co/${encodeURIComponent(query)}/json/` : `https://ipapi.co/json/`;
+      const res = await fetch(targetUrl);
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.reason || "IP intelligence lookup failed.");
+      } else {
+        setIpResult(data);
+        toast.success(`OSINT intel resolved for ${data.ip || query}`);
+      }
+    } catch (err) {
+      toast.error("Could not connect to GeoIP provider.");
+    } finally {
+      setIpLoading(false);
+    }
   };
 
   const copyToClipboard = (text) => {
@@ -456,7 +462,7 @@ export default function ToolsSection() {
               <span className="px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] text-[10px] font-mono font-bold border border-[#5B8DB8]/30">V3.0</span>
             </h1>
             <p className="text-xs text-[#E5E7EB]/60">
-              OpenGraph metadata customization, Discord embed dispatchers, Snowflake OSINT, Cloudflare protection & permission calculators
+              OpenGraph metadata customization, Discord embed dispatchers, Snowflake OSINT, IP/GeoIP intelligence & permission calculators
             </p>
           </div>
         </div>
@@ -470,7 +476,7 @@ export default function ToolsSection() {
             { id: "discord_perms", label: "Discord Perms & Bot", icon: Key },
             { id: "token_osint", label: "Token Inspector", icon: Fingerprint },
             { id: "social_osint", label: "Social OSINT", icon: Search },
-            { id: "cloudflare", label: "Cloudflare & DNS", icon: Shield },
+            { id: "geoip", label: "IP & GeoIP OSINT", icon: Globe },
             { id: "fonts", label: "Bio Fonts", icon: Type },
             { id: "gradients", label: "Gradient Studio", icon: Palette },
             { id: "qr", label: "QR Generator", icon: QrCode },
@@ -1049,82 +1055,150 @@ export default function ToolsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 7. CLOUDFLARE & DDOS PROTECTION CONFIGURATOR */}
+      {/* 7. IP & GEOIP THREAT OSINT INVESTIGATOR */}
       {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "cloudflare" && (
+      {toolTab === "geoip" && (
         <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <Shield size={16} className="text-amber-400" />
-              <span>Cloudflare Protection & Custom Domain Setup</span>
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Step-by-step setup guide to proxy your domain through Cloudflare for free DDoS mitigation, rate limiting, and Bot Fight Mode.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+                <Globe size={16} className="text-[#5B8DB8]" />
+                <span>IP & GeoIP OSINT Investigator</span>
+              </h2>
+              <p className="text-xs text-[#E5E7EB]/60">
+                Resolve IP addresses or hostnames to geographic location, autonomous system (ASN), ISP routing, and network footprint.
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={() => handleLookupIp(null, "")}
+              disabled={ipLoading}
+              variant="outline"
+              className="border-white/10 text-xs bg-white/5 hover:bg-white/10 text-white rounded-xl gap-1.5 cursor-pointer shrink-0"
+            >
+              {ipLoading ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />}
+              <span>Inspect My IP</span>
+            </Button>
           </div>
 
-          <form onSubmit={handleCheckDns} className="flex gap-2">
-            <Input
-              value={domainInput}
-              onChange={(e) => setDomainInput(e.target.value)}
-              placeholder="e.g. bio.yourdomain.com or myname.me"
-              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-amber-400"
-            />
+          <form onSubmit={(e) => handleLookupIp(e)} className="flex gap-2">
+            <div className="relative flex-1">
+              <Globe size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40" />
+              <Input
+                value={ipInput}
+                onChange={(e) => setIpInput(e.target.value)}
+                placeholder="Enter IPv4 / IPv6 or domain (e.g. 1.1.1.1 or 8.8.8.8)"
+                className="pl-9 text-xs bg-[#08090d] border-white/10 rounded-xl text-white font-mono focus:border-[#5B8DB8]"
+              />
+            </div>
             <Button
               type="submit"
-              className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
+              disabled={ipLoading}
+              className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer gap-1.5"
             >
-              Generate DNS Map
+              {ipLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              <span>Investigate</span>
             </Button>
           </form>
 
-          {dnsResult && (
-            <div className="p-4 rounded-xl bg-[#08090d] border border-amber-500/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white">Target Domain: {dnsResult.domain}</span>
-                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
-                  {dnsResult.status}
-                </span>
+          {/* Quick Preset IP Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="text-white/40 text-[11px] font-mono mr-1">Sample Queries:</span>
+            {[
+              { label: "Cloudflare (1.1.1.1)", ip: "1.1.1.1" },
+              { label: "Google Public (8.8.8.8)", ip: "8.8.8.8" },
+              { label: "Quad9 (9.9.9.9)", ip: "9.9.9.9" },
+              { label: "OpenDNS (208.67.222.222)", ip: "208.67.222.222" },
+            ].map((p) => (
+              <button
+                key={p.ip}
+                type="button"
+                onClick={() => {
+                  setIpInput(p.ip);
+                  handleLookupIp(null, p.ip);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-[#5B8DB8]/20 border border-white/10 hover:border-[#5B8DB8]/40 text-white/70 hover:text-white text-[11px] font-mono transition-all cursor-pointer"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Result Card */}
+          {ipResult && (
+            <div className="p-4 rounded-xl bg-[#08090d] border border-[#5B8DB8]/30 space-y-4 animate-in fade-in duration-200">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#5B8DB8]/20 border border-[#5B8DB8]/40 flex items-center justify-center text-[#5B8DB8]">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white font-mono flex items-center gap-2">
+                      <span>{ipResult.ip || ipInput}</span>
+                      {ipResult.country_code && (
+                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white border border-white/10">
+                          {ipResult.country_code}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-[#E5E7EB]/60">
+                      {ipResult.city ? `${ipResult.city}, ` : ""}{ipResult.region ? `${ipResult.region}, ` : ""}{ipResult.country_name || "Unknown Country"}
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => copyToClipboard(JSON.stringify(ipResult, null, 2))}
+                  className="bg-white/5 hover:bg-white/10 text-white text-xs rounded-lg gap-1 border border-white/10"
+                >
+                  <Copy size={12} /> Copy JSON
+                </Button>
               </div>
-              <div className="space-y-2 text-xs font-mono text-white/80 bg-black/40 p-3 rounded-lg border border-white/5">
-                <div>{dnsResult.recommendedCname}</div>
+
+              {/* Data Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Autonomous System (ASN)</span>
+                  <span className="text-xs font-mono font-bold text-[#5B8DB8] mt-0.5 block truncate">{ipResult.asn || "N/A"}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">ISP / Provider</span>
+                  <span className="text-xs font-bold text-white mt-0.5 block truncate">{ipResult.org || ipResult.asn || "N/A"}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Timezone</span>
+                  <span className="text-xs font-mono text-white/90 mt-0.5 block truncate">{ipResult.timezone || "UTC"}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-black/40 border border-white/5">
+                  <span className="text-[10px] text-white/40 uppercase font-bold block">Currency / Calling Code</span>
+                  <span className="text-xs font-mono text-emerald-400 mt-0.5 block truncate">{ipResult.currency || "USD"} ({ipResult.country_calling_code || "+1"})</span>
+                </div>
+              </div>
+
+              {/* Coordinates & Map Link */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 text-xs text-white/70">
+                <div className="flex items-center gap-2 font-mono text-[11px]">
+                  <span>LAT: <strong>{ipResult.latitude || "N/A"}</strong></span>
+                  <span>•</span>
+                  <span>LON: <strong>{ipResult.longitude || "N/A"}</strong></span>
+                  {ipResult.postal && <span>• Postal: {ipResult.postal}</span>}
+                </div>
+                {ipResult.latitude && ipResult.longitude && (
+                  <a
+                    href={`https://www.google.com/maps?q=${ipResult.latitude},${ipResult.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[#5B8DB8] hover:underline text-xs font-semibold"
+                  >
+                    <span>Open Satellite Map</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
               </div>
             </div>
           )}
-
-          {/* Step-by-Step Cloudflare Protection Guide */}
-          <div className="space-y-3 pt-2">
-            <div className="text-xs font-bold text-white uppercase tracking-wider">Cloudflare Protection Checklist</div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
-                <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-                  <span>1. Orange Cloud Proxy</span>
-                </div>
-                <p className="text-[11px] text-white/70 leading-relaxed">
-                  In Cloudflare DNS, ensure the CNAME points to <code className="text-[#5B8DB8]">swatsbio-production.up.railway.app</code> with <strong>Proxy status: Proxied (Orange cloud)</strong>.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
-                <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                  <span>2. SSL/TLS Full (Strict)</span>
-                </div>
-                <p className="text-[11px] text-white/70 leading-relaxed">
-                  Go to <strong>SSL/TLS &gt; Overview</strong> in Cloudflare and set encryption mode to <strong>Full (Strict)</strong> for end-to-end HTTPS encryption.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
-                <div className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
-                  <span>3. Bot Fight Mode & WAF</span>
-                </div>
-                <p className="text-[11px] text-white/70 leading-relaxed">
-                  Go to <strong>Security &gt; Bots</strong> and enable <strong>Bot Fight Mode</strong> to automatically block malicious automated crawlers and scrapers.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

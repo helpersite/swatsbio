@@ -20,7 +20,7 @@ import {
 import ProfileTemplatesSection from "@/pages/dashboard/ProfileTemplatesSection";
 import SocialSection from "@/pages/dashboard/SocialSection";
 import ToolsSection from "@/pages/dashboard/ToolsSection";
-import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection } from "@/pages/dashboard/Admin";
+import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection, AdminOAuthInspector } from "@/pages/dashboard/Admin";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 const SIDEBAR_CATEGORIES = [
@@ -68,6 +68,7 @@ const ADMIN_CATEGORY = {
   icon: Shield,
   items: [
     { id: "admin-bot", label: "Bot Manager", icon: Shield },
+    { id: "admin-oauth", label: "OAuth & Spotify", icon: Link2 },
     { id: "admin-users", label: "Manage Users", icon: Users },
     { id: "admin-invites", label: "Invite Codes", icon: KeyRound },
     { id: "admin-stats", label: "Platform Stats", icon: Activity },
@@ -172,6 +173,9 @@ export default function Dashboard() {
       case "admin-bot":
       case "bot":
         return <AdminBotSection />;
+      case "admin-oauth":
+      case "admin-connections":
+        return <AdminOAuthInspector />;
       case "admin-users":
         return <AdminUsers />;
       case "admin-invites":

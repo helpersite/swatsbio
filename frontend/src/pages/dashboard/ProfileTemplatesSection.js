@@ -156,7 +156,7 @@ export const OFFICIAL_STYLE_PRESETS = [
       name_effect: "sparkle",
       name_color: "#F59E0B",
       bio_effect: "glow",
-      layout: "magazine",
+      layout: "split_left",
       font_family: "Outfit",
     },
   },

@@ -461,3 +461,208 @@ export function BackgroundEffect({ effect, config = {} }) {
       return null;
   }
 }
+
+// ──────────────────────────────────────────────
+// INTERACTIVE CURSOR EFFECTS RENDERER
+// ──────────────────────────────────────────────
+export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) {
+  const canvasRef = useRef(null);
+  const mouseRef = useRef({ x: -1000, y: -1000, isDown: false, lastX: -1000, lastY: -1000 });
+  const particlesRef = useRef([]);
+
+  useEffect(() => {
+    if (!effect || effect === "none") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animId;
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const onMouseMove = (e) => {
+      mouseRef.current.lastX = mouseRef.current.x;
+      mouseRef.current.lastY = mouseRef.current.y;
+      mouseRef.current.x = e.clientX;
+      mouseRef.current.y = e.clientY;
+
+      if (effect === "trail" || effect === "sparkles") {
+        const count = effect === "sparkles" ? 3 : 2;
+        for (let i = 0; i < count; i++) {
+          particlesRef.current.push({
+            x: e.clientX + (Math.random() - 0.5) * 8,
+            y: e.clientY + (Math.random() - 0.5) * 8,
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: (Math.random() - 0.5) * 1.5,
+            size: (Math.random() * 0.6 + 0.4) * size,
+            alpha: 1,
+            decay: Math.random() * 0.03 + 0.02,
+            rotation: Math.random() * Math.PI * 2,
+            rotSpeed: (Math.random() - 0.5) * 0.1,
+          });
+        }
+      }
+    };
+
+    const onMouseDown = (e) => {
+      mouseRef.current.isDown = true;
+      if (effect === "sparkles" || effect === "trail") {
+        for (let i = 0; i < 12; i++) {
+          const angle = (Math.PI * 2 * i) / 12;
+          const speed = 2 + Math.random() * 3;
+          particlesRef.current.push({
+            x: e.clientX,
+            y: e.clientY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: (Math.random() * 0.8 + 0.6) * size,
+            alpha: 1,
+            decay: 0.025,
+            rotation: Math.random() * Math.PI,
+            rotSpeed: 0.15,
+          });
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      mouseRef.current.isDown = false;
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mouseup", onMouseUp);
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const mx = mouseRef.current.x;
+      const my = mouseRef.current.y;
+
+      // 1. Neon Aura Effect
+      if (effect === "neon_aura" && mx > -100) {
+        const rad = size * 3;
+        const grad = ctx.createRadialGradient(mx, my, 0, mx, my, rad);
+        grad.addColorStop(0, color);
+        grad.addColorStop(0.35, `${color}88`);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(mx, my, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2. Precision Dot Effect
+      if (effect === "glow_dot" && mx > -100) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(mx, my, size / 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // 3. Tactical Crosshair Effect
+      if (effect === "crosshair" && mx > -100) {
+        const arm = size * 1.2;
+        const gap = size * 0.4;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+
+        // Reticle lines
+        ctx.beginPath();
+        // Top
+        ctx.moveTo(mx, my - gap);
+        ctx.lineTo(mx, my - gap - arm);
+        // Bottom
+        ctx.moveTo(mx, my + gap);
+        ctx.lineTo(mx, my + gap + arm);
+        // Left
+        ctx.moveTo(mx - gap, my);
+        ctx.lineTo(mx - gap - arm, my);
+        // Right
+        ctx.moveTo(mx + gap, my);
+        ctx.lineTo(mx + gap + arm, my);
+        ctx.stroke();
+
+        // Center dot
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(mx, my, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // 4. Trail & Sparkles Particle Loop
+      if ((effect === "trail" || effect === "sparkles") && particlesRef.current.length > 0) {
+        for (let i = particlesRef.current.length - 1; i >= 0; i--) {
+          const p = particlesRef.current[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= p.decay;
+          p.rotation += p.rotSpeed;
+
+          if (p.alpha <= 0) {
+            particlesRef.current.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.globalAlpha = p.alpha;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = color;
+
+          if (effect === "sparkles") {
+            // Draw 4-point star
+            const s = p.size;
+            ctx.beginPath();
+            ctx.moveTo(0, -s);
+            ctx.quadraticCurveTo(0, 0, s, 0);
+            ctx.quadraticCurveTo(0, 0, 0, s);
+            ctx.quadraticCurveTo(0, 0, -s, 0);
+            ctx.quadraticCurveTo(0, 0, 0, -s);
+            ctx.fill();
+          } else {
+            // Draw glowing particle circle
+            ctx.beginPath();
+            ctx.arc(0, 0, Math.max(1, p.size / 2), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [effect, color, size]);
+
+  if (!effect || effect === "none") return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 pointer-events-none z-50 w-full h-full"
+      style={{ touchAction: "none" }}
+    />
+  );
+}

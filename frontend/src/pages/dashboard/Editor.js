@@ -33,7 +33,6 @@ export const CARD_LAYOUTS = [
   { v: "bento_grid", l: "Bento Grid", desc: "Modern multi-tile responsive bento blocks" },
   { v: "split_left", l: "2-Column Split", desc: "Profile identity on left, links on right" },
   { v: "floating_glass", l: "Floating Glass", desc: "Decoupled floating frosted glass tiles" },
-  { v: "magazine", l: "Editorial Hero", desc: "Bold header banner with featured bio hero" },
   { v: "grid_tiles", l: "2×2 Grid Tiles", desc: "Square interactive icon & link tiles" },
 ];
 
@@ -242,12 +241,6 @@ function RealLayoutPreview({ layout, isSelected, pfpUrl }) {
         <div className="flex flex-col items-center justify-center h-full gap-1.5">
           <div className="w-7 h-7 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-md" />
           <div className="w-20 h-3 rounded-lg bg-white/10 backdrop-blur-md border border-white/20" />
-        </div>
-      )}
-      {layout === "magazine" && (
-        <div className="h-full flex flex-col justify-between">
-          <div className="h-10 rounded-t-lg bg-gradient-to-r from-[#5B8DB8]/30 to-purple-600/30" />
-          <div className="h-3 rounded bg-white/10 border border-white/5" />
         </div>
       )}
       {layout === "grid_tiles" && (
@@ -542,7 +535,7 @@ export default function Editor({ initialTab = "profile" }) {
               <div className="space-y-1.5 relative">
                 <div className="flex justify-between items-center">
                   <Label className="text-xs text-[#E5E7EB]/70 font-semibold">Display Name</Label>
-                  <span className="text-[11px] font-mono text-[#5B8DB8]">Click [ ✨ FX ] to style font</span>
+                  <span className="text-[11px] font-mono text-[#5B8DB8]">Text FX</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -779,28 +772,7 @@ export default function Editor({ initialTab = "profile" }) {
                 </div>
               )}
 
-              {activeLayout === "magazine" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <SelectRow
-                    label="Headline Style"
-                    value={s.magazine_headline || "bold"}
-                    onChange={(v) => patch("magazine_headline", v)}
-                    options={[
-                      { v: "bold", l: "Heavy Display Bold" },
-                      { v: "editorial", l: "Editorial Serif Light" },
-                      { v: "cyber", l: "Cyber Monospace" },
-                    ]}
-                  />
-                  <SliderRow
-                    label="Hero Banner Height"
-                    value={s.hero_height || 180}
-                    min={120}
-                    max={260}
-                    suffix="px"
-                    onChange={(v) => patch("hero_height", v)}
-                  />
-                </div>
-              )}
+
 
               {activeLayout === "slideshow" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

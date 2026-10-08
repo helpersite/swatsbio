@@ -10,7 +10,7 @@ import { SiDiscord, SiSpotify, SiTiktok, SiYoutube, SiTwitch, SiKick, SiInstagra
 import { brandIcon, BRAND_COLORS } from "@/lib/brandIcons";
 import { DETAIL_KEYS } from "@/lib/linkConfig";
 import { injectCustomFonts } from "@/lib/fonts";
-import { BackgroundEffect } from "@/components/BackgroundEffects";
+import { BackgroundEffect, CursorEffectsRenderer } from "@/components/BackgroundEffects";
 import { AvatarDecoration } from "@/components/AvatarDecorations";
 import { MediaDisplay } from "@/components/MediaDisplay";
 import { getDiscordBadges, DISCORD_BADGES_CATALOG, DiscordBadgeIcon } from "@/lib/discordBadges";
@@ -1979,7 +1979,31 @@ function SocialIconsRow({ links = [], accent, align = "center", max = 50, onSoci
 
 function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
   if (!discord) return null;
-  const status = discord.status || discord.presence?.status || "offline";
+  const [lanyard, setLanyard] = useState(null);
+
+  useEffect(() => {
+    if (!discord?.id) return;
+    let alive = true;
+    const fetchLanyard = () => {
+      fetch(`https://api.lanyard.rest/v1/users/${discord.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (alive && data?.success) setLanyard(data.data);
+        })
+        .catch(() => {});
+    };
+    fetchLanyard();
+    const timer = setInterval(fetchLanyard, 8000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [discord?.id]);
+
+  const liveStatus = lanyard?.discord_status || discord.status || discord.presence?.status || "offline";
+  const liveAvatar = lanyard?.discord_user?.avatar
+    ? `https://cdn.discordapp.com/avatars/${discord.id}/${lanyard.discord_user.avatar}.png`
+    : discord.avatar;
+  const liveName = lanyard?.discord_user?.global_name || lanyard?.discord_user?.username || discord.global_name || discord.username || "Discord";
+  const activity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || lanyard?.activities?.find((a) => a.type === 4);
+
   const statusMap = {
     online: { label: "online", bg: "rgba(34,197,94,0.18)", border: "rgba(34,197,94,0.6)", color: "#86efac" },
     idle: { label: "idle", bg: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.6)", color: "#fbbf24" },
@@ -1987,7 +2011,7 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
     offline: { label: "offline", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.4)", color: "#cbd5e1" },
     streaming: { label: "live", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.5)", color: "#d8b4fe" },
   };
-  const visual = statusMap[status] || statusMap.offline;
+  const visual = statusMap[liveStatus] || statusMap.offline;
 
   return (
     <div
@@ -1996,25 +2020,30 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
       style={{ background: "rgba(88,101,242,0.10)", border: "1px solid rgba(88,101,242,0.3)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
     >
       <div className="relative shrink-0">
-        {discord.avatar ? (
-          <img src={discord.avatar} alt="" className="w-10 h-10 rounded-full border border-white/10 object-cover" />
+        {liveAvatar ? (
+          <img src={liveAvatar} alt="" className="w-10 h-10 rounded-full border border-white/10 object-cover" />
         ) : (
           <span className="w-10 h-10 rounded-full bg-[#5865F2]/30 flex items-center justify-center border border-white/10"><SiDiscord color="#5865F2" size={18} /></span>
         )}
         <span
           className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#0b0d12]"
           style={{ background: visual.color, boxShadow: `0 0 10px ${visual.color}` }}
-          title={status}
+          title={liveStatus}
         />
       </div>
 
-      <div className="text-left min-w-0">
+      <div className="text-left min-w-0 flex-1">
         <div className="text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/50">Discord</div>
-        <div className="text-xs text-[#E5E7EB] font-medium truncate">{discord.global_name || discord.username || "Discord"}</div>
+        <div className="text-xs text-[#E5E7EB] font-medium truncate">{liveName}</div>
+        {activity && (
+          <div className="text-[10px] text-white/60 truncate mt-0.5 font-mono">
+            {activity.type === 4 ? (activity.state || activity.name) : `${activity.type === 1 ? "Streaming" : activity.type === 2 ? "Listening to" : activity.type === 3 ? "Watching" : "Playing"} ${activity.name}`}
+          </div>
+        )}
       </div>
 
       {showBadge && (
-        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full border" style={{ background: visual.bg, borderColor: visual.border, color: visual.color }}>
+        <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full border shrink-0" style={{ background: visual.bg, borderColor: visual.border, color: visual.color }}>
           {visual.label}
         </span>
       )}
@@ -2397,16 +2426,35 @@ function BioCard({ bio }) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [scrolledDown, setScrolledDown] = useState(false);
 
+  const customSlides = Array.isArray(s.slideshow?.slides) ? s.slideshow.slides : [];
+
   const slideshowSlides = useMemo(() => {
-    return [
-      { id: "slide-0", label: "Identity" },
-      { id: "slide-1", label: "Projects" },
-      ...((s.discord_guild?.name || s.discord_server?.name || s.discord_guild?.invite_url) ? [{ id: "slide-2", label: "Discord" }] : []),
-      ...(s.show_friends !== false && friends.length > 0 ? [{ id: "slide-friends", label: "Friends" }] : []),
-      ...(Array.isArray(s.promos) && s.promos.length > 0 ? [{ id: "slide-3", label: "Showcase" }] : []),
-      { id: "slide-footer", label: "Footer" },
-    ];
-  }, [s.projects, s.discord_guild, s.discord_server, s.show_friends, friends, s.promos]);
+    const list = [{ id: "slide-0", label: "Identity" }];
+
+    if (customSlides.length > 0) {
+      customSlides.forEach((cs, idx) => {
+        list.push({
+          id: `slide-custom-${idx}`,
+          label: cs.title || cs.serverName || `Slide ${idx + 1}`,
+          customData: cs,
+        });
+      });
+    } else {
+      list.push({ id: "slide-1", label: "Projects" });
+      if (s.discord_guild?.name || s.discord_server?.name || s.discord_guild?.invite_url) {
+        list.push({ id: "slide-2", label: "Discord" });
+      }
+    }
+
+    if (s.show_friends !== false && friends.length > 0) {
+      list.push({ id: "slide-friends", label: "Friends" });
+    }
+    if (Array.isArray(s.promos) && s.promos.length > 0) {
+      list.push({ id: "slide-3", label: "Showcase" });
+    }
+    list.push({ id: "slide-footer", label: "Footer" });
+    return list;
+  }, [customSlides, s.projects, s.discord_guild, s.discord_server, s.show_friends, friends, s.promos]);
 
   const scrollToSlide = (id) => {
     const target = id && document.getElementById(id);
@@ -2510,6 +2558,9 @@ function BioCard({ bio }) {
       {/* Dynamic Animated Background Effect */}
       <BackgroundEffect effect={s.bg_effect} />
 
+      {/* Interactive Cursor Effects Renderer (Trail, Sparkles, Reticle, Halo, Dot) */}
+      <CursorEffectsRenderer effect={s.cursor_fx} color={s.cursor_fx_color || accent} size={s.cursor_fx_size || 18} />
+
       {/* Guns.lol / Feds Slideshow Floating HUD Overlays */}
       {layout === "slideshow" && s.slideshow_hud_enabled !== false && (
         <>
@@ -2561,7 +2612,7 @@ function BioCard({ bio }) {
               {(s.presence?.discord || s.presence?.spotify) && (
                 <div className="mt-5 pt-4 border-t border-white/10 space-y-3">
                   {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-                  {s.presence?.spotify && <NowPlaying username={bio.username} />}
+                  {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} />}
                 </div>
               )}
 
@@ -2803,36 +2854,9 @@ function BioCard({ bio }) {
             <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
-
-            {/* 2x2 Grid of square tiles */}
-            {cardLinks.length > 0 && (
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mt-6">
-                {cardLinks.map((l, i) => <LinkTile key={l.id} l={l} accent={accent} index={i} linkBg={linkBg} linkText={linkText} cardBorder={cardBorder} animation={s.link_animation} iconNoBg={iconNoBg} onPresenceClick={showPresenceModal ? handlePresenceClick : null} />)}
-              </div>
-            )}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} />}
           </div>
         )}
-
-        {/* LAYOUT 2: MAGAZINE HERO */}
-        {layout === "magazine" && (
-          <div className={`text-center space-y-4 ${contentAlignClass}`}>
-            <div className={`relative inline-block ${avatarAlignClass}`}>
-              <MediaDisplay src={pfp} alt={bio.display_name || bio.username} className="w-24 h-24 mx-auto object-cover border-2 relative z-10" style={{ ...avatarShape, ...customAvatarSize, ...customAvatarOffsetY, borderColor: accent, boxShadow: `0 0 ${s.glow_intensity ?? 35}px ${glowColor}` }} />
-              <AvatarDecoration decoration={s.avatar_decoration} />
-            </div>
-            <div>
-              <h1 className={`profile-title-3d text-2xl sm:text-3xl font-black ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
-              <div className="text-xs font-semibold uppercase tracking-wider mt-1" style={{ color: accent }}>@{bio.username}</div>
-              {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
-              <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "center"} bio={bio} />
-            </div>
-            {bio.description && <div className={`text-xs leading-relaxed p-3 rounded-xl ${isCardInvisible ? "bg-transparent border-0" : "bg-white/[0.03] border border-white/5"}`} style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</div>}
-            <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "center"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
-
-            {/* Content Blocks */}
-            {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
-            {s.presence?.spotify && <NowPlaying username={bio.username} />}
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -3378,18 +3402,60 @@ function BioCard({ bio }) {
 }
 
 
-function NowPlaying({ username, accent }) {
+function NowPlaying({ username, accent, discordId }) {
   const [np, setNp] = useState(null);
   const [showLyrics, setShowLyrics] = useState(false);
   const lyricsRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
-    const load = () => api.get(`/u/${encodeURIComponent(username)}/nowplaying`).then(({ data }) => { if (alive) setNp(data); }).catch(() => { if (alive) setNp({ playing: false, state: "unavailable" }); });
+    const load = async () => {
+      try {
+        const { data } = await api.get(`/u/${encodeURIComponent(username)}/nowplaying`);
+        if (!alive) return;
+        if (data && data.playing) {
+          setNp(data);
+          return;
+        }
+      } catch (err) {}
+
+      // Fallback to Lanyard if user has Discord listening to Spotify
+      if (discordId) {
+        try {
+          const res = await fetch(`https://api.lanyard.rest/v1/users/${discordId}`);
+          const lanyardRes = await res.json();
+          if (!alive) return;
+          if (lanyardRes?.success && lanyardRes.data?.listening_to_spotify && lanyardRes.data?.spotify) {
+            const sp = lanyardRes.data.spotify;
+            const now = Date.now();
+            const start = sp.timestamps?.start || now;
+            const end = sp.timestamps?.end || (start + 180000);
+            const duration_ms = Math.max(1, end - start);
+            const progress_ms = Math.min(duration_ms, Math.max(0, now - start));
+            setNp({
+              playing: true,
+              track: sp.song,
+              artist: sp.artist,
+              album: sp.album,
+              album_art: sp.album_art_url,
+              url: `https://open.spotify.com/track/${sp.track_id}`,
+              progress_ms,
+              duration_ms,
+            });
+            return;
+          }
+        } catch (err) {}
+      }
+
+      if (alive) {
+        setNp({ playing: false, state: "not_playing" });
+      }
+    };
+
     load();
-    const id = setInterval(load, 12000);
+    const id = setInterval(load, 8000);
     return () => { alive = false; clearInterval(id); };
-  }, [username]);
+  }, [username, discordId]);
 
   const isPlaying = !!np?.playing;
   const pct = isPlaying && np.duration_ms ? Math.min(100, (np.progress_ms / np.duration_ms) * 100) : 0;
