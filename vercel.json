@@ -1,0 +1,8 @@
+{
+  "buildCommand": "node -e \"const fs=require('fs'),cp=require('child_process');const dir=fs.existsSync('frontend')?'frontend':'.';cp.execSync('npm run build',{cwd:dir,stdio:'inherit'})\"",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

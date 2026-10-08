@@ -1,0 +1,422 @@
+import React, { useState, useEffect } from "react";
+import { Ghost, Star } from "lucide-react";
+import sparkleAsset from "../../sparkle_black.gif";
+
+const COLOR_MAP = {
+  red: "#ef4444",
+  blue: "#5B8DB8",
+  cyan: "#06b6d4",
+  purple: "#a855f7",
+  pink: "#ec4899",
+  grey: "#9ca3af",
+  gray: "#9ca3af",
+  white: "#E5E7EB",
+  orange: "#f97316",
+  yellow: "#eab308",
+  green: "#22c55e",
+  gold: "#F5C542",
+  black: "#111827",
+  silver: "#cbd5e1",
+  teal: "#14b8a6",
+  violet: "#8b5cf6",
+  rose: "#f43f5e",
+  emerald: "#10b981",
+  amber: "#f59e0b",
+  sky: "#38bdf8",
+  indigo: "#6366f1",
+};
+
+export const USERNAME_EFFECTS_LIST = [
+  { id: "none", name: "No Effect", desc: "Clean default typography styling", wrap: (t) => t },
+  { id: "glow", name: "Glow", desc: "Refined luminous backlight glow with customizable accent color", wrap: (t, color = "#5B8DB8") => `:glow#${color.replace(/^#/, "")}:${t}:glow:` },
+  { id: "sparkle", name: "Sparkle", desc: "Animated golden sparkle particles around your name", wrap: (t, color = "#F5C542") => `:sparkle#${color.replace(/^#/, "")}:${t}:sparkle:` },
+  { id: "wave_flow", name: "Wave Flow", desc: "True flowing sine wave undulating animation across letters", wrap: (t) => `:waveflow:${t}:` },
+  { id: "rgb_glow", name: "RGB Glow", desc: "Pulsing multi-chroma RGB rainbow perimeter glow", wrap: (t) => `:rgbglow:${t}:` },
+  { id: "bleed", name: "Bleed", desc: "Dripping dark crimson blood shadow & aura", wrap: (t) => `:blood:${t}:` },
+  { id: "flicker", name: "Flicker", desc: "High-voltage neon phosphor flickering strobe", wrap: (t) => `:flicker:${t}:` },
+  { id: "neon", name: "Neon Edge", desc: "Intense neon tube edge glow with customizable color", wrap: (t, color = "#06b6d4") => `:neon#${color.replace(/^#/, "")}:${t}:neon:` },
+  { id: "rainbow", name: "Rainbow Wave", desc: "Smooth chromatic color shifting gradient", wrap: (t) => `:rainbow:${t}:` },
+  { id: "outline", name: "Outline", desc: "Crisp color-stroked lettering", wrap: (t, color = "#5B8DB8") => `:outline#${color.replace(/^#/, "")}:${t}:outline:` },
+];
+
+function ShuffleText({ text }) {
+  const [display, setDisplay] = useState(text);
+  const chars = "!@#$%^&*()_+-=~<>{}[]|/\\0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  useEffect(() => {
+    let iteration = 0;
+    const interval = setInterval(() => {
+      setDisplay(
+        text
+          .split("")
+          .map((letter, index) => {
+            if (index < iteration) {
+              return text[index];
+            }
+            return chars[Math.floor(Math.random() * chars.length)];
+          })
+          .join("")
+      );
+
+      if (iteration >= text.length) {
+        iteration = 0;
+      }
+      iteration += 1 / 3;
+    }, 60);
+
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return <span className="font-mono tracking-wide text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] inline-block">{display}</span>;
+}
+
+export function stripEffectSyntax(text) {
+  if (!text || typeof text !== "string") return "";
+  let clean = text;
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):/g, "$2");
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):/g, "$2");
+  clean = clean.replace(/:([a-zA-Z0-9_#-]+):/g, "");
+  clean = clean.replace(/\*\*|--|\*/g, "");
+  return clean.trim();
+}
+
+function resolveColor(hexMatch, colorMatch, defaultHex) {
+  if (hexMatch) return `#${hexMatch}`;
+  if (colorMatch) {
+    const lower = colorMatch.toLowerCase();
+    if (lower.startsWith("#")) return lower;
+    if (COLOR_MAP[lower]) return COLOR_MAP[lower];
+    if (/^[0-9a-f]{3,8}$/i.test(lower)) return `#${lower}`;
+  }
+  return defaultHex;
+}
+
+export function renderBioText(text) {
+  if (!text) return null;
+  if (typeof text !== "string") return text;
+  
+  const tokens = [];
+  let i = 0;
+  const src = text;
+  const pushText = (s) => { if (s) tokens.push({ t: "text", v: s }); };
+
+  const patterns = [
+    { re: /^:rainbow:([^:\n]+)(?::(?:rainbow|[a-zA-Z0-9_#-]+))?:/i, type: "rainbow" },
+    { re: /^:fuzzy:([^:\n]+)(?::(?:fuzzy|[a-zA-Z0-9_#-]+))?:/i, type: "fuzzy" },
+    { re: /^:shuffle:([^:\n]+)(?::(?:shuffle|[a-zA-Z0-9_#-]+))?:/i, type: "shuffle" },
+    { re: /^:waveflow:([^:\n]+)(?::(?:waveflow|[a-zA-Z0-9_#-]+))?:/i, type: "waveflow" },
+    { re: /^:wavegrad:([^:\n]+)(?::(?:wavegrad|[a-zA-Z0-9_#-]+))?:/i, type: "wavegrad" },
+    { re: /^:rgbglow:([^:\n]+)(?::(?:rgbglow|[a-zA-Z0-9_#-]+))?:/i, type: "rgbglow" },
+    { re: /^:flicker:([^:\n]+)(?::(?:flicker|[a-zA-Z0-9_#-]+))?:/i, type: "flicker" },
+    { re: /^:bats:([^:\n]+)(?::(?:bats|[a-zA-Z0-9_#-]+))?:/i, type: "bats" },
+    { re: /^:sparkle(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "sparkle" },
+    { re: /^:outline(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "outline" },
+    { re: /^:highlight(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "highlight" },
+    { re: /^:fire:([^:\n]+)(?::(?:fire|[a-zA-Z0-9_#-]+))?:/i, type: "fire" },
+    { re: /^:matrix:([^:\n]+)(?::(?:matrix|[a-zA-Z0-9_#-]+))?:/i, type: "plain" },
+    { re: /^:glitch:([^:\n]+)(?::(?:glitch|[a-zA-Z0-9_#-]+))?:/i, type: "glitch" },
+    { re: /^:blood:([^:\n]+)(?::(?:blood|[a-zA-Z0-9_#-]+))?:/i, type: "blood" },
+    { re: /^:bleed:([^:\n]+)(?::(?:bleed|[a-zA-Z0-9_#-]+))?:/i, type: "blood" },
+    { re: /^:wave:([^:\n]+)(?::(?:wave|[a-zA-Z0-9_#-]+))?:/i, type: "waveflow" },
+    { re: /^:smoke:([^:\n]+)(?::(?:smoke|[a-zA-Z0-9_#-]+))?:/i, type: "smoke" },
+    { re: /^:stars:([^:\n]+)(?::(?:stars|[a-zA-Z0-9_#-]+))?:/i, type: "stars" },
+    { re: /^:ghost:([^:\n]+)(?::(?:ghost|[a-zA-Z0-9_#-]+))?:/i, type: "ghost" },
+    { re: /^:typewriter:([^:\n]+)(?::(?:typewriter|[a-zA-Z0-9_#-]+))?:/i, type: "typewriter" },
+    { re: /^:neon(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "neon" },
+    { re: /^:glow(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "glow" },
+    { re: /^:blur:([^:\n]+)(?::(?:blur|[a-zA-Z0-9_#-]+))?:/i, type: "blur" },
+    { re: /^\*\*([\s\S]*?)\*\*/, type: "bold" },
+    { re: /^--([\s\S]*?)--/, type: "cut" },
+    { re: /^\*([\s\S]*?)\*/, type: "italic" },
+    { re: /^\[([^\]]+)\]\(([^)]+)\)/, type: "link" },
+  ];
+
+  let buffer = "";
+  while (i < src.length) {
+    const rest = src.slice(i);
+    let matched = false;
+    for (const p of patterns) {
+      const m = rest.match(p.re);
+      if (m) {
+        pushText(buffer);
+        buffer = "";
+        if (p.type === "glow") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "glow" ? null : m[3], "#5B8DB8");
+          tokens.push({ t: "glow", v: content, color });
+        } else if (p.type === "neon") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "neon" ? null : m[3], "#06b6d4");
+          tokens.push({ t: "neon", v: content, color });
+        } else if (p.type === "sparkle") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "sparkle" ? null : m[3], "#F5C542");
+          tokens.push({ t: "sparkle", v: content, color });
+        } else if (p.type === "outline") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "outline" ? null : m[3], "#5B8DB8");
+          tokens.push({ t: "outline", v: content, color });
+        } else if (p.type === "highlight") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "highlight" ? null : m[3], "#5B8DB8");
+          tokens.push({ t: "highlight", v: content, color });
+        } else {
+          tokens.push({ t: p.type, v: m[1], url: m[2] });
+        }
+        i += m[0].length;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      buffer += src[i];
+      i += 1;
+    }
+  }
+  pushText(buffer);
+
+  return tokens.map((tok, idx) => {
+    switch (tok.t) {
+      case "rainbow":
+        return (
+          <span key={idx} className="font-bold text-fx-rainbow inline-block">
+            {tok.v}
+          </span>
+        );
+
+      case "fuzzy":
+        return (
+          <span
+            key={idx}
+            className="font-bold inline-block text-white"
+            style={{
+              textShadow: "1px 0 #06b6d4, -1px 0 #ec4899, 0 1px #a855f7",
+              filter: "blur(0.35px)",
+              letterSpacing: "0.02em",
+            }}
+          >
+            {tok.v}
+          </span>
+        );
+
+      case "shuffle":
+        return <ShuffleText key={idx} text={tok.v} />;
+
+      case "waveflow":
+        return (
+          <span key={idx} className="font-bold text-fx-waveflow inline-block">
+            {tok.v.split("").map((ch, cIdx) => (
+              <span
+                key={cIdx}
+                className="inline-block"
+                style={{
+                  animation: "wave-flow-motion 1.8s ease-in-out infinite",
+                  animationDelay: `${cIdx * 0.1}s`,
+                }}
+              >
+                {ch === " " ? "\u00A0" : ch}
+              </span>
+            ))}
+          </span>
+        );
+
+      case "rgbglow":
+        return (
+          <span key={idx} className="text-fx-rgbglow inline-block">
+            {tok.v}
+          </span>
+        );
+
+      case "flicker":
+        return (
+          <span key={idx} className="text-fx-flicker font-bold text-cyan-300 inline-block">
+            {tok.v}
+          </span>
+        );
+
+      case "wavegrad":
+        return (
+          <span
+            key={idx}
+            className="font-extrabold inline-block text-transparent bg-clip-text"
+            style={{
+              backgroundImage: "linear-gradient(135deg, #38bdf8 0%, #a855f7 50%, #f43f5e 100%)",
+              backgroundSize: "200% auto",
+              animation: "fx-rainbow 4s linear infinite",
+              filter: "drop-shadow(0 0 10px rgba(168,85,247,0.6))",
+            }}
+          >
+            {tok.v}
+          </span>
+        );
+
+      case "bats":
+        return (
+          <span key={idx} className="font-semibold text-fx-bats inline-block text-purple-300 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]">
+            {tok.v}
+          </span>
+        );
+
+      case "sparkle":
+        return (
+          <span key={idx} className="text-fx-sparkle relative inline-block px-3 py-2 align-middle">
+            {[
+              "-left-1 top-0 h-5 w-5",
+              "left-[16%] -top-1 h-3 w-3",
+              "left-[43%] -top-2 h-4 w-4",
+              "right-[18%] -top-1 h-3 w-3",
+              "-right-1 top-1 h-5 w-5",
+              "left-[8%] bottom-0 h-3 w-3",
+              "right-[38%] -bottom-1 h-4 w-4",
+              "right-[7%] bottom-0 h-3 w-3",
+            ].map((position, sparkleIndex) => (
+              <span
+                key={position}
+                aria-hidden="true"
+                className={`sparkle-drift pointer-events-none absolute ${position}`}
+                style={{
+                  backgroundColor: tok.color,
+                  WebkitMaskImage: `url("${sparkleAsset}")`,
+                  maskImage: `url("${sparkleAsset}")`,
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskPosition: "center",
+                  maskPosition: "center",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  animationDelay: `${sparkleIndex * 170}ms`,
+                  filter: `drop-shadow(0 0 5px ${tok.color})`,
+                }}
+              />
+            ))}
+            <span className="relative z-10 font-semibold" style={{ color: tok.color, textShadow: `0 0 10px ${tok.color}99` }}>{tok.v}</span>
+          </span>
+        );
+
+      case "outline": {
+        const color = tok.color || "#5B8DB8";
+        return <span key={idx} className="inline-block font-bold text-white" style={{ WebkitTextStroke: `1px ${color}`, textShadow: `0 0 8px ${color}66` }}>{tok.v}</span>;
+      }
+
+      case "highlight": {
+        const color = tok.color || "#5B8DB8";
+        return <span key={idx} className="inline-block rounded-sm px-1 py-0.5 text-white" style={{ background: `${color}44`, boxShadow: `inset 0 -1px ${color}` }}>{tok.v}</span>;
+      }
+
+      case "fire":
+        return (
+          <span key={idx} className="font-black text-fx-fire inline-block">
+            {tok.v}
+          </span>
+        );
+
+      case "plain":
+        return <React.Fragment key={idx}>{tok.v}</React.Fragment>;
+
+      case "glitch":
+        return (
+          <span key={idx} className="font-extrabold text-fx-glitch inline-block" data-text={tok.v}>
+            {tok.v}
+          </span>
+        );
+
+      case "blood":
+        return (
+          <span key={idx} className="font-bold text-red-500 text-fx-blood inline-block">
+            {tok.v}
+          </span>
+        );
+
+      case "smoke":
+        return <span key={idx} className="font-medium text-fx-smoke inline-block">{tok.v}</span>;
+
+      case "stars":
+        return (
+          <span key={idx} className="font-semibold text-fx-stars inline-flex items-center gap-1">
+            <Star size={12} aria-hidden="true" className="fill-sky-400 text-sky-400" />
+            <span className="text-cyan-100 drop-shadow-[0_0_8px_rgba(56,189,248,0.85)]">{tok.v}</span>
+            <Star size={12} aria-hidden="true" className="fill-sky-400 text-sky-400" />
+          </span>
+        );
+
+      case "ghost":
+        return (
+          <span key={idx} className="font-medium text-fx-ghost inline-flex items-center gap-1">
+            <Ghost size={14} aria-hidden="true" className="opacity-80" />
+            <span className="text-slate-300 italic">{tok.v}</span>
+          </span>
+        );
+
+      case "typewriter":
+        return (
+          <span key={idx} className="font-mono text-fx-typewriter inline-block border-r-2 border-[#5B8DB8] pr-0.5 animate-pulse">
+            {tok.v}
+          </span>
+        );
+
+      case "neon": {
+        const hex = tok.color || "#06b6d4";
+        return (
+          <span
+            key={idx}
+            className="font-bold text-fx-neon"
+            style={{
+              color: "#ffffff",
+              textShadow: `0 0 5px ${hex}, 0 0 10px ${hex}, 0 0 20px ${hex}, 0 0 35px ${hex}`,
+            }}
+          >
+            {tok.v}
+          </span>
+        );
+      }
+
+      case "glow": {
+        const hex = tok.color || "#5B8DB8";
+        return (
+          <span
+            key={idx}
+            className="font-bold text-fx-glow"
+            style={{
+              color: "#ffffff",
+              textShadow: `0 0 8px ${hex}, 0 0 16px ${hex}88`,
+            }}
+          >
+            {tok.v}
+          </span>
+        );
+      }
+
+      case "blur":
+        return (
+          <span key={idx} className="inline-block transition-all hover:blur-none" style={{ filter: "blur(4px)" }}>
+            {tok.v}
+          </span>
+        );
+
+      case "bold":
+        return <strong key={idx} className="font-bold text-white">{tok.v}</strong>;
+
+      case "cut":
+        return <del key={idx} className="line-through text-[#E5E7EB]/50">{tok.v}</del>;
+
+      case "italic":
+        return <em key={idx} className="italic text-[#E5E7EB]/90">{tok.v}</em>;
+
+      case "link":
+        return (
+          <a
+            key={idx}
+            href={tok.url}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-4 text-[#5B8DB8] hover:text-[#78A9D0] transition-colors"
+          >
+            {tok.v}
+          </a>
+        );
+
+      default:
+        return <React.Fragment key={idx}>{tok.v}</React.Fragment>;
+    }
+  });
+}
