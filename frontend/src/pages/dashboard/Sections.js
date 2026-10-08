@@ -415,6 +415,20 @@ export function LinksSection() {
 
   const remove = async (id) => { await api.delete(`/links/${id}`); load(); };
   const toggleHide = async (l) => { await api.put(`/links/${l.id}`, { hidden: !l.hidden }); load(); };
+  
+  const moveLink = async (index, direction) => {
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= links.length) return;
+    const newLinks = [...links];
+    const temp = newLinks[index];
+    newLinks[index] = newLinks[targetIdx];
+    newLinks[targetIdx] = temp;
+    setLinks(newLinks);
+    try {
+      await api.put("/links/reorder", { link_ids: newLinks.map((x) => x.id) });
+    } catch {}
+    toast.success("Order updated!");
+  };
 
   const counts = useMemo(() => {
     return {
@@ -442,7 +456,7 @@ export function LinksSection() {
 
   return (
     <div className="space-y-6">
-      <Header title="Links & Media Blocks" subtitle="Manage link cards, social icon rows, and rich embeds with custom colors & glow." action={
+      <Header title="Links & Social Cards" subtitle="Create and customize social buttons, link cards, and custom media embeds." action={
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -454,7 +468,7 @@ export function LinksSection() {
           >
             <Palette size={14} /> Link & Social Styles
           </Button>
-          <Button data-testid="bio-editor-add-link-button" onClick={() => setOpen(true)} className="rounded-full bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white gap-2 shadow-[0_0_16px_rgba(91,141,184,0.3)]"><Plus size={16} /> Add link</Button>
+          <Button data-testid="bio-editor-add-link-button" onClick={() => setOpen(true)} className="rounded-full bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white gap-2 shadow-[0_0_16px_rgba(91,141,184,0.3)]"><Plus size={16} /> Add Link</Button>
         </div>
       } />
 
@@ -509,28 +523,21 @@ export function LinksSection() {
               onChange={(v) => patchSetting("icon_background_enabled", v)}
               testid="icon-background-toggle"
             />
-            <p className="text-[11px] text-[#E5E7EB]/50 -mt-1">
-              Icon backgrounds are off by default. Turn them on here or choose a custom color overlay per link.
-            </p>
-
             <ToggleRow
               label="Enable link popups"
               checked={s.show_presence_modal !== false}
               onChange={(v) => patchSetting("show_presence_modal", v)}
               testid="presence-modal-toggle"
             />
-            <p className="text-[11px] text-[#E5E7EB]/50 -mt-1">
-              This is the default for links. You can override it for each link below.
-            </p>
           </div>
         </div>
       )}
 
       {/* Quick Add Social Toolbar */}
-      <div className="swat-glass rounded-3xl p-5 border border-[#4A6B8A]/25">
-        <div className="text-xs font-bold uppercase tracking-wider text-[#E5E7EB]/80 mb-3 flex items-center justify-between">
-          <span className="flex items-center gap-1.5"><Sparkles size={14} className="text-[#5B8DB8]" /> 1-Click Platform Presets</span>
-          <span className="text-[11px] text-[#5B8DB8] font-mono">{links.length} Active</span>
+      <div className="swat-glass rounded-3xl p-4 border border-[#4A6B8A]/25">
+        <div className="text-xs font-bold uppercase tracking-wider text-[#E5E7EB]/80 mb-2.5 flex items-center justify-between">
+          <span className="flex items-center gap-1.5"><Sparkles size={13} className="text-[#5B8DB8]" /> 1-Click Platform Presets</span>
+          <span className="text-[11px] text-[#5B8DB8] font-mono">{links.length} Active Links</span>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {["discord", "spotify", "twitter", "instagram", "youtube", "tiktok", "twitch", "kick", "github", "steam", "soundcloud", "roblox"].map((plat) => {
@@ -543,9 +550,9 @@ export function LinksSection() {
                   setForm({ platform: plat, label: PLATFORM_LABELS[plat] || plat, url: "" });
                   setOpen(true);
                 }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-[#08090B]/60 hover:bg-[#5B8DB8]/20 hover:border-[#5B8DB8]/60 text-xs font-semibold text-[#E5E7EB] transition-all shrink-0 hover:scale-105"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 bg-[#08090B]/60 hover:bg-[#5B8DB8]/20 hover:border-[#5B8DB8]/60 text-xs font-semibold text-[#E5E7EB] transition-all shrink-0 hover:scale-105"
               >
-                <Ic size={14} className="text-[#5B8DB8]" />
+                <Ic size={13} className="text-[#5B8DB8]" />
                 <span className="capitalize">{plat}</span>
               </button>
             );
@@ -553,7 +560,7 @@ export function LinksSection() {
         </div>
       </div>
 
-      {/* Categorized Filter Tabs (Separating Cards, Social Icons, and Media Embeds) */}
+      {/* Categorized Filter Tabs */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
         <div className="flex items-center p-1 rounded-2xl bg-[#08090B]/70 border border-[#4A6B8A]/30 text-xs">
           {[
@@ -593,10 +600,10 @@ export function LinksSection() {
       <div className="grid sm:grid-cols-2 gap-3.5 mt-2">
         {filteredLinks.length === 0 && (
           <p className="text-[#E5E7EB]/40 text-sm col-span-2 py-10 text-center border border-dashed border-[#4A6B8A]/30 rounded-2xl">
-            No links in this category. Click &quot;Add link&quot; above to create one.
+            No links in this category. Click &quot;Add Link&quot; above to create one.
           </p>
         )}
-        {filteredLinks.map((l) => {
+        {filteredLinks.map((l, index) => {
           const Ic = brandIcon(l.platform);
           const iconColor = l.config?.custom_icon_color || BRAND_COLORS[l.platform] || "#5B8DB8";
           const iconGlow = l.config?.custom_icon_glow || (l.config?.glow ? (l.config?.glow_color || iconColor) : null);
@@ -607,10 +614,32 @@ export function LinksSection() {
             <div
               key={l.id}
               data-testid={`link-item-${l.id}`}
-              className={`swat-glass rounded-2xl p-4 flex items-center gap-3.5 border border-[#4A6B8A]/25 hover:border-[#5B8DB8]/50 transition-all ${
+              className={`swat-glass rounded-2xl p-3.5 flex items-center gap-3 border border-[#4A6B8A]/25 hover:border-[#5B8DB8]/50 transition-all ${
                 l.hidden ? "opacity-50 grayscale" : ""
               }`}
             >
+              {/* Reorder Buttons */}
+              <div className="flex flex-col gap-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => moveLink(index, -1)}
+                  disabled={index === 0}
+                  className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white disabled:opacity-20 text-[10px] transition-colors"
+                  title="Move Up"
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveLink(index, 1)}
+                  disabled={index === filteredLinks.length - 1}
+                  className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/50 hover:text-white disabled:opacity-20 text-[10px] transition-colors"
+                  title="Move Down"
+                >
+                  ▼
+                </button>
+              </div>
+
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-105"
                 style={{
@@ -620,36 +649,61 @@ export function LinksSection() {
                   boxShadow: iconGlow ? `0 0 ${glowSize}px ${iconGlow}` : "none",
                 }}
               >
-                <Ic size={noIconBg ? 22 : 20} />
+                <Ic size={noIconBg ? 22 : 18} />
               </div>
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-sm font-bold truncate text-white">{l.label}</span>
-                  {l.config?.no_icon_bg && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 shrink-0">No BG</span>
-                  )}
                   {l.config?.display_as === "card" && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">Card Only</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">Card</span>
                   )}
                   {l.config?.display_as === "icon" && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/25 shrink-0">Icon Only</span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 border border-purple-500/25 shrink-0">Icon</span>
                   )}
                   {(!l.config?.display_as || l.config?.display_as === "both") && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">Both</span>
-                  )}
-                  {l.config?.custom_icon_color && (
-                    <span className="w-2.5 h-2.5 rounded-full ring-1 ring-white/30" style={{ background: l.config.custom_icon_color }} title="Custom Icon Color" />
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">Both</span>
                   )}
                 </div>
-                <div className="text-xs text-[#E5E7EB]/40 truncate mt-0.5">{l.url}</div>
+                <div className="text-[11px] text-[#E5E7EB]/40 truncate mt-0.5">{l.url}</div>
               </div>
+
               <div className="flex items-center gap-1">
-                <a href={l.url.startsWith("http") ? l.url : `https://${l.url}`} target="_blank" rel="noreferrer" className="p-1.5 text-[#E5E7EB]/40 hover:text-white rounded-lg hover:bg-white/5" title="Test link">
-                  <ExternalLink size={14} />
-                </a>
-                <button onClick={() => toggleHide(l)} className="p-1.5 text-[#E5E7EB]/40 hover:text-[#5B8DB8] rounded-lg hover:bg-white/5" title="show/hide">{l.hidden ? <EyeOff size={15} /> : <Eye size={15} />}</button>
-                <button data-testid={`link-edit-${l.id}`} onClick={() => setEditing(l)} className="p-1.5 text-[#E5E7EB]/40 hover:text-[#5B8DB8] rounded-lg hover:bg-white/5" title="Edit"><Pencil size={15} /></button>
-                <button data-testid={`link-delete-${l.id}`} onClick={() => remove(l.id)} className="p-1.5 text-red-400/70 hover:text-red-400 rounded-lg hover:bg-red-500/10" title="Delete"><X size={16} /></button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(l.url);
+                    toast.success("URL copied!");
+                  }}
+                  className="p-1.5 text-[#E5E7EB]/40 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
+                  title="Copy Link URL"
+                >
+                  <Copy size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleHide(l)}
+                  className="p-1.5 text-[#E5E7EB]/40 hover:text-[#5B8DB8] rounded-lg hover:bg-white/5 transition-colors"
+                  title={l.hidden ? "Show on profile" : "Hide from profile"}
+                >
+                  {l.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+                <button
+                  data-testid={`link-edit-${l.id}`}
+                  onClick={() => setEditing(l)}
+                  className="p-1.5 text-[#E5E7EB]/60 hover:text-[#5B8DB8] rounded-lg hover:bg-white/5 transition-colors"
+                  title="Customize Link"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  data-testid={`link-delete-${l.id}`}
+                  onClick={() => remove(l.id)}
+                  className="p-1.5 text-red-400/70 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                  title="Delete Link"
+                >
+                  <X size={15} />
+                </button>
               </div>
             </div>
           );
@@ -1095,18 +1149,35 @@ export function BadgesSection() {
 
   const SelectedIconComp = Icons[newBadge.icon] || Icons.Award;
 
+  const [badgeFilterTab, setBadgeFilterTab] = useState("all");
+  const [badgeSearch, setBadgeSearch] = useState("");
+
+  const equippedList = useMemo(() => {
+    const list = [];
+    shown.forEach((id) => {
+      const custom = customBadges.find((cb) => cb.id === id && cb.enabled !== false);
+      if (custom) {
+        list.push({ ...custom, isCustom: true });
+      } else {
+        const def = BADGE_DEFS.find((d) => d.id.toLowerCase() === id.toLowerCase());
+        if (def) list.push(def);
+      }
+    });
+    return list;
+  }, [shown, customBadges]);
+
   return (
     <div className="space-y-6">
       <Header
         title="Badges & Accolades"
-        subtitle="Toggle official accolades or craft custom glowing badges with 100+ icons."
+        subtitle="Equip official achievements or craft custom glowing accolades with 100+ icons."
         action={
           <div className="flex items-center gap-2">
             {canCreateCustomBadge && (
               <Button
                 type="button"
                 onClick={() => setCreateModal(true)}
-                className="rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-white gap-1.5 text-xs"
+                className="rounded-full bg-white/10 hover:bg-white/15 border border-white/20 text-white gap-1.5 text-xs font-semibold"
               >
                 <Plus size={15} /> Create Custom Badge
               </Button>
@@ -1115,16 +1186,60 @@ export function BadgesSection() {
               data-testid="badges-save-btn"
               onClick={save}
               disabled={saving}
-              className="rounded-full bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white shadow-[0_0_15px_rgba(91,141,184,0.3)]"
+              className="rounded-full bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white shadow-[0_0_15px_rgba(91,141,184,0.3)] font-bold text-xs px-5"
             >
-              {saving ? "..." : "Save display"}
+              {saving ? "..." : "Save Display"}
             </Button>
           </div>
         }
       />
 
-      <div className="swat-glass rounded-xl p-4 border border-[#4A6B8A]/25 space-y-4">
-        <div className="text-xs font-bold text-white">Badge appearance</div>
+      {/* Live Equipped Badges Preview Bar */}
+      <div className="swat-glass rounded-3xl p-4 border border-[#5B8DB8]/30 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <Sparkles size={14} className="text-[#5B8DB8]" />
+            <span>Live Equipped Badges Preview ({equippedList.length})</span>
+          </div>
+          <span className="text-[10px] text-[#5B8DB8] font-mono">
+            Tooltip: {badgeStyle.tooltip_style || "normal"}
+          </span>
+        </div>
+
+        {equippedList.length === 0 ? (
+          <div className="py-4 text-center text-xs text-white/40 border border-dashed border-white/10 rounded-2xl">
+            No badges currently equipped. Toggle any badge below to equip it to your profile.
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap p-2.5 rounded-2xl bg-[#08090B]/60 border border-white/5">
+            {equippedList.map((b) => {
+              const Ic = Icons[b.icon] || Icons.Award;
+              const col = b.color || "#5B8DB8";
+              return (
+                <div
+                  key={b.id}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer shadow-md"
+                  style={{
+                    background: badgeStyle.background === false ? "transparent" : `${col}25`,
+                    border: badgeStyle.outline === false ? "none" : `1.5px solid ${col}77`,
+                    color: col,
+                    boxShadow: badgeStyle.glow === false ? "none" : `0 0 12px ${col}66`,
+                  }}
+                  title={`${b.name}: ${b.desc}`}
+                >
+                  <Ic size={18} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Badge Appearance Controls */}
+      <div className="swat-glass rounded-3xl p-5 border border-[#4A6B8A]/25 space-y-4">
+        <div className="text-xs font-bold uppercase tracking-wider text-[#5B8DB8] pb-1 border-b border-white/5">
+          Badge Appearance & Tooltips
+        </div>
         <SelectRow
           label="Badge layout"
           value={badgeLayout}
@@ -1167,7 +1282,7 @@ export function BadgesSection() {
       </div>
 
       {/* Discord Booster Auto-Check Banner */}
-      <div className="swat-glass rounded-2xl p-4 border border-[#a855f7]/30 bg-gradient-to-r from-[#a855f7]/15 via-[#5865F2]/10 to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="swat-glass rounded-3xl p-4 border border-[#a855f7]/30 bg-gradient-to-r from-[#a855f7]/15 via-[#5865F2]/10 to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#a855f7]/25 text-[#a855f7] border border-[#a855f7]/40 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(168,85,247,0.4)]">
             <Rocket size={20} className="animate-pulse" />
@@ -1196,105 +1311,177 @@ export function BadgesSection() {
         </Button>
       </div>
 
-      {/* Custom Badges Section */}
-      {customBadges.length > 0 && (
+      {/* Filter Tabs & Search Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+        <div className="flex items-center p-1 rounded-2xl bg-[#08090B]/70 border border-[#4A6B8A]/30 text-xs">
+          {[
+            { id: "all", label: "All Badges" },
+            { id: "equipped", label: `Equipped (${shown.length})` },
+            { id: "official", label: `Official (${BADGE_DEFS.length})` },
+            { id: "custom", label: `Custom (${customBadges.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setBadgeFilterTab(tab.id)}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                badgeFilterTab === tab.id
+                  ? "bg-[#5B8DB8] text-white shadow-[0_0_12px_rgba(91,141,184,0.4)]"
+                  : "text-[#E5E7EB]/60 hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-64">
+          <Input
+            value={badgeSearch}
+            onChange={(e) => setBadgeSearch(e.target.value)}
+            placeholder="Search badges..."
+            className="bg-[#08090B]/60 border-[#4A6B8A]/30 text-xs h-9 pl-8 text-white rounded-xl"
+          />
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Custom Badges List */}
+      {(badgeFilterTab === "all" || badgeFilterTab === "custom" || badgeFilterTab === "equipped") && customBadges.length > 0 && (
         <div className="space-y-3">
           <div className="text-xs font-bold uppercase tracking-wider text-[#5B8DB8] flex items-center gap-1.5">
-            <Sparkles size={14} /> Custom Badges Created ({customBadges.length})
+            <Sparkles size={14} /> Custom Creator Badges ({customBadges.length})
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customBadges.map((cb) => {
-              const Ic = Icons[cb.icon] || Icons.Award;
-              const on = cb.enabled !== false;
-              return (
-                <div
-                  key={cb.id}
-                  className={`swat-glass rounded-2xl p-4 flex items-start gap-3.5 border transition-all ${
-                    on ? "border-[#5B8DB8]/40" : "border-white/10 opacity-50 grayscale"
-                  }`}
-                >
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {customBadges
+              .filter((cb) => {
+                if (badgeFilterTab === "equipped" && (!shown.includes(cb.id) || cb.enabled === false)) return false;
+                if (!badgeSearch) return true;
+                return (
+                  cb.name.toLowerCase().includes(badgeSearch.toLowerCase()) ||
+                  cb.desc.toLowerCase().includes(badgeSearch.toLowerCase())
+                );
+              })
+              .map((cb) => {
+                const Ic = Icons[cb.icon] || Icons.Award;
+                const on = cb.enabled !== false;
+                const isEquipped = shown.includes(cb.id) && on;
+                return (
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-110"
-                    style={{
-                      background: `${cb.color}25`,
-                      border: `1px solid ${cb.color}55`,
-                      color: cb.color,
-                      boxShadow: on ? `0 0 ${cb.glow_intensity ?? 15}px ${cb.glow_color || cb.color}` : "none",
+                    key={cb.id}
+                    onClick={() => {
+                      if (on) toggle(cb.id);
                     }}
+                    className={`swat-glass rounded-2xl p-4 flex items-start gap-3.5 border transition-all cursor-pointer ${
+                      isEquipped ? "border-[#5B8DB8] shadow-[0_0_15px_rgba(91,141,184,0.25)] bg-[#5B8DB8]/10" : on ? "border-white/10 hover:border-white/25" : "border-white/5 opacity-40 grayscale"
+                    }`}
                   >
-                    <Ic size={20} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display font-bold text-sm text-white truncate">{cb.name}</div>
-                    <div className="text-xs text-[#E5E7EB]/50 mt-0.5 line-clamp-1">{cb.desc}</div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-[10px] font-mono text-[#5B8DB8]">Icon: {cb.icon}</span>
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-110"
+                      style={{
+                        background: `${cb.color}25`,
+                        border: `1px solid ${cb.color}55`,
+                        color: cb.color,
+                        boxShadow: isEquipped ? `0 0 ${cb.glow_intensity ?? 15}px ${cb.glow_color || cb.color}` : "none",
+                      }}
+                    >
+                      <Ic size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display font-bold text-sm text-white truncate">{cb.name}</div>
+                      <div className="text-xs text-[#E5E7EB]/50 mt-0.5 line-clamp-1">{cb.desc}</div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isEquipped ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/40"}`}>
+                          {isEquipped ? "EQUIPPED" : "CLICK TO EQUIP"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Switch checked={isEquipped} onCheckedChange={() => toggle(cb.id)} />
+                      <button
+                        onClick={() => deleteCustomBadge(cb.id)}
+                        className="text-[#E5E7EB]/40 hover:text-red-400 p-1 rounded-lg transition-colors"
+                        title="Delete Custom Badge"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Switch checked={on} onCheckedChange={() => toggleCustomBadge(cb.id)} />
-                    <button
-                      onClick={() => deleteCustomBadge(cb.id)}
-                      className="text-[#E5E7EB]/40 hover:text-red-400 p-1 rounded-lg transition-colors"
-                      title="Delete custom badge"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       )}
 
-      {/* System Official Badges */}
-      <div className="space-y-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-[#E5E7EB]/70 flex items-center gap-1.5">
-          <Award size={14} /> Official Platform Accolades
+      {/* Official Platform Accolades */}
+      {(badgeFilterTab === "all" || badgeFilterTab === "official" || badgeFilterTab === "equipped") && (
+        <div className="space-y-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-[#E5E7EB]/70 flex items-center gap-1.5">
+            <Award size={14} /> Official Platform Accolades
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {BADGE_DEFS
+              .filter((b) => {
+                if (badgeFilterTab === "equipped" && !shown.includes(b.id)) return false;
+                if (!badgeSearch) return true;
+                return (
+                  b.name.toLowerCase().includes(badgeSearch.toLowerCase()) ||
+                  b.desc.toLowerCase().includes(badgeSearch.toLowerCase())
+                );
+              })
+              .map((b) => {
+                const Ic = Icons[b.icon] || Icons.Award;
+                const has = owned.includes(b.id);
+                const on = shown.includes(b.id);
+                return (
+                  <div
+                    key={b.id}
+                    data-testid={`badge-item-${b.id.replace(/[.\s]/g, "-")}`}
+                    onClick={() => {
+                      if (has) toggle(b.id);
+                    }}
+                    className={`swat-glass rounded-2xl p-4 flex items-start gap-3.5 transition-all ${
+                      has ? "cursor-pointer" : "opacity-40 grayscale"
+                    } ${
+                      on ? "border-[#5B8DB8] bg-[#5B8DB8]/10 shadow-[0_0_15px_rgba(91,141,184,0.25)]" : "border-white/10 hover:border-white/25"
+                    }`}
+                  >
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-110"
+                      style={{
+                        background: `${b.color}22`,
+                        border: `1px solid ${b.color}44`,
+                        color: b.color,
+                        boxShadow: has && on ? `0 0 16px ${b.color}55` : "none",
+                      }}
+                    >
+                      <Ic size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display font-semibold text-white text-sm truncate">{b.name}</div>
+                      <div className="text-xs text-[#E5E7EB]/50 mt-0.5 leading-relaxed line-clamp-2">{b.desc}</div>
+                      {has && (
+                        <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.2 rounded-full font-mono ${on ? "bg-emerald-500/20 text-emerald-400" : "bg-white/5 text-white/40"}`}>
+                          {on ? "EQUIPPED" : "CLICK TO EQUIP"}
+                        </span>
+                      )}
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {has ? (
+                        <Switch
+                          checked={on}
+                          onCheckedChange={() => toggle(b.id)}
+                          data-testid={`badge-toggle-${b.id.replace(/[.\s]/g, "-")}`}
+                        />
+                      ) : (
+                        <Lock size={14} className="text-[#E5E7EB]/40 mt-1" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {BADGE_DEFS.map((b) => {
-            const Ic = Icons[b.icon] || Icons.Award;
-            const has = owned.includes(b.id);
-            const on = shown.includes(b.id);
-            return (
-              <div
-                key={b.id}
-                data-testid={`badge-item-${b.id.replace(/[.\s]/g, "-")}`}
-                className={`swat-glass rounded-2xl p-5 flex items-start gap-4 transition-all ${
-                  has ? "" : "opacity-40 grayscale"
-                }`}
-              >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform hover:scale-110"
-                  style={{
-                    background: `${b.color}22`,
-                    border: `1px solid ${b.color}44`,
-                    color: b.color,
-                    boxShadow: has && on ? `0 0 18px ${b.color}55` : "none",
-                  }}
-                >
-                  <Ic size={22} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-display font-semibold text-white">{b.name}</div>
-                  <div className="text-xs text-[#E5E7EB]/50 mt-0.5 leading-relaxed">{b.desc}</div>
-                </div>
-                {has ? (
-                  <Switch
-                    checked={on}
-                    onCheckedChange={() => toggle(b.id)}
-                    data-testid={`badge-toggle-${b.id.replace(/[.\s]/g, "-")}`}
-                  />
-                ) : (
-                  <Lock size={14} className="text-[#E5E7EB]/40 mt-1" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {/* Custom Badge Creation Modal with 100+ Searchable Icons */}
       <Dialog open={createModal} onOpenChange={setCreateModal}>
