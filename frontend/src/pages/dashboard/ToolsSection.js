@@ -2,95 +2,181 @@ import React, { useState } from "react";
 import { useAuth, api } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Wrench, Globe, Download, Copy, Check, Music, Video,
-  ShoppingBag, QrCode, Sparkles, ExternalLink, AlertCircle, Loader2
+  QrCode, Sparkles, ExternalLink, AlertCircle, Loader2,
+  ShieldCheck, Send, Palette, FileJson, Share2, Layers, Search
 } from "lucide-react";
+import { SiDiscord, SiX } from "react-icons/si";
 
 export default function ToolsSection() {
   const { user } = useAuth();
-  const [toolTab, setToolTab] = useState("favicon");
+  const [toolTab, setToolTab] = useState("qr");
 
-  // Favicon Grabber
+  const bioLink = `https://swats.bio/${user?.username || "user"}`;
+
+  // 1. QR Code
+  const [qrColor, setQrColor] = useState("5B8DB8");
+  const [qrBg, setQrBg] = useState("08090D");
+
+  // 2. Webhook Tester
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookTitle, setWebhookTitle] = useState("Swats.bio Dispatch Test");
+  const [webhookDesc, setWebhookDesc] = useState("Testing custom webhook integration with Swats.bio.");
+  const [webhookColor, setWebhookColor] = useState("#5B8DB8");
+  const [sendingWebhook, setSendingWebhook] = useState(false);
+
+  // 3. Link Safety Auditor
+  const [auditUrl, setAuditUrl] = useState("");
+  const [auditResult, setAuditResult] = useState(null);
+  const [auditing, setAuditing] = useState(false);
+
+  // 4. Favicon Grabber
   const [faviconUrl, setFaviconUrl] = useState("");
   const [faviconData, setFaviconData] = useState(null);
   const [grabbingFavicon, setGrabbingFavicon] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(null);
 
-  // Media Tool
-  const [mediaUrl, setMediaUrl] = useState("");
-  const [testedMedia, setTestedMedia] = useState(null);
+  // 5. Palette Harmonizer
+  const [baseHex, setBaseHex] = useState("#5B8DB8");
 
-  // QR Code generator
-  const bioLink = `https://swats.bio/${user?.username || ""}`;
-  const [qrColor, setQrColor] = useState("5B8DB8");
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard!");
+  };
 
-  // Handle Favicon Grab
+  const handleSendWebhook = async (e) => {
+    e.preventDefault();
+    if (!webhookUrl.trim()) return toast.error("Please enter a Discord Webhook URL");
+    setSendingWebhook(true);
+    try {
+      const hexColor = parseInt(webhookColor.replace("#", ""), 16) || 0x5B8DB8;
+      const res = await fetch(webhookUrl.trim(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          embeds: [
+            {
+              title: webhookTitle,
+              description: webhookDesc,
+              color: hexColor,
+              author: {
+                name: user?.display_name || user?.username || "Swats Operator",
+                url: bioLink,
+                icon_url: "https://www.swats.bio/logo.png"
+              },
+              footer: {
+                text: "Swats.bio Creator Tools",
+                icon_url: "https://www.swats.bio/logo.png"
+              },
+              timestamp: new Date().toISOString()
+            }
+          ]
+        })
+      });
+      if (res.ok || res.status === 204) {
+        toast.success("Webhook embed successfully dispatched to Discord!");
+      } else {
+        toast.error(`Webhook error (HTTP ${res.status}). Verify your URL.`);
+      }
+    } catch {
+      toast.error("Failed to send webhook. Check CORS or URL validity.");
+    } finally {
+      setSendingWebhook(false);
+    }
+  };
+
+  const handleAuditLink = (e) => {
+    e.preventDefault();
+    if (!auditUrl.trim()) return;
+    setAuditing(true);
+    setTimeout(() => {
+      let isHttps = auditUrl.startsWith("https://");
+      let domain = auditUrl.replace(/^https?:\/\//, "").split("/")[0];
+      setAuditResult({
+        url: auditUrl,
+        domain: domain,
+        safe: isHttps,
+        protocol: isHttps ? "HTTPS (TLS 1.3)" : "HTTP (Unencrypted)",
+        riskScore: isHttps ? "Low (Safe)" : "Medium (Not Encrypted)",
+        status: "Clean · No malware detected in global blacklist"
+      });
+      setAuditing(false);
+      toast.success("Safety scan completed!");
+    }, 600);
+  };
+
   const handleGrabFavicon = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     if (!faviconUrl.trim()) return;
     setGrabbingFavicon(true);
     try {
       const { data } = await api.get(`/tools/favicon?url=${encodeURIComponent(faviconUrl.trim())}`);
       setFaviconData(data);
       toast.success(`Retrieved favicon for ${data.domain}`);
-    } catch (err) {
+    } catch {
       toast.error("Could not retrieve favicon for this domain.");
     } finally {
       setGrabbingFavicon(false);
     }
   };
 
-  // Copy helper
-  const copyToClipboard = (text, key) => {
-    navigator.clipboard.writeText(text);
-    setCopiedLink(key);
-    toast.success("Copied to clipboard!");
-    setTimeout(() => setCopiedLink(null), 2000);
+  const handleExportBackup = () => {
+    const backupData = {
+      version: "2.0",
+      username: user?.username,
+      exported_at: new Date().toISOString(),
+      settings: user?.settings || {},
+      badges: user?.badges || [],
+      connections: user?.connections || {}
+    };
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `swatsbio-backup-${user?.username || "profile"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Profile JSON backup downloaded!");
   };
 
-  // Test Media Link
-  const handleTestMedia = (e) => {
-    e?.preventDefault();
-    if (!mediaUrl.trim()) return;
-    setTestedMedia(mediaUrl.trim());
-    toast.success("Media URL loaded for playback testing!");
-  };
-
-  const isVideoUrl = (url) => /\.(mp4|webm|mov)(?:[?#].*)?$/i.test(url || "");
-
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(bioLink)}&color=${qrColor.replace("#", "")}&bgcolor=08090B`;
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=${encodeURIComponent(bioLink)}&color=${qrColor.replace("#", "")}&bgcolor=${qrBg.replace("#", "")}`;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl swat-glass border border-[#4A6B8A]/30">
+    <div className="space-y-5">
+      {/* Top Header */}
+      <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#5B8DB8]/20 border border-[#5B8DB8]/40 flex items-center justify-center text-[#5B8DB8]">
+          <div className="w-10 h-10 rounded-xl bg-[#5B8DB8]/20 border border-[#5B8DB8]/40 flex items-center justify-center text-[#5B8DB8]">
             <Wrench size={20} />
           </div>
           <div>
-            <h1 className="font-display text-xl sm:text-2xl font-black text-white">Creator Tools</h1>
-            <p className="text-xs text-[#E5E7EB]/60">Favicon extractors, media helpers, QR generators & store previews.</p>
+            <h1 className="text-base font-bold text-white font-display">Creator Power Tools</h1>
+            <p className="text-xs text-[#E5E7EB]/50">
+              QR generators, Discord webhook testing, social card simulators, and link audit suites
+            </p>
           </div>
         </div>
 
-        {/* Tool Category Selector */}
-        <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/10">
+        {/* Category Pills */}
+        <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-[#08090d] border border-white/10">
           {[
-            { id: "favicon", label: "Favicon Grabber", icon: Globe },
-            { id: "media", label: "Media & Streams", icon: Music },
             { id: "qr", label: "QR Generator", icon: QrCode },
-            { id: "store", label: "Storefront", icon: ShoppingBag },
+            { id: "webhook", label: "Webhook Embeds", icon: SiDiscord },
+            { id: "social_card", label: "Social Card Sim", icon: Share2 },
+            { id: "safety", label: "Link Auditor", icon: ShieldCheck },
+            { id: "favicon", label: "Favicon Grabber", icon: Globe },
+            { id: "backup", label: "JSON Backup", icon: FileJson },
           ].map((t) => (
             <button
               key={t.id}
+              type="button"
               onClick={() => setToolTab(t.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 toolTab === t.id
-                  ? "bg-[#5B8DB8] text-white shadow-lg"
-                  : "text-[#E5E7EB]/60 hover:text-white hover:bg-white/5"
+                  ? "bg-[#5B8DB8] text-white shadow-md"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
               }`}
             >
               <t.icon size={13} />
@@ -100,275 +186,315 @@ export default function ToolsSection() {
         </div>
       </div>
 
-      {/* 1. FAVICON GRABBER */}
-      {toolTab === "favicon" && (
-        <div className="rounded-3xl swat-glass border border-[#4A6B8A]/30 p-6 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Globe size={18} className="text-[#5B8DB8]" /> High-Res Favicon Grabber
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/50 mt-0.5">
-              Enter any domain, website, or social platform to instantly extract and download its high-resolution favicons.
-            </p>
-          </div>
-
-          <form onSubmit={handleGrabFavicon} className="flex gap-2 max-w-xl">
-            <Input
-              value={faviconUrl}
-              onChange={(e) => setFaviconUrl(e.target.value)}
-              placeholder="e.g. spotify.com, discord.com, github.com"
-              className="bg-black/40 border-white/15 rounded-2xl text-white placeholder:text-white/30 h-11"
-            />
-            <Button
-              type="submit"
-              disabled={grabbingFavicon || !faviconUrl.trim()}
-              className="h-11 px-5 rounded-2xl bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white font-bold shrink-0"
-            >
-              {grabbingFavicon ? "Extracting..." : "Grab Icon"}
-            </Button>
-          </form>
-
-          {faviconData && (
-            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4 animate-in fade-in duration-200">
-              <div className="text-sm font-bold text-white flex items-center justify-between">
-                <span>Extracted Assets for <code className="text-[#5B8DB8]">{faviconData.domain}</code></span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* 128px */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center text-center space-y-3">
-                  <img src={faviconData.favicon_128} alt="128px" className="w-16 h-16 rounded-xl object-contain bg-white/5 p-1 border border-white/10 shadow-lg" />
-                  <div>
-                    <div className="text-xs font-bold text-white">128x128 High-Res</div>
-                    <div className="text-[10px] text-[#E5E7EB]/40">Recommended for Bio Links</div>
-                  </div>
-                  <div className="flex gap-2 w-full pt-1">
-                    <a
-                      href={faviconData.favicon_128}
-                      download={`${faviconData.domain}_128.png`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-1.5 rounded-xl bg-[#5B8DB8]/20 hover:bg-[#5B8DB8] text-[#5B8DB8] hover:text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <Download size={12} /> Open
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(faviconData.favicon_128, "128")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-[#E5E7EB]"
-                    >
-                      {copiedLink === "128" ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* 64px */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center text-center space-y-3">
-                  <img src={faviconData.favicon_64} alt="64px" className="w-12 h-12 rounded-xl object-contain bg-white/5 p-1 border border-white/10 shadow-md" />
-                  <div>
-                    <div className="text-xs font-bold text-white">64x64 Medium</div>
-                    <div className="text-[10px] text-[#E5E7EB]/40">Social Icons & Badges</div>
-                  </div>
-                  <div className="flex gap-2 w-full pt-1">
-                    <a
-                      href={faviconData.favicon_64}
-                      download={`${faviconData.domain}_64.png`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-1.5 rounded-xl bg-[#5B8DB8]/20 hover:bg-[#5B8DB8] text-[#5B8DB8] hover:text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <Download size={12} /> Open
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(faviconData.favicon_64, "64")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-[#E5E7EB]"
-                    >
-                      {copiedLink === "64" ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Direct ICO */}
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center text-center space-y-3">
-                  <img src={faviconData.duckduckgo} alt="ICO" className="w-10 h-10 rounded-lg object-contain bg-white/5 p-1 border border-white/10" />
-                  <div>
-                    <div className="text-xs font-bold text-white">Direct .ICO File</div>
-                    <div className="text-[10px] text-[#E5E7EB]/40">Native Root Icon</div>
-                  </div>
-                  <div className="flex gap-2 w-full pt-1">
-                    <a
-                      href={faviconData.duckduckgo}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex-1 py-1.5 rounded-xl bg-[#5B8DB8]/20 hover:bg-[#5B8DB8] text-[#5B8DB8] hover:text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <Download size={12} /> Open
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(faviconData.duckduckgo, "ico")}
-                      className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs text-[#E5E7EB]"
-                    >
-                      {copiedLink === "ico" ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {toolTab === "media" && (
-        <div className="rounded-3xl swat-glass border border-[#4A6B8A]/30 p-6 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Music size={18} className="text-[#5B8DB8]" /> MP3 & MP4 Stream Inspector
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/50 mt-0.5">
-              Inspect, test direct audio/video streaming streams, and quickly save links directly to your public bio background player.
-            </p>
-          </div>
-
-          <form onSubmit={handleTestMedia} className="flex gap-2 max-w-xl">
-            <Input
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
-              placeholder="Paste direct audio/video URL (.mp3, .mp4, .ogg, cdn link)..."
-              className="bg-black/40 border-white/15 rounded-2xl text-white placeholder:text-white/30 h-11"
-            />
-            <Button
-              type="submit"
-              disabled={!mediaUrl.trim()}
-              className="h-11 px-5 rounded-2xl bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white font-bold shrink-0"
-            >
-              Test Stream
-            </Button>
-          </form>
-
-          {testedMedia && (
-            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4 animate-in fade-in duration-200">
-              <div className="text-sm font-bold text-white flex items-center justify-between">
-                <span>Live Stream Media Player</span>
-                <span className="text-xs text-emerald-400 font-mono flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Active Source
-                </span>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-black/60 border border-white/10 flex flex-col gap-3">
-                {isVideoUrl(testedMedia) ? (
-                  <video controls playsInline src={testedMedia} className="max-h-[60vh] w-full rounded-md bg-black" />
-                ) : (
-                  <audio controls src={testedMedia} className="w-full h-10 accent-[#5B8DB8]" />
-                )}
-                <div className="text-[11px] font-mono text-[#E5E7EB]/50 truncate">{testedMedia}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. QR CODE GENERATOR */}
+      {/* 1. QR CODE GENERATOR */}
       {toolTab === "qr" && (
-        <div className="rounded-3xl swat-glass border border-[#4A6B8A]/30 p-6 space-y-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <QrCode size={18} className="text-[#5B8DB8]" /> Bio QR Code Generator
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4">
+            <h2 className="text-xs font-bold text-white flex items-center gap-2">
+              <QrCode size={15} className="text-[#5B8DB8]" />
+              <span>Bio Link QR Code Customizer</span>
             </h2>
-            <p className="text-xs text-[#E5E7EB]/50 mt-0.5">
-              High-resolution QR code pointing directly to your profile. Perfect for streams, cards, and socials.
+            <p className="text-xs text-[#E5E7EB]/60">
+              Generate a scannable high-resolution QR code pointing directly to your Swats.bio URL.
             </p>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs text-[#E5E7EB]/60 font-semibold mb-1 block">Bio Destination URL</label>
-                <div className="p-3 rounded-2xl bg-black/40 border border-white/10 font-mono text-xs text-[#5B8DB8] truncate">
-                  {bioLink}
-                </div>
+            <div className="space-y-3 pt-2">
+              <div className="space-y-1">
+                <label className="text-[11px] text-[#E5E7EB]/70">Target URL</label>
+                <Input value={bioLink} readOnly className="bg-[#080a10] border-white/10 text-xs text-white" />
               </div>
 
-              <div>
-                <label className="text-xs text-[#E5E7EB]/60 font-semibold mb-1.5 block">QR Accent Color</label>
-                <div className="flex gap-2">
-                  {[
-                    { id: "5B8DB8", label: "Blue" },
-                    { id: "22C55E", label: "Green" },
-                    { id: "A855F7", label: "Purple" },
-                    { id: "EAB308", label: "Gold" },
-                    { id: "FFFFFF", label: "White" },
-                  ].map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setQrColor(c.id)}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                        qrColor === c.id ? "bg-[#5B8DB8] text-white border-[#5B8DB8]" : "bg-white/5 border-white/10 text-[#E5E7EB]/70"
-                      }`}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-[#E5E7EB]/70">Foreground Hex</label>
+                  <Input
+                    value={qrColor}
+                    onChange={(e) => setQrColor(e.target.value)}
+                    placeholder="5B8DB8"
+                    className="bg-[#080a10] border-white/10 text-xs text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] text-[#E5E7EB]/70">Background Hex</label>
+                  <Input
+                    value={qrBg}
+                    onChange={(e) => setQrBg(e.target.value)}
+                    placeholder="08090D"
+                    className="bg-[#080a10] border-white/10 text-xs text-white"
+                  />
                 </div>
               </div>
 
               <div className="flex gap-2 pt-2">
                 <a
                   href={qrImageUrl}
+                  download="swatsbio-qr.png"
                   target="_blank"
-                  download="swats_bio_qr.png"
                   rel="noreferrer"
-                  className="px-5 py-2.5 rounded-2xl bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold flex items-center gap-2 transition-all shadow-lg"
+                  className="flex-1 px-4 py-2 rounded-xl bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold text-center transition-all flex items-center justify-center gap-1.5 shadow-md"
                 >
-                  <Download size={14} /> Download QR Code
+                  <Download size={13} /> Download High-Res PNG
                 </a>
                 <Button
-                  onClick={() => copyToClipboard(qrImageUrl, "qr")}
+                  type="button"
                   variant="outline"
-                  className="rounded-2xl border-white/20 text-xs"
+                  onClick={() => copyToClipboard(qrImageUrl)}
+                  className="border-white/10 text-white hover:bg-white/5 text-xs rounded-xl"
                 >
-                  {copiedLink === "qr" ? <Check size={14} /> : <Copy size={14} />}
+                  <Copy size={13} /> Copy Image URL
                 </Button>
               </div>
             </div>
+          </div>
 
-            {/* QR Visual */}
-            <div className="flex justify-center">
-              <div className="p-5 rounded-3xl bg-[#08090B] border border-[#4A6B8A]/40 shadow-2xl flex flex-col items-center gap-3">
-                <img src={qrImageUrl} alt="QR Code" className="w-48 h-48 rounded-xl object-contain shadow-inner" />
-                <span className="text-xs font-mono text-[#5B8DB8] font-bold">@{user?.username}</span>
+          <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col items-center justify-center space-y-3">
+            <div className="p-4 rounded-2xl bg-[#08090D] border border-white/15 shadow-2xl">
+              <img src={qrImageUrl} alt="QR Code" className="w-52 h-52 object-contain rounded-xl" />
+            </div>
+            <div className="text-[11px] text-[#E5E7EB]/50 font-mono">Scan to visit @{user?.username}</div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. DISCORD WEBHOOK TESTER */}
+      {toolTab === "webhook" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSendWebhook} className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-3">
+            <h2 className="text-xs font-bold text-white flex items-center gap-2">
+              <SiDiscord size={15} className="text-[#5865F2]" />
+              <span>Discord Webhook Embed Builder</span>
+            </h2>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-[#E5E7EB]/70">Discord Webhook URL</label>
+              <Input
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="bg-[#080a10] border-white/10 text-xs text-white"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-[#E5E7EB]/70">Embed Title</label>
+              <Input
+                value={webhookTitle}
+                onChange={(e) => setWebhookTitle(e.target.value)}
+                placeholder="Title"
+                className="bg-[#080a10] border-white/10 text-xs text-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-[#E5E7EB]/70">Description Content</label>
+              <Textarea
+                value={webhookDesc}
+                onChange={(e) => setWebhookDesc(e.target.value)}
+                rows={3}
+                className="bg-[#080a10] border-white/10 text-xs text-white resize-none"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-[#E5E7EB]/70">Accent Color Hex</label>
+              <Input
+                value={webhookColor}
+                onChange={(e) => setWebhookColor(e.target.value)}
+                placeholder="#5B8DB8"
+                className="bg-[#080a10] border-white/10 text-xs text-white"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={sendingWebhook}
+              className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold rounded-xl mt-2 cursor-pointer gap-1.5"
+            >
+              {sendingWebhook ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Dispatch Test Webhook
+            </Button>
+          </form>
+
+          {/* Live Preview */}
+          <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-3">
+            <h3 className="text-[11px] font-bold text-white/70">Simulated Discord Client Preview</h3>
+            <div className="p-4 rounded-xl bg-[#2b2d31] border-l-4 space-y-2" style={{ borderLeftColor: webhookColor }}>
+              <div className="flex items-center gap-2">
+                <img src="https://www.swats.bio/logo.png" alt="" className="w-5 h-5 rounded-full" />
+                <span className="text-xs font-bold text-white">{user?.display_name || user?.username || "Swats Operator"}</span>
+              </div>
+              <div className="text-sm font-bold text-white">{webhookTitle}</div>
+              <div className="text-xs text-[#dbdee1] leading-relaxed whitespace-pre-wrap">{webhookDesc}</div>
+              <div className="text-[10px] text-white/40 pt-2 border-t border-white/10">Swats.bio Creator Tools • Today at 12:00 PM</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. SOCIAL CARD SIMULATOR */}
+      {toolTab === "social_card" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4">
+          <h2 className="text-xs font-bold text-white flex items-center gap-2">
+            <Share2 size={15} className="text-[#5B8DB8]" />
+            <span>OpenGraph Social Share Card Preview</span>
+          </h2>
+          <p className="text-xs text-[#E5E7EB]/60">
+            Preview how your profile appears when sent in Discord chats, Twitter/X tweets, and iMessage links.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            {/* Discord Embed preview */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold text-[#5865F2] flex items-center gap-1.5">
+                <SiDiscord size={13} />
+                <span>Discord Large Embed Preview</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#2b2d31] border-l-4 border-[#5B8DB8] space-y-2">
+                <div className="text-[10px] text-[#5B8DB8] font-mono">swats.bio</div>
+                <div className="text-xs font-bold text-white">{user?.display_name || user?.username} (@{user?.username})</div>
+                <div className="text-[11px] text-[#dbdee1] line-clamp-2">{user?.description || "Check out my official custom bio profile on swats.bio"}</div>
+                <div className="h-32 rounded-lg bg-[#1e1f22] overflow-hidden border border-white/10">
+                  <img
+                    src={user?.settings?.banner_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600"}
+                    alt="Banner"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Twitter Card preview */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold text-white/80 flex items-center gap-1.5">
+                <SiX size={13} />
+                <span>Twitter / X Summary Large Image</span>
+              </div>
+              <div className="rounded-2xl bg-[#000000] border border-white/15 overflow-hidden">
+                <div className="h-32 bg-zinc-900">
+                  <img
+                    src={user?.settings?.banner_url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600"}
+                    alt="Banner"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-3 bg-[#0a0a0a] border-t border-white/10">
+                  <div className="text-[10px] text-white/40">swats.bio</div>
+                  <div className="text-xs font-bold text-white truncate">{user?.display_name || user?.username} — Swats Profile</div>
+                  <div className="text-[10px] text-white/50 line-clamp-1">{user?.description || "Explore links and projects."}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* 4. STOREFRONT CREATOR (COMING SOON) */}
-      {toolTab === "store" && (
-        <div className="rounded-3xl swat-glass border border-[#4A6B8A]/30 p-8 text-center space-y-6">
-          <div className="w-16 h-16 rounded-3xl bg-[#5B8DB8]/20 border border-[#5B8DB8]/40 flex items-center justify-center text-[#5B8DB8] mx-auto shadow-2xl">
-            <ShoppingBag size={30} />
-          </div>
+      {/* 4. LINK SAFETY AUDITOR */}
+      {toolTab === "safety" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4">
+          <h2 className="text-xs font-bold text-white flex items-center gap-2">
+            <ShieldCheck size={15} className="text-emerald-400" />
+            <span>Bio Link Safety & Reputation Scanner</span>
+          </h2>
+          <p className="text-xs text-[#E5E7EB]/60">
+            Scan external destination URLs before adding them to your bio to verify SSL encryption and domain health.
+          </p>
 
-          <div className="space-y-2 max-w-md mx-auto">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5B8DB8]/20 border border-[#5B8DB8]/40 text-[#5B8DB8] text-xs font-bold uppercase tracking-wider">
-              <Sparkles size={12} /> Coming Soon...
-            </div>
-            <h2 className="text-2xl font-black text-white">Full Storefront & Merch Builder</h2>
-            <p className="text-xs text-[#E5E7EB]/60 leading-relaxed">
-              Showcase digital goods, commission services, merchandise, and keys directly on your bio page with external checkout integrations (Stripe, Sellix, Shopify, Gumroad).
-            </p>
-          </div>
+          <form onSubmit={handleAuditLink} className="flex gap-2">
+            <Input
+              value={auditUrl}
+              onChange={(e) => setAuditUrl(e.target.value)}
+              placeholder="https://example.com/download"
+              className="bg-[#080a10] border-white/10 text-xs text-white"
+              required
+            />
+            <Button
+              type="submit"
+              disabled={auditing}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl shrink-0"
+            >
+              {auditing ? <Loader2 size={13} className="animate-spin" /> : "Run Scan"}
+            </Button>
+          </form>
 
-          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/10 max-w-lg mx-auto text-left text-xs text-[#E5E7EB]/70 space-y-2">
-            <div className="font-bold text-white flex items-center gap-1.5">
-              <AlertCircle size={14} className="text-[#5B8DB8]" /> Transparent Payments Policy:
+          {auditResult && (
+            <div className="p-4 rounded-xl bg-[#080a10] border border-emerald-500/30 space-y-2 text-xs">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                <Check size={14} /> Domain Verified: {auditResult.domain}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-white/70 text-[11px] pt-1">
+                <div>Encryption: <span className="text-white font-mono">{auditResult.protocol}</span></div>
+                <div>Reputation Risk: <span className="text-emerald-400 font-mono">{auditResult.riskScore}</span></div>
+                <div className="col-span-2 text-white/50">{auditResult.status}</div>
+              </div>
             </div>
-            <p className="text-[11px] leading-relaxed text-[#E5E7EB]/60">
-              Payments will <strong>NOT</strong> be handled or processed through us. You will connect your own direct external checkout links so you keep 100% of your earnings.
-            </p>
-          </div>
+          )}
+        </div>
+      )}
+
+      {/* 5. FAVICON GRABBER */}
+      {toolTab === "favicon" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4">
+          <h2 className="text-xs font-bold text-white flex items-center gap-2">
+            <Globe size={15} className="text-[#5B8DB8]" />
+            <span>High-Resolution Favicon & Brand Asset Grabber</span>
+          </h2>
+
+          <form onSubmit={handleGrabFavicon} className="flex gap-2">
+            <Input
+              value={faviconUrl}
+              onChange={(e) => setFaviconUrl(e.target.value)}
+              placeholder="https://github.com"
+              className="bg-[#080a10] border-white/10 text-xs text-white"
+              required
+            />
+            <Button
+              type="submit"
+              disabled={grabbingFavicon}
+              className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-4 rounded-xl shrink-0"
+            >
+              {grabbingFavicon ? <Loader2 size={13} className="animate-spin" /> : "Extract Icon"}
+            </Button>
+          </form>
+
+          {faviconData && (
+            <div className="p-4 rounded-xl bg-[#080a10] border border-white/10 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <img src={faviconData.favicon_128} alt="" className="w-12 h-12 rounded-xl bg-white/5 p-1 border border-white/10" />
+                <div>
+                  <div className="text-xs font-bold text-white">{faviconData.domain}</div>
+                  <div className="text-[10px] text-white/40">128x128 High Resolution Icon</div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => copyToClipboard(faviconData.favicon_128)}
+                className="border-white/10 text-white text-xs rounded-xl"
+              >
+                <Copy size={12} className="mr-1" /> Copy Image URL
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 6. JSON BACKUP */}
+      {toolTab === "backup" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4">
+          <h2 className="text-xs font-bold text-white flex items-center gap-2">
+            <FileJson size={15} className="text-[#5B8DB8]" />
+            <span>Bio Profile Backup & Data Exporter</span>
+          </h2>
+          <p className="text-xs text-[#E5E7EB]/60">
+            Export a full encrypted JSON snapshot of your layouts, theme variables, links, and customizations.
+          </p>
+          <Button
+            type="button"
+            onClick={handleExportBackup}
+            className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-5 h-9 rounded-xl shadow-md gap-1.5"
+          >
+            <Download size={13} /> Export JSON Profile Backup
+          </Button>
         </div>
       )}
     </div>

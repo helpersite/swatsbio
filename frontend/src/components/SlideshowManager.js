@@ -5,19 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Edit3, MoveUp, MoveDown, Layers, Sparkles, ExternalLink, ShieldCheck, Code, ShoppingCart, Key, Gamepad2, Briefcase, Eye, Upload, Image as ImageIcon, X } from "lucide-react";
+import {
+  Plus, Trash2, Edit3, MoveUp, MoveDown, Layers, Sparkles, ExternalLink,
+  ShieldCheck, Code, ShoppingCart, Key, Gamepad2, Briefcase, Eye, Upload,
+  Image as ImageIcon, X, Check, Users, Shield, Tag
+} from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { toast } from "sonner";
 import { fileUrl } from "@/lib/auth";
 
 export const PROJECT_TYPES = [
-  { id: "game_cheat", name: "Game Cheat / Mod Menu", icon: Gamepad2, desc: "Showcase game hacks, undetected status, code language & features" },
-  { id: "store", name: "Digital Store / Product", icon: ShoppingCart, desc: "Sell products, licenses, downloads & configs" },
-  { id: "accounts", name: "Accounts & Alts", icon: Key, desc: "Marketplace for gaming accounts, subscriptions & alts" },
-  { id: "code", name: "Code / Repository / Tool", icon: Code, desc: "Showcase open-source repositories, libraries & scripts" },
-  { id: "service", name: "Service / Commission", icon: Briefcase, desc: "Freelance dev, graphics, boosting, or design services" },
+  { id: "game_cheat", name: "Game Cheat / Mod Menu", icon: Gamepad2, desc: "Showcase game hacks, bypasses, status & code languages" },
+  { id: "store", name: "Digital Store / Product", icon: ShoppingCart, desc: "Sell software licenses, digital configs, downloads & assets" },
+  { id: "accounts", name: "Accounts & Alts", icon: Key, desc: "Marketplace for gaming accounts, subscriptions & alt drops" },
+  { id: "code", name: "Code / Repository / Tool", icon: Code, desc: "Showcase open-source libraries, exploits & frameworks" },
+  { id: "service", name: "Service / Commission", icon: Briefcase, desc: "Freelance dev, reverse engineering, boosting, or UI design" },
   { id: "portfolio", name: "Project Portfolio", icon: Sparkles, desc: "General creative showcase with media galleries" },
 ];
+
+export const CATEGORIZED_TAGS = {
+  "Code & Tech": ["C++", "C#", "Python", "Rust", "JavaScript", "TypeScript", "HTML/CSS", "Go", "Lua", "Java", "PHP", "React", "Kernel Driver", "Reverse Engineering"],
+  "Games": ["Fortnite", "Valorant", "CS2", "Apex Legends", "Roblox", "Minecraft", "Rust", "GTA V", "Overwatch 2", "Rainbow Six Siege", "Call of Duty", "Tarkov"],
+  "Product & Perks": ["Instant Delivery", "Warranty Included", "Crypto Accepted", "PayPal", "Stripe", "Auto-Checkout", "Limited Stock", "Lifetime License", "Undetected"],
+  "Accounts": ["Full Access", "Unverified Mail", "OG Names", "Stacked Skins", "Ranked Ready", "NFA", "FA", "Clean History"],
+  "Services": ["24/7 Support", "Fast Delivery", "Middleman", "Custom Setup", "Boosting", "Graphic Design", "Bot Development"]
+};
 
 export function SlideshowManager({
   slideshowConfig,
@@ -34,23 +46,25 @@ export function SlideshowManager({
   const [projectSubtype, setProjectSubtype] = useState("game_cheat");
   
   // Discord Fields
-  const [dcServerName, setDcServerName] = useState("My Community");
-  const [dcInviteUrl, setDcInviteUrl] = useState("https://discord.gg/example");
+  const [dcServerName, setDcServerName] = useState("Swats Bio Community");
+  const [dcInviteUrl, setDcInviteUrl] = useState("https://discord.gg/swats");
   const [dcIcon, setDcIcon] = useState("");
+  const [dcBanner, setDcBanner] = useState("");
   const [dcMembers, setDcMembers] = useState("1,450");
   const [dcOnline, setDcOnline] = useState("320");
-  const [dcDescription, setDcDescription] = useState("Official community server for releases, updates and 24/7 support.");
-  const [dcTheme, setDcTheme] = useState("nitro_glass"); // "nitro_glass" | "dark_minimal" | "cyber_glow"
+  const [dcDescription, setDcDescription] = useState("Official verified community for bio updates, releases, and 24/7 priority support.");
+  const [dcTheme, setDcTheme] = useState("nitro_glass");
   const [dcButtonText, setDcButtonText] = useState("Join Server");
 
   // Project Fields
   const [projTitle, setProjTitle] = useState("Apex Silent Aim & ESP");
   const [projGame, setProjGame] = useState("Apex Legends");
   const [projLanguage, setProjLanguage] = useState("C++ / Kernel Driver");
-  const [projStatus, setProjStatus] = useState("Undetected (v2.4)");
+  const [projStatus, setProjStatus] = useState("Undetected");
   const [projPrice, setProjPrice] = useState("$19.99 / mo");
   const [projDescription, setProjDescription] = useState("Full kernel bypass with customizable smooth aimbot, item glow ESP, spectator list alert, and customizable config presets.");
   const [projImages, setProjImages] = useState([]);
+  const [projTags, setProjTags] = useState(["C++", "Apex Legends", "Undetected", "Instant Delivery"]);
   const [projButtonText, setProjButtonText] = useState("Purchase Access");
   const [projButtonUrl, setProjButtonUrl] = useState("https://swats.bio");
   const [projSecondaryButtonText, setProjSecondaryButtonText] = useState("Join Discord");
@@ -59,23 +73,32 @@ export function SlideshowManager({
   // Two-sided secondary project fields
   const [proj2Title, setProj2Title] = useState("Rust External Radar");
   const [proj2Game, setProj2Game] = useState("Rust");
-  const [proj2Description, setProj2Description] = useState("Web radar and live map stream with player inventories.");
+  const [proj2Description, setProj2Description] = useState("Live web radar stream with player inventory and resource scanner.");
   const [proj2Price, setProj2Price] = useState("$24.99");
   const [proj2ButtonUrl, setProj2ButtonUrl] = useState("https://swats.bio");
+
+  const toggleTag = (tag) => {
+    if (projTags.includes(tag)) {
+      setProjTags(projTags.filter((t) => t !== tag));
+    } else {
+      setProjTags([...projTags, tag]);
+    }
+  };
 
   const openAddSlideModal = () => {
     setEditingIndex(null);
     setSlideType("project");
     setProjectLayout("one_sided");
     setProjectSubtype("game_cheat");
-    setProjTitle("Apex Silent Aim & ESP");
-    setProjGame("Apex Legends");
-    setProjLanguage("C++ / Kernel Driver");
-    setProjStatus("Undetected (v2.4)");
-    setProjPrice("$19.99 / mo");
-    setProjDescription("Full kernel bypass with customizable smooth aimbot, item glow ESP, spectator list alert, and customizable config presets.");
+    setProjTitle("Valorant Precision Triggerbot");
+    setProjGame("Valorant");
+    setProjLanguage("C++ / Arduino");
+    setProjStatus("Undetected");
+    setProjPrice("$14.99 / mo");
+    setProjDescription("Color-based aim assist with humanized smoothing curves, custom hitboxes, and hardware emulation.");
     setProjImages([]);
-    setProjButtonText("Purchase Access");
+    setProjTags(["C++", "Valorant", "Undetected", "Instant Delivery"]);
+    setProjButtonText("Get Started");
     setProjButtonUrl("https://swats.bio");
     setModalOpen(true);
   };
@@ -89,6 +112,7 @@ export function SlideshowManager({
       setDcServerName(s.serverName || "");
       setDcInviteUrl(s.inviteUrl || "");
       setDcIcon(s.icon || "");
+      setDcBanner(s.banner || "");
       setDcMembers(s.members || "");
       setDcOnline(s.online || "");
       setDcDescription(s.description || "");
@@ -104,98 +128,101 @@ export function SlideshowManager({
       setProjPrice(s.price || "");
       setProjDescription(s.description || "");
       setProjImages(s.images || []);
+      setProjTags(s.tags || ["C++", "Undetected"]);
       setProjButtonText(s.buttonText || "Purchase Access");
       setProjButtonUrl(s.buttonUrl || "");
-      setProjSecondaryButtonText(s.secondaryButtonText || "");
+      setProjSecondaryButtonText(s.secondaryButtonText || "Join Discord");
       setProjSecondaryButtonUrl(s.secondaryButtonUrl || "");
-      if (s.project2) {
-        setProj2Title(s.project2.title || "");
-        setProj2Game(s.project2.game || "");
-        setProj2Description(s.project2.description || "");
-        setProj2Price(s.project2.price || "");
-        setProj2ButtonUrl(s.project2.buttonUrl || "");
-      }
+      setProj2Title(s.side2Title || "");
+      setProj2Game(s.side2Game || "");
+      setProj2Description(s.side2Description || "");
+      setProj2Price(s.side2Price || "");
+      setProj2ButtonUrl(s.side2ButtonUrl || "");
     }
     setModalOpen(true);
   };
 
   const handleSaveSlide = () => {
-    let newSlide = {};
+    let slideData = {};
     if (slideType === "discord") {
-      newSlide = {
+      if (!dcServerName.trim()) {
+        toast.error("Please enter a Discord server name");
+        return;
+      }
+      slideData = {
         type: "discord",
-        serverName: dcServerName,
-        inviteUrl: dcInviteUrl,
+        serverName: dcServerName.trim(),
+        inviteUrl: dcInviteUrl.trim(),
         icon: dcIcon,
+        banner: dcBanner,
         members: dcMembers,
         online: dcOnline,
         description: dcDescription,
         theme: dcTheme,
-        buttonText: dcButtonText,
+        buttonText: dcButtonText || "Join Server",
       };
     } else {
-      newSlide = {
+      if (!projTitle.trim()) {
+        toast.error("Please enter a project title");
+        return;
+      }
+      slideData = {
         type: "project",
         layout: projectLayout,
         subtype: projectSubtype,
-        title: projTitle,
-        game: projGame,
-        language: projLanguage,
-        status: projStatus,
-        price: projPrice,
-        description: projDescription,
+        title: projTitle.trim(),
+        game: projGame.trim(),
+        language: projLanguage.trim(),
+        status: projStatus.trim(),
+        price: projPrice.trim(),
+        description: projDescription.trim(),
         images: projImages,
-        buttonText: projButtonText,
-        buttonUrl: projButtonUrl,
+        tags: projTags,
+        buttonText: projButtonText || "View Project",
+        buttonUrl: projButtonUrl.trim(),
         secondaryButtonText: projSecondaryButtonText,
-        secondaryButtonUrl: projSecondaryButtonUrl,
+        secondaryButtonUrl: projSecondaryButtonUrl.trim(),
+        side2Title: proj2Title.trim(),
+        side2Game: proj2Game.trim(),
+        side2Description: proj2Description.trim(),
+        side2Price: proj2Price.trim(),
+        side2ButtonUrl: proj2ButtonUrl.trim(),
       };
-      if (projectLayout === "two_sided") {
-        newSlide.project2 = {
-          title: proj2Title,
-          game: proj2Game,
-          description: proj2Description,
-          price: proj2Price,
-          buttonUrl: proj2ButtonUrl,
-        };
-      }
     }
 
-    let updatedSlides = [...slides];
+    const nextSlides = [...slides];
     if (editingIndex !== null) {
-      updatedSlides[editingIndex] = newSlide;
-      toast.success("Slide updated!");
+      nextSlides[editingIndex] = slideData;
+      toast.success("Slide updated");
     } else {
-      updatedSlides.push(newSlide);
-      toast.success("New slide added!");
+      nextSlides.push(slideData);
+      toast.success("New slide added to deck");
     }
-    onChange({ ...slideshowConfig, slides: updatedSlides });
+
+    onChange({ ...(slideshowConfig || {}), slides: nextSlides });
     setModalOpen(false);
   };
 
   const handleDeleteSlide = (index) => {
-    const updated = slides.filter((_, i) => i !== index);
-    onChange({ ...slideshowConfig, slides: updated });
-    toast.info("Slide removed.");
+    const nextSlides = slides.filter((_, i) => i !== index);
+    onChange({ ...(slideshowConfig || {}), slides: nextSlides });
+    toast.success("Slide removed");
   };
 
   const handleMoveSlide = (index, dir) => {
     const target = index + dir;
     if (target < 0 || target >= slides.length) return;
-    const updated = [...slides];
-    const [moved] = updated.splice(index, 1);
-    updated.splice(target, 0, moved);
-    onChange({ ...slideshowConfig, slides: updated });
+    const nextSlides = [...slides];
+    const temp = nextSlides[index];
+    nextSlides[index] = nextSlides[target];
+    nextSlides[target] = temp;
+    onChange({ ...(slideshowConfig || {}), slides: nextSlides });
   };
 
-  const handleAddImage = async (e) => {
+  const handleUploadImage = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    if (projImages.length + files.length > 3) {
-      toast.warning("Maximum 3 images per project slide.");
-    }
-    const toUpload = files.slice(0, 3 - projImages.length);
-    for (const f of toUpload) {
+    for (const f of files) {
       if (uploadFile) {
         try {
           const url = await uploadFile(f);
@@ -208,10 +235,6 @@ export function SlideshowManager({
         setProjImages((prev) => [...prev, local]);
       }
     }
-  };
-
-  const handleRemoveImage = (imgIdx) => {
-    setProjImages((prev) => prev.filter((_, i) => i !== imgIdx));
   };
 
   return (
@@ -230,7 +253,7 @@ export function SlideshowManager({
         <Button
           type="button"
           onClick={openAddSlideModal}
-          className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-4 h-8 rounded-xl shadow-[0_0_12px_rgba(91,141,184,0.35)] gap-1.5"
+          className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-4 h-8 rounded-xl shadow-[0_0_12px_rgba(91,141,184,0.35)] gap-1.5 cursor-pointer"
         >
           <Plus size={14} /> Add Slide
         </Button>
@@ -248,7 +271,7 @@ export function SlideshowManager({
             type="button"
             size="sm"
             onClick={openAddSlideModal}
-            className="bg-white/10 hover:bg-white/20 text-white text-xs rounded-xl"
+            className="bg-white/10 hover:bg-white/20 text-white text-xs rounded-xl cursor-pointer"
           >
             + Create First Slide
           </Button>
@@ -290,7 +313,7 @@ export function SlideshowManager({
                 <button
                   onClick={() => handleMoveSlide(idx, -1)}
                   disabled={idx === 0}
-                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 flex items-center justify-center cursor-pointer"
                   title="Move Up"
                 >
                   <MoveUp size={13} />
@@ -298,21 +321,21 @@ export function SlideshowManager({
                 <button
                   onClick={() => handleMoveSlide(idx, 1)}
                   disabled={idx === slides.length - 1}
-                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-20 flex items-center justify-center cursor-pointer"
                   title="Move Down"
                 >
                   <MoveDown size={13} />
                 </button>
                 <button
                   onClick={() => openEditSlideModal(idx)}
-                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-[#5B8DB8]/20 text-white/70 hover:text-[#5B8DB8] flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-[#5B8DB8]/20 text-white/70 hover:text-[#5B8DB8] flex items-center justify-center cursor-pointer"
                   title="Edit Slide"
                 >
                   <Edit3 size={13} />
                 </button>
                 <button
                   onClick={() => handleDeleteSlide(idx)}
-                  className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center"
+                  className="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center cursor-pointer"
                   title="Delete Slide"
                 >
                   <Trash2 size={13} />
@@ -325,7 +348,7 @@ export function SlideshowManager({
 
       {/* Slide Modal Editor */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="w-[780px] max-w-[calc(100vw-2rem)] h-[660px] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
+        <DialogContent className="w-[840px] max-w-[calc(100vw-2rem)] h-[720px] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#090b10]">
             <div className="flex items-center gap-2.5">
@@ -334,396 +357,287 @@ export function SlideshowManager({
               </div>
               <div>
                 <DialogTitle className="text-sm font-bold text-white font-display">
-                  {editingIndex !== null ? "Edit Slide" : "Add Slide to Deck"}
+                  {editingIndex !== null ? "Edit Deck Slide" : "Add Slide to Deck"}
                 </DialogTitle>
                 <div className="text-[11px] text-[#E5E7EB]/50">
-                  Configure embed types, project details, images and call-to-action buttons
+                  Configure Discord server embeds, software details, categorized tags & live previews
                 </div>
               </div>
             </div>
             <button
               onClick={() => setModalOpen(false)}
-              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white"
+              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white cursor-pointer"
             >
               <X size={14} />
             </button>
           </div>
 
-          {/* Slide Type Picker Bar */}
-          <div className="px-4 py-2.5 border-b border-white/10 bg-[#08090d] flex items-center gap-2 shrink-0">
-            <span className="text-xs text-[#E5E7EB]/70 font-semibold mr-2">Slide Type:</span>
-            <button
-              type="button"
-              onClick={() => setSlideType("discord")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                slideType === "discord"
-                  ? "bg-[#5865F2] text-white shadow-sm"
-                  : "bg-white/5 text-[#E5E7EB]/70 hover:text-white"
-              }`}
-            >
-              <SiDiscord size={13} /> Discord Server Embed
-            </button>
-            <button
-              type="button"
-              onClick={() => setSlideType("project")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                slideType === "project"
-                  ? "bg-[#5B8DB8] text-white shadow-sm"
-                  : "bg-white/5 text-[#E5E7EB]/70 hover:text-white"
-              }`}
-            >
-              <Gamepad2 size={13} /> Project Page Embed
-            </button>
-          </div>
-
-          {/* Body Content */}
+          {/* Modal Body */}
           <div className="p-4 flex-1 overflow-y-auto space-y-4">
-            {/* DISCORD SERVER EMBED CONFIG */}
+            {/* Slide Type Selector */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSlideType("project")}
+                className={`p-3 rounded-xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+                  slideType === "project"
+                    ? "bg-[#5B8DB8]/20 border-[#5B8DB8] text-white ring-1 ring-[#5B8DB8]"
+                    : "bg-[#080a10] border-white/10 text-white/70 hover:border-white/20"
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#5B8DB8]/20 flex items-center justify-center text-[#5B8DB8]">
+                  <Gamepad2 size={16} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white">Project / Product Showcase</div>
+                  <div className="text-[10px] text-[#E5E7EB]/50">Game cheats, tools, code, store items</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSlideType("discord")}
+                className={`p-3 rounded-xl border text-left transition-all flex items-center gap-3 cursor-pointer ${
+                  slideType === "discord"
+                    ? "bg-[#5865F2]/20 border-[#5865F2] text-white ring-1 ring-[#5865F2]"
+                    : "bg-[#080a10] border-white/10 text-white/70 hover:border-white/20"
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-[#5865F2]/20 flex items-center justify-center text-[#5865F2]">
+                  <SiDiscord size={16} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-white">Discord Server Embed</div>
+                  <div className="text-[10px] text-[#E5E7EB]/50">Live server banner, stats & join button</div>
+                </div>
+              </button>
+            </div>
+
+            {/* If DISCORD EMBED */}
             {slideType === "discord" && (
-              <div className="space-y-3.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Server Name</Label>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Server Name</Label>
                     <Input
                       value={dcServerName}
                       onChange={(e) => setDcServerName(e.target.value)}
-                      placeholder="My Community"
-                      className="h-8 text-xs bg-black/40 border-white/10 mt-1"
+                      placeholder="e.g. Swats Community"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Invite URL</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Invite URL / Vanities</Label>
                     <Input
                       value={dcInviteUrl}
                       onChange={(e) => setDcInviteUrl(e.target.value)}
-                      placeholder="https://discord.gg/yourcode"
-                      className="h-8 text-xs bg-black/40 border-white/10 mt-1"
+                      placeholder="https://discord.gg/swats"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Total Members</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Total Members</Label>
                     <Input
                       value={dcMembers}
                       onChange={(e) => setDcMembers(e.target.value)}
-                      placeholder="1,450"
-                      className="h-8 text-xs bg-black/40 border-white/10 mt-1"
+                      placeholder="e.g. 2,450"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Online Count</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Online Count</Label>
                     <Input
                       value={dcOnline}
                       onChange={(e) => setDcOnline(e.target.value)}
-                      placeholder="320"
-                      className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Button Label</Label>
-                    <Input
-                      value={dcButtonText}
-                      onChange={(e) => setDcButtonText(e.target.value)}
-                      placeholder="Join Server"
-                      className="h-8 text-xs bg-black/40 border-white/10 mt-1"
+                      placeholder="e.g. 540"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <Label className="text-xs text-[#E5E7EB]/70">Server Icon URL</Label>
-                  <Input
-                    value={dcIcon}
-                    onChange={(e) => setDcIcon(e.target.value)}
-                    placeholder="https://... (or leave empty for Discord icon)"
-                    className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs text-[#E5E7EB]/70">Description / Topic</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Server Description / Tagline</Label>
                   <Textarea
                     value={dcDescription}
                     onChange={(e) => setDcDescription(e.target.value)}
+                    placeholder="Enter server description..."
                     rows={2}
-                    placeholder="Official server for updates, community chat, and ticket support."
-                    className="text-xs bg-black/40 border-white/10 mt-1"
+                    className="bg-[#080a10] border-white/10 text-xs text-white resize-none"
                   />
                 </div>
 
-                {/* Live Discord Embed Preview */}
-                <div className="p-3.5 rounded-xl bg-[#2b2d31] border border-[#3f4147] text-white space-y-2 mt-2">
-                  <div className="text-[10px] uppercase font-bold tracking-wider text-[#5865F2]">
-                    Live Discord Embed Preview
+                {/* Live Discord Embed Preview Card */}
+                <div className="p-4 rounded-2xl bg-[#080a10] border border-[#5865F2]/30 space-y-3">
+                  <div className="text-[11px] font-bold text-[#5865F2] flex items-center gap-1.5">
+                    <SiDiscord size={13} />
+                    <span>Live Discord Embed Preview</span>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="p-4 rounded-xl bg-[#141824] border border-white/10 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#5865F2] flex items-center justify-center text-white overflow-hidden font-bold">
-                        {dcIcon ? <img src={dcIcon} alt="" className="w-full h-full object-cover" /> : <SiDiscord size={22} />}
+                      <div className="w-12 h-12 rounded-2xl bg-[#5865F2]/20 border border-[#5865F2]/40 flex items-center justify-center text-[#5865F2] font-bold text-lg">
+                        {dcServerName.charAt(0) || "S"}
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-white">{dcServerName || "Discord Server"}</div>
-                        <div className="text-[10px] text-white/60 flex items-center gap-2">
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> {dcOnline || "0"} Online</span>
-                          <span>•</span>
-                          <span>{dcMembers || "0"} Members</span>
+                        <div className="text-sm font-bold text-white">{dcServerName || "Server Name"}</div>
+                        <div className="text-[11px] text-[#E5E7EB]/60 flex items-center gap-2">
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> {dcOnline} Online</span>
+                          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-white/40" /> {dcMembers} Members</span>
                         </div>
                       </div>
                     </div>
-                    <span className="px-3 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-semibold cursor-pointer">
-                      {dcButtonText || "Join"}
-                    </span>
+                    <a
+                      href={dcInviteUrl || "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(88,101,242,0.4)]"
+                    >
+                      {dcButtonText || "Join Server"}
+                    </a>
                   </div>
-                  {dcDescription && (
-                    <div className="text-[11px] text-white/70 pt-1 border-t border-white/5">
-                      {dcDescription}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* PROJECT PAGE EMBED CONFIG */}
+            {/* If PROJECT SHOWCASE */}
             {slideType === "project" && (
-              <div className="space-y-3.5">
-                {/* Layout Style: One-sided vs Two-sided */}
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setProjectLayout("one_sided")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      projectLayout === "one_sided"
-                        ? "bg-[#5B8DB8]/20 border-[#5B8DB8] ring-1 ring-[#5B8DB8]"
-                        : "bg-[#080a10] border-white/10 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="text-xs font-bold text-white mb-0.5">One-Sided (Centered Hero)</div>
-                    <div className="text-[10px] text-[#E5E7EB]/50">Single large project card in the middle with multi-image gallery</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProjectLayout("two_sided")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      projectLayout === "two_sided"
-                        ? "bg-[#5B8DB8]/20 border-[#5B8DB8] ring-1 ring-[#5B8DB8]"
-                        : "bg-[#080a10] border-white/10 hover:border-white/20"
-                    }`}
-                  >
-                    <div className="text-xs font-bold text-white mb-0.5">Two-Sided (Split Projects)</div>
-                    <div className="text-[10px] text-[#E5E7EB]/50">Dual projects displayed side-by-side on left and right columns</div>
-                  </button>
+              <div className="space-y-4">
+                {/* Project Subtype Pills */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Project Category</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PROJECT_TYPES.map((pt) => {
+                      const Icon = pt.icon;
+                      const isSel = projectSubtype === pt.id;
+                      return (
+                        <button
+                          key={pt.id}
+                          type="button"
+                          onClick={() => setProjectSubtype(pt.id)}
+                          className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                            isSel
+                              ? "bg-[#5B8DB8]/20 border-[#5B8DB8] text-white"
+                              : "bg-[#080a10] border-white/10 text-white/60 hover:text-white"
+                          }`}
+                        >
+                          <Icon size={14} className={isSel ? "text-[#5B8DB8]" : "text-white/40"} />
+                          <span className="text-xs font-bold truncate">{pt.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Project Type Dropdown */}
-                <div>
-                  <Label className="text-xs text-[#E5E7EB]/70">Project Category</Label>
-                  <Select value={projectSubtype} onValueChange={setProjectSubtype}>
-                    <SelectTrigger className="h-8 text-xs bg-black/40 border-white/10 text-white mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0b0d13] border-white/15 text-white">
-                      {PROJECT_TYPES.map((pt) => (
-                        <SelectItem key={pt.id} value={pt.id} className="text-xs">
-                          {pt.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Primary Project Details */}
-                <div className="p-3.5 rounded-xl border border-white/10 bg-[#080a10] space-y-3">
-                  <div className="text-xs font-bold text-white">
-                    {projectLayout === "two_sided" ? "Project #1 (Left Column)" : "Project Details"}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Title</Label>
-                      <Input
-                        value={projTitle}
-                        onChange={(e) => setProjTitle(e.target.value)}
-                        placeholder="Project Title"
-                        className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Price / Tier</Label>
-                      <Input
-                        value={projPrice}
-                        onChange={(e) => setProjPrice(e.target.value)}
-                        placeholder="$19.99 / mo or Free"
-                        className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
-                  </div>
-
-                  {projectSubtype === "game_cheat" && (
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <Label className="text-xs text-[#E5E7EB]/70">Game Name</Label>
-                        <Input
-                          value={projGame}
-                          onChange={(e) => setProjGame(e.target.value)}
-                          placeholder="Apex / Fortnite"
-                          className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#E5E7EB]/70">Code Language</Label>
-                        <Input
-                          value={projLanguage}
-                          onChange={(e) => setProjLanguage(e.target.value)}
-                          placeholder="C++ / Kernel"
-                          className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#E5E7EB]/70">Status Tag</Label>
-                        <Input
-                          value={projStatus}
-                          onChange={(e) => setProjStatus(e.target.value)}
-                          placeholder="Undetected"
-                          className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label className="text-xs text-[#E5E7EB]/70">Description & Features</Label>
-                    <Textarea
-                      value={projDescription}
-                      onChange={(e) => setProjDescription(e.target.value)}
-                      rows={2}
-                      placeholder="Detail features, key updates, or license perks..."
-                      className="text-xs bg-black/40 border-white/10 mt-1"
+                {/* Primary Info */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Project Title</Label>
+                    <Input
+                      value={projTitle}
+                      onChange={(e) => setProjTitle(e.target.value)}
+                      placeholder="e.g. Apex Kernel Mod Menu"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
                   </div>
-
-                  {/* Image Uploads (up to 3) */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label className="text-xs text-[#E5E7EB]/70">Project Screenshots / Artwork (Max 3)</Label>
-                      <span className="text-[10px] font-mono text-[#5B8DB8]">{projImages.length}/3 images</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {projImages.map((img, iIdx) => (
-                        <div key={iIdx} className="relative w-16 h-16 rounded-lg border border-white/10 bg-black/40 overflow-hidden group">
-                          <img src={img.startsWith("http") || img.startsWith("blob:") ? img : fileUrl(img)} alt="" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImage(iIdx)}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 rounded bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
-
-                      {projImages.length < 3 && (
-                        <label className="w-16 h-16 rounded-lg border border-dashed border-[#5B8DB8]/40 hover:border-[#5B8DB8] bg-[#121622]/50 hover:bg-[#5B8DB8]/10 flex flex-col items-center justify-center cursor-pointer text-[#5B8DB8]">
-                          <input type="file" accept="image/*" className="hidden" onChange={handleAddImage} multiple />
-                          <Upload size={14} />
-                          <span className="text-[9px] mt-0.5 font-medium">+ Add</span>
-                        </label>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="grid grid-cols-2 gap-3 pt-1 border-t border-white/5">
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Primary Button Label</Label>
-                      <Input
-                        value={projButtonText}
-                        onChange={(e) => setProjButtonText(e.target.value)}
-                        placeholder="Purchase Access"
-                        className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Primary Button Link</Label>
-                      <Input
-                        value={projButtonUrl}
-                        onChange={(e) => setProjButtonUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Price / Tier</Label>
+                    <Input
+                      value={projPrice}
+                      onChange={(e) => setProjPrice(e.target.value)}
+                      placeholder="e.g. $19.99 / mo or Free"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
                   </div>
                 </div>
 
-                {/* Secondary Project (If Two-Sided is active) */}
-                {projectLayout === "two_sided" && (
-                  <div className="p-3.5 rounded-xl border border-white/10 bg-[#080a10] space-y-3">
-                    <div className="text-xs font-bold text-white">Project #2 (Right Column)</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs text-[#E5E7EB]/70">Title</Label>
-                        <Input
-                          value={proj2Title}
-                          onChange={(e) => setProj2Title(e.target.value)}
-                          placeholder="Project #2 Title"
-                          className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[#E5E7EB]/70">Price / Tier</Label>
-                        <Input
-                          value={proj2Price}
-                          onChange={(e) => setProj2Price(e.target.value)}
-                          placeholder="$24.99"
-                          className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Description</Label>
-                      <Textarea
-                        value={proj2Description}
-                        onChange={(e) => setProj2Description(e.target.value)}
-                        rows={2}
-                        placeholder="Description for right column project..."
-                        className="text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-[#E5E7EB]/70">Button Link</Label>
-                      <Input
-                        value={proj2ButtonUrl}
-                        onChange={(e) => setProj2ButtonUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="h-8 text-xs bg-black/40 border-white/10 mt-1"
-                      />
-                    </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Description & Feature List</Label>
+                  <Textarea
+                    value={projDescription}
+                    onChange={(e) => setProjDescription(e.target.value)}
+                    placeholder="Describe key features, supported OS, undetected status..."
+                    rows={3}
+                    className="bg-[#080a10] border-white/10 text-xs text-white resize-none"
+                  />
+                </div>
+
+                {/* Categorized Selectable Tags */}
+                <div className="space-y-2 p-3.5 rounded-2xl bg-[#080a10] border border-white/10">
+                  <div className="text-xs font-bold text-white flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Tag size={13} className="text-[#5B8DB8]" /> Select Project Tags</span>
+                    <span className="text-[10px] text-[#E5E7EB]/50">{projTags.length} selected</span>
                   </div>
-                )}
+                  <div className="space-y-2.5 pt-1">
+                    {Object.entries(CATEGORIZED_TAGS).map(([cat, tags]) => (
+                      <div key={cat} className="space-y-1">
+                        <div className="text-[10px] font-semibold text-[#5B8DB8]">{cat}</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.map((t) => {
+                            const isSelected = projTags.includes(t);
+                            return (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => toggleTag(t)}
+                                className={`px-2 py-0.5 rounded-lg text-[11px] font-medium border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? "bg-[#5B8DB8] border-[#5B8DB8] text-white shadow-[0_0_8px_rgba(91,141,184,0.4)]"
+                                    : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:text-white"
+                                }`}
+                              >
+                                {t}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actions & Buttons */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Primary Button Label</Label>
+                    <Input
+                      value={projButtonText}
+                      onChange={(e) => setProjButtonText(e.target.value)}
+                      placeholder="e.g. Purchase Access"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Primary URL</Label>
+                    <Input
+                      value={projButtonUrl}
+                      onChange={(e) => setProjButtonUrl(e.target.value)}
+                      placeholder="https://yourstore.com"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="p-3 border-t border-white/10 bg-[#090b10] flex items-center justify-between shrink-0">
+          <div className="p-3.5 border-t border-white/10 flex justify-end gap-2 bg-[#090b10]">
             <Button
               type="button"
-              variant="ghost"
-              size="sm"
+              variant="outline"
               onClick={() => setModalOpen(false)}
-              className="text-xs text-white/60 hover:text-white"
+              className="border-white/10 text-white hover:bg-white/5 text-xs rounded-xl cursor-pointer"
             >
               Cancel
             </Button>
             <Button
               type="button"
-              size="sm"
               onClick={handleSaveSlide}
-              className="text-xs font-bold h-8 px-5 rounded-lg bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white shadow-[0_0_12px_rgba(91,141,184,0.35)]"
+              className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-5 rounded-xl cursor-pointer"
             >
-              Save Slide to Deck
+              Save Slide
             </Button>
           </div>
         </DialogContent>

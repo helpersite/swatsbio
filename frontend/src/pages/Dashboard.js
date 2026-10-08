@@ -20,7 +20,7 @@ import {
 import ProfileTemplatesSection from "@/pages/dashboard/ProfileTemplatesSection";
 import SocialSection from "@/pages/dashboard/SocialSection";
 import ToolsSection from "@/pages/dashboard/ToolsSection";
-import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings } from "@/pages/dashboard/Admin";
+import { AdminUsers, AdminInvites, AdminStats, AdminSiteSettings, AdminBotSection } from "@/pages/dashboard/Admin";
 
 const SIDEBAR_CATEGORIES = [
   {
@@ -63,9 +63,10 @@ const SIDEBAR_CATEGORIES = [
 ];
 
 const ADMIN_CATEGORY = {
-  group: "Admin",
+  group: "Admin & Control",
   icon: Shield,
   items: [
+    { id: "admin-bot", label: "Bot Manager", icon: Shield },
     { id: "admin-users", label: "Manage Users", icon: Users },
     { id: "admin-invites", label: "Invite Codes", icon: KeyRound },
     { id: "admin-stats", label: "Platform Stats", icon: Activity },
@@ -167,6 +168,9 @@ export default function Dashboard() {
         return <ConnectionsSection />;
       case "security":
         return <SecuritySection />;
+      case "admin-bot":
+      case "bot":
+        return <AdminBotSection />;
       case "admin-users":
         return <AdminUsers />;
       case "admin-invites":
@@ -195,7 +199,7 @@ export default function Dashboard() {
               swats<span className="text-[#5B8DB8]">.bio</span>
             </span>
           </div>
-          <div className="text-[10px] uppercase font-bold tracking-widest text-[#E5E7EB]/40 mt-0.5 pl-0.5">
+          <div className="text-[11px] uppercase font-bold tracking-widest text-[#E5E7EB]/50 mt-0.5 pl-0.5">
             Dashboard
           </div>
         </div>
@@ -230,12 +234,12 @@ export default function Dashboard() {
         <div className="flex-1 overflow-y-auto space-y-4 pr-0.5 scrollbar-thin">
           {navCategories.map((cat) => (
             <div key={cat.group}>
-              <div className="px-2 mb-1 text-[10px] uppercase font-bold tracking-wider text-[#E5E7EB]/45 flex items-center gap-1.5">
-                <cat.icon size={11} className="text-[#5B8DB8]" />
+              <div className="px-2 mb-1.5 text-[11px] uppercase font-bold tracking-wider text-[#5B8DB8] flex items-center gap-1.5">
+                <cat.icon size={12} className="text-[#5B8DB8]" />
                 <span>{cat.group}</span>
               </div>
 
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {cat.items.map((item) => {
                   const isSelected = active === item.id;
                   return (
@@ -244,13 +248,13 @@ export default function Dashboard() {
                       type="button"
                       data-testid={`nav-${item.id}`}
                       onClick={() => navigate(`/dashboard/${item.id}`)}
-                      className={`w-[175px] h-[28px] flex items-center gap-2 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`w-[175px] h-[30px] flex items-center gap-2.5 px-3 rounded-xl text-[13px] font-semibold transition-all cursor-pointer ${
                         isSelected
-                          ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20 font-bold"
+                          ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/30 font-bold"
                           : "text-[#E5E7EB]/70 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <item.icon size={13} className={isSelected ? "text-white" : "text-[#5B8DB8]/80"} />
+                      <item.icon size={14} className={isSelected ? "text-white" : "text-[#5B8DB8]"} />
                       <span className="truncate">{item.label}</span>
                       {isSelected && <ChevronRight size={12} className="ml-auto text-white/90" />}
                     </button>

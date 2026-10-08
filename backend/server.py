@@ -96,6 +96,8 @@ def normalize_username(value: str) -> str:
 
 DISCORD_CLIENT_ID     = get_env("DISCORD_CLIENT_ID", "") or get_env("DISCORD_APP_ID", "") or ""
 DISCORD_CLIENT_SECRET = get_env("DISCORD_CLIENT_SECRET", "") or get_env("DISCORD_SECRET", "") or ""
+DISCORD_GUILD_ID      = get_env("DISCORD_GUILD_ID", "")
+DISCORD_LEADERBOARD_CHANNEL_ID = get_env("DISCORD_LEADERBOARD_CHANNEL_ID", "1557281277734813806")
 
 _env_discord_redirect = get_env("DISCORD_REDIRECT_URI", "") or get_env("DISCORD_REDIRECT_URL", "")
 BACKEND_PUBLIC_URL = get_env("BACKEND_PUBLIC_URL", "").strip().rstrip("/")
@@ -3003,8 +3005,173 @@ async def discord_bot_verify_code(body: DiscordBotVerifyCodeIn, response: Respon
 
 
 # ─────────────────────────────────────────
-# Site settings
+# Discord Bot Leaderboard Poster & Admin Bot Control
 # ─────────────────────────────────────────
+
+async def post_discord_leaderboard(db: AsyncSession, custom_channel: Optional[str] = None) -> dict:
+    chan_id = custom_channel or DISCORD_LEADERBOARD_CHANNEL_ID or "1557281277734813806"
+    if not DISCORD_BOT_TOKEN:
+        logger.warning(f"post_discord_leaderboard skipped: DISCORD_BOT_TOKEN not configured (Target channel: {chan_id})")
+        return {"ok": False, "channel_id": chan_id, "detail": "DISCORD_BOT_TOKEN is not configured on the server."}
+
+    rows = await db.execute(text("""
+        SELECT username, display_name, views, badges, settings
+        FROM users
+        ORDER BY views DESC, created_at ASC
+        LIMIT 10
+    """))
+    top_users = rows.fetchall()
+
+    medals = ["👑 **#1**", "🥈 **#2**", "🥉 **#3**", "4️⃣ **#4**", "5️⃣ **#5**", "6️⃣ **#6**", "7️⃣ **#7**", "8️⃣ **#8**", "9️⃣ **#9**", "🔟 **#10**"]
+    leaderboard_lines = []
+    for idx, u in enumerate(top_users):
+        medal = medals[idx] if idx < len(medals) else f"**#{idx+1}**"
+        dname = u[1] or u[0]
+        vcount = f"{u[2]:,}" if u[2] else "0"
+        b_list = _j(u[3]) if u[3] else []
+        badge_str = " ".join([f"`[{b.upper()}]`" for b in b_list[:3]]) if b_list else ""
+        leaderboard_lines.append(f"{medal} **[{dname}](https://swats.bio/{u[0]})** (`@{u[0]}`) • **{vcount}** views {badge_str}")
+
+    desc = "\n".join(leaderboard_lines) if leaderboard_lines else "*No active bio profiles yet.*"
+
+    embed = {
+        "title": "🏆 Swats.bio Official Leaderboard",
+        "description": f"Here are the most viewed bio profiles on **Swats.bio**!\n\n{desc}\n\n*Synced in real-time from https://swats.bio*",
+        "color": 0x5B8DB8,
+        "thumbnail": {"url": "https://www.swats.bio/logo.png"},
+        "fields": [
+            {
+                "name": "⚡ Claim Your Custom Bio",
+                "value": "[Create your profile at swats.bio](https://swats.bio) • Connect Discord & unlock custom perks",
+                "inline": False
+            }
+        ],
+        "footer": {
+            "text": "Swats.bio • Automated 24h Leaderboard Sync",
+            "icon_url": "https://www.swats.bio/logo.png"
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+    try:
+        res = requests.post(
+            f"https://discord.com/api/v10/channels/{chan_id}/messages",
+            headers={"Authorization": f"Bot {DISCORD_BOT_TOKEN}", "Content-Type": "application/json"},
+            json={"embeds": [embed]},
+            timeout=10
+        )
+        if res.status_code in (200, 201):
+            logger.info(f"Successfully posted Leaderboard Embed to Discord channel {chan_id}")
+            return {"ok": True, "channel_id": chan_id, "status": "posted", "top_count": len(top_users)}
+        else:
+            logger.error(f"Failed to post Discord Leaderboard to channel {chan_id}: {res.status_code} {res.text}")
+            return {"ok": False, "channel_id": chan_id, "status_code": res.status_code, "detail": res.text}
+    except Exception as e:
+        logger.error(f"Error posting leaderboard embed to Discord: {e}")
+        return {"ok": False, "channel_id": chan_id, "detail": str(e)}
+
+class AdminBotLeaderboardIn(BaseModel):
+    channel_id: Optional[str] = None
+
+class AdminBotSendDmIn(BaseModel):
+    discord_id: str
+    message: str
+
+class AdminBotUserActionIn(BaseModel):
+    user_id: str
+    action: str  # "verify", "unverify", "give_booster", "remove_booster"
+
+@api.get("/admin/bot/dashboard")
+async def admin_bot_dashboard(admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    # Count authed discord users
+    rows = await db.execute(text("SELECT id, username, display_name, connections, badges, created_at FROM users"))
+    all_users = rows.fetchall()
+    
+    authed_users = []
+    booster_count = 0
+    
+    for u in all_users:
+        conns = _j(u[3]) if u[3] else {}
+        badges = _j(u[4]) if u[4] else []
+        dc = conns.get("discord") or {}
+        if dc.get("id"):
+            is_booster = bool(dc.get("is_booster") or "booster" in badges)
+            if is_booster:
+                booster_count += 1
+            authed_users.append({
+                "id": u[0],
+                "username": u[1],
+                "display_name": u[2] or u[1],
+                "discord_id": dc.get("id"),
+                "discord_tag": dc.get("username") or dc.get("tag") or "Connected",
+                "discord_avatar": dc.get("avatar_url") or "",
+                "verified": bool(dc.get("verified", True)),
+                "is_booster": is_booster,
+                "badges": badges,
+                "created_at": u[5]
+            })
+
+    return {
+        "bot_configured": bool(DISCORD_BOT_TOKEN),
+        "bot_online": DISCORD_BOT_READY or bool(DISCORD_BOT_TOKEN),
+        "guild_id": DISCORD_GUILD_ID,
+        "leaderboard_channel_id": DISCORD_LEADERBOARD_CHANNEL_ID or "1557281277734813806",
+        "total_authed_users": len(authed_users),
+        "total_boosters": booster_count,
+        "users": authed_users[:50]
+    }
+
+@api.post("/admin/bot/post-leaderboard")
+async def admin_bot_post_leaderboard(body: AdminBotLeaderboardIn, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    res = await post_discord_leaderboard(db, custom_channel=body.channel_id)
+    return res
+
+@api.post("/admin/bot/send-dm")
+async def admin_bot_send_dm(body: AdminBotSendDmIn, admin: dict = Depends(require_admin)):
+    if not DISCORD_BOT_TOKEN:
+        raise HTTPException(status_code=400, detail="DISCORD_BOT_TOKEN is not configured on server.")
+    ok = send_discord_bot_dm(body.discord_id, body.message)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Failed to deliver DM via Discord Bot. User may have DMs closed or blocked.")
+    return {"ok": True, "message": "DM delivered successfully"}
+
+@api.post("/admin/bot/user-action")
+async def admin_bot_user_action(body: AdminBotUserActionIn, admin: dict = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("SELECT id, connections, badges FROM users WHERE id = :id"), {"id": body.user_id})
+    u = row.fetchone()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    conns = _j(u[1]) if u[1] else {}
+    badges = _j(u[2]) if u[2] else []
+    
+    if body.action == "verify":
+        if "discord" in conns:
+            conns["discord"]["verified"] = True
+        if "verified" not in badges:
+            badges.append("verified")
+    elif body.action == "unverify":
+        if "discord" in conns:
+            conns["discord"]["verified"] = False
+        badges = [b for b in badges if b != "verified"]
+    elif body.action == "give_booster":
+        if "discord" in conns:
+            conns["discord"]["is_booster"] = True
+        if "booster" not in badges:
+            badges.append("booster")
+    elif body.action == "remove_booster":
+        if "discord" in conns:
+            conns["discord"]["is_booster"] = False
+        badges = [b for b in badges if b != "booster"]
+
+    await db.execute(text("UPDATE users SET connections = :c, badges = :b WHERE id = :id"), {
+        "c": _jdump(conns),
+        "b": _jdump(badges),
+        "id": body.user_id
+    })
+    await db.commit()
+    return {"ok": True, "action": body.action, "badges": badges}
+
 @api.get("/site")
 async def get_site(db: AsyncSession = Depends(get_db)):
     row = await db.execute(text("SELECT value FROM site_settings WHERE key = 'site'"))

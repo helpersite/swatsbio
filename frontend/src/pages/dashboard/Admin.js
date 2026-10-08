@@ -1075,3 +1075,320 @@ export function AdminStats() {
     </div>
   );
 }
+
+/* ───────────────────────────────────────────────────────────── */
+/* Admin Bot Section: Discord Bot, Leaderboard & User DM Manager */
+/* ───────────────────────────────────────────────────────────── */
+
+export function AdminBotSection() {
+  const [botData, setBotData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [postingLeaderboard, setPostingLeaderboard] = useState(false);
+  const [dmModal, setDmModal] = useState({ open: false, user: null, message: "" });
+  const [sendingDm, setSendingDm] = useState(false);
+  const [customChannel, setCustomChannel] = useState("1557281277734813806");
+
+  const loadBotData = () => {
+    api.get("/admin/bot/dashboard")
+      .then(({ data }) => setBotData(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadBotData();
+  }, []);
+
+  const handlePostLeaderboard = async () => {
+    setPostingLeaderboard(true);
+    try {
+      const { data } = await api.post("/admin/bot/post-leaderboard", { channel_id: customChannel });
+      if (data.ok) {
+        toast.success(`🏆 Leaderboard embed posted to Discord channel #${customChannel}!`);
+      } else {
+        toast.error(`Failed to post: ${data.detail || "Check bot permissions in channel"}`);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Could not post leaderboard embed.");
+    } finally {
+      setPostingLeaderboard(false);
+    }
+  };
+
+  const handleUserAction = async (userId, action) => {
+    try {
+      const { data } = await api.post("/admin/bot/user-action", { user_id: userId, action });
+      if (data.ok) {
+        toast.success(`User updated: ${action.replace("_", " ")}`);
+        loadBotData();
+      }
+    } catch {
+      toast.error("Failed to execute action.");
+    }
+  };
+
+  const handleSendDm = async (e) => {
+    e.preventDefault();
+    if (!dmModal.message.trim() || !dmModal.user?.discord_id) return;
+    setSendingDm(true);
+    try {
+      const { data } = await api.post("/admin/bot/send-dm", {
+        discord_id: dmModal.user.discord_id,
+        message: dmModal.message.trim(),
+      });
+      if (data.ok) {
+        toast.success(`DM delivered to @${dmModal.user.username} via Discord Bot!`);
+        setDmModal({ open: false, user: null, message: "" });
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to deliver DM.");
+    } finally {
+      setSendingDm(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Header
+        title="Discord Bot & Leaderboard Command"
+        subtitle="Manage Discord authentication gateway, server booster roles, and channel 1557281277734813806 leaderboard sync."
+        action={
+          <Button
+            type="button"
+            disabled={postingLeaderboard}
+            onClick={handlePostLeaderboard}
+            className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(88,101,242,0.4)] gap-1.5 cursor-pointer"
+          >
+            {postingLeaderboard ? "Posting Embed..." : "⚡ Post Leaderboard to Channel Now"}
+          </Button>
+        }
+      />
+
+      {/* Top Status Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium flex items-center justify-between">
+            <span>Bot Connection</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <div className="text-lg font-bold text-white">
+            {botData?.bot_configured ? "Online & Ready" : "Standby (Configured)"}
+          </div>
+          <div className="text-[10px] text-[#5B8DB8] font-mono">Channel: {customChannel}</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Authed Discord Users</div>
+          <div className="text-lg font-bold text-white">{botData?.total_authed_users || 0}</div>
+          <div className="text-[10px] text-emerald-400 font-mono">OAuth2 Verified</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Active Boosters</div>
+          <div className="text-lg font-bold text-white">{botData?.total_boosters || 0}</div>
+          <div className="text-[10px] text-purple-400 font-mono">Server Booster Perks</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">24h Leaderboard Auto-Sync</div>
+          <div className="text-lg font-bold text-emerald-400">Enabled (Every 24h)</div>
+          <div className="text-[10px] text-white/40 font-mono">Channel #1557281277734813806</div>
+        </div>
+      </div>
+
+      {/* Manual Channel Trigger Config */}
+      <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-[#5865F2]/20 border border-[#5865F2]/40 flex items-center justify-center text-[#5865F2]">
+            <Shield size={16} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white">Target Discord Channel ID</div>
+            <div className="text-[10px] text-[#E5E7EB]/50">Default leaderboard broadcast channel</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Input
+            value={customChannel}
+            onChange={(e) => setCustomChannel(e.target.value)}
+            className="bg-[#080a10] border-white/10 text-xs text-white font-mono w-48 h-8 rounded-xl"
+            placeholder="1557281277734813806"
+          />
+          <Button
+            type="button"
+            size="sm"
+            onClick={handlePostLeaderboard}
+            className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs rounded-xl h-8 shrink-0"
+          >
+            Broadcast Embed
+          </Button>
+        </div>
+      </div>
+
+      {/* Authed Users Management Table */}
+      <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-bold text-white flex items-center gap-2">
+            <span>Authed Discord Accounts & Verification Status</span>
+            <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-white/60 font-mono">
+              {botData?.users?.length || 0} Registered
+            </span>
+          </div>
+          <Button type="button" size="sm" variant="outline" onClick={loadBotData} className="border-white/10 text-white text-xs h-7 rounded-lg">
+            Refresh
+          </Button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="border-b border-white/10 text-[#E5E7EB]/40 uppercase tracking-wider text-[10px]">
+                <th className="p-3">Swats User</th>
+                <th className="p-3">Discord Tag & ID</th>
+                <th className="p-3">Verification</th>
+                <th className="p-3">Server Booster</th>
+                <th className="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(!botData?.users || botData.users.length === 0) ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-white/40 text-xs">
+                    No connected Discord accounts yet.
+                  </td>
+                </tr>
+              ) : (
+                botData.users.map((u) => (
+                  <tr key={u.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                    <td className="p-3">
+                      <div className="font-bold text-white">{u.display_name}</div>
+                      <div className="text-[10px] text-[#5B8DB8] font-mono">@{u.username}</div>
+                    </td>
+                    <td className="p-3">
+                      <div className="text-white font-medium">{u.discord_tag}</div>
+                      <div className="text-[10px] text-white/40 font-mono">{u.discord_id}</div>
+                    </td>
+                    <td className="p-3">
+                      {u.verified ? (
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                          ✓ Verified
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
+                          Pending Code
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      {u.is_booster ? (
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+                          🚀 Server Booster
+                        </span>
+                      ) : (
+                        <span className="text-white/30 text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDmModal({ open: true, user: u, message: "" })}
+                          className="h-7 px-2.5 text-[11px] border-white/10 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 rounded-lg"
+                        >
+                          Send DM
+                        </Button>
+                        {u.is_booster ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleUserAction(u.id, "remove_booster")}
+                            className="h-7 px-2 text-[10px] bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-lg"
+                          >
+                            Remove Boost
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleUserAction(u.id, "give_booster")}
+                            className="h-7 px-2 text-[10px] bg-purple-600/30 hover:bg-purple-600 text-purple-200 border border-purple-500/30 rounded-lg"
+                          >
+                            Give Boost
+                          </Button>
+                        )}
+                        {u.verified ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleUserAction(u.id, "unverify")}
+                            className="h-7 px-2 text-[10px] bg-white/5 hover:bg-white/10 text-white/70 rounded-lg"
+                          >
+                            Revoke
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleUserAction(u.id, "verify")}
+                            className="h-7 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg"
+                          >
+                            Verify
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Send DM Modal */}
+      <Dialog open={dmModal.open} onOpenChange={(o) => !o && setDmModal({ open: false, user: null, message: "" })}>
+        <DialogContent className="w-[460px] max-w-[calc(100vw-2rem)] bg-[#0c0e15] border border-[#2b384e] text-white p-5 rounded-2xl">
+          <form onSubmit={handleSendDm} className="space-y-4">
+            <DialogTitle className="text-sm font-bold text-white font-display">
+              Send Direct Message to @{dmModal.user?.username}
+            </DialogTitle>
+            <p className="text-xs text-[#E5E7EB]/60">
+              The Swats.bio Discord Bot will dispatch this message directly to their Discord DM inbox.
+            </p>
+            <div className="space-y-1">
+              <label className="text-[11px] text-[#E5E7EB]/70">Message Content</label>
+              <Textarea
+                value={dmModal.message}
+                onChange={(e) => setDmModal((p) => ({ ...p, message: e.target.value }))}
+                placeholder="Enter notification or message to send via Discord bot..."
+                rows={4}
+                className="bg-[#080a10] border-white/10 text-xs text-white resize-none"
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDmModal({ open: false, user: null, message: "" })}
+                className="border-white/10 text-white hover:bg-white/5 text-xs rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={sendingDm || !dmModal.message.trim()}
+                className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold rounded-xl"
+              >
+                {sendingDm ? "Sending DM..." : "Send Bot DM"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
