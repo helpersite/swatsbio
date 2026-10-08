@@ -1136,6 +1136,10 @@ export default function Editor({ initialTab = "profile" }) {
                   value={s.accent_color || "#5B8DB8"}
                   onChange={(v) => patch("accent_color", v)}
                 />
+              </div>
+            </div>
+          </Panel>
+
           {/* Global Badge Color & Glow Overlap */}
           <Panel title="Global Badge Color & Glow Overlap (Override All Badges)">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
