@@ -25,7 +25,7 @@ from html.parser import HTMLParser
 from fastapi import FastAPI, APIRouter, Request, Response, HTTPException, Depends, UploadFile, File, Header, Query, Body
 from starlette.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import Response as StarletteResponse, RedirectResponse, FileResponse
+from starlette.responses import Response as StarletteResponse, RedirectResponse, FileResponse, HTMLResponse
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 from sqlalchemy import text
@@ -695,6 +695,92 @@ DEFAULT_SITE = {
 def set_cookie(resp: Response, token: str):
     resp.set_cookie(key="access_token", value=token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
 
+def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse:
+    import html as html_lib
+    if not user:
+        meta_title = f"@{username} • Swats.bio"
+        meta_desc = f"Swats.bio — #1 private bio handler service. Explore @{username}'s links and profile."
+        meta_image = f"https://api.dicebear.com/7.x/bottts/svg?seed={username}"
+        theme_color = "#5B8DB8"
+        card_type = "summary"
+    else:
+        settings = _j(user.get("settings")) or {}
+        display_name = user.get("display_name") or username
+        meta_title = settings.get("meta_title") or f"{display_name} (@{username}) • Swats.bio"
+        raw_desc = settings.get("meta_desc") or user.get("description") or "Explore my official bio, social links, and music on Swats.bio."
+        # Strip BBCode/effect markers from description for clean embed
+        meta_desc = re.sub(r':[a-zA-Z0-9_-]+:', '', raw_desc).strip()
+        if not meta_desc:
+            meta_desc = f"Explore @{username}'s official profile on Swats.bio."
+        
+        theme_color = settings.get("meta_theme_color") or settings.get("accent_color") or "#5B8DB8"
+        if not theme_color.startswith("#"):
+            theme_color = f"#{theme_color}"
+        
+        card_type = settings.get("twitter_card") or "summary_large_image"
+        
+        # Image resolution
+        raw_img = settings.get("meta_image") or settings.get("profile_embed_image") or settings.get("banner") or settings.get("pfp") or ""
+        if raw_img.startswith("http://") or raw_img.startswith("https://"):
+            meta_image = raw_img
+        elif raw_img.startswith("/api/"):
+            meta_image = f"{BACKEND_PUBLIC_URL}{raw_img}"
+        elif raw_img:
+            meta_image = f"{BACKEND_PUBLIC_URL}/api/files/{raw_img.lstrip('/')}"
+        else:
+            meta_image = f"https://api.dicebear.com/7.x/bottts/svg?seed={username}"
+
+    esc_title = html_lib.escape(meta_title)
+    esc_desc = html_lib.escape(meta_desc)
+    esc_img = html_lib.escape(meta_image)
+    esc_color = html_lib.escape(theme_color)
+    esc_user = html_lib.escape(username)
+    esc_url = f"https://swats.bio/{esc_user}"
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{esc_title}</title>
+  <meta name="description" content="{esc_desc}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <!-- Open Graph / Discord Embeds -->
+  <meta property="og:type" content="profile">
+  <meta property="og:site_name" content="Swats.bio">
+  <meta property="og:title" content="{esc_title}">
+  <meta property="og:description" content="{esc_desc}">
+  <meta property="og:image" content="{esc_img}">
+  <meta property="og:image:secure_url" content="{esc_img}">
+  <meta property="og:url" content="{esc_url}">
+  <meta name="theme-color" content="{esc_color}">
+  
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="{card_type}">
+  <meta name="twitter:site" content="@swatsbio">
+  <meta name="twitter:title" content="{esc_title}">
+  <meta name="twitter:description" content="{esc_desc}">
+  <meta name="twitter:image" content="{esc_img}">
+  
+  <!-- Client redirection -->
+  <meta http-equiv="refresh" content="0; url={esc_url}">
+  <link rel="canonical" href="{esc_url}">
+</head>
+<body style="background:#08090d; color:#e5e7eb; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+  <p>Loading <a href="{esc_url}" style="color:#5b8db8; font-weight:bold;">@{esc_user} on Swats.bio</a>...</p>
+</body>
+</html>"""
+    return HTMLResponse(content=html_content, status_code=200)
+
+@app.get("/meta/{username}", response_class=HTMLResponse)
+@app.get("/u/{username}/meta", response_class=HTMLResponse)
+@api.get("/meta/{username}", response_class=HTMLResponse)
+async def get_user_meta_endpoint(username: str, db: AsyncSession = Depends(get_db)):
+    clean_u = (username or "").lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT * FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u LIMIT 1"), {"u": clean_u})
+    user = row_to_user(row.fetchone())
+    return generate_user_meta_html(user, clean_u)
+
 # ─────────────────────────────────────────
 # Routes — health
 # ─────────────────────────────────────────
@@ -705,6 +791,7 @@ async def app_root():
 @api.get("/")
 async def root():
     return {"message": "swats.bio api"}
+
 
 # ─────────────────────────────────────────
 # Auth

@@ -9,9 +9,10 @@ import {
   QrCode, Sparkles, ExternalLink, AlertCircle, Loader2,
   ShieldCheck, Send, Palette, FileJson, Share2, Layers, Search,
   Terminal, Type, Cpu, CheckCircle2, Sliders, RefreshCw, Eye,
-  HelpCircle, Hash, AtSign, ArrowRight, Upload
+  HelpCircle, Hash, AtSign, ArrowRight, Upload, Key, Shield, User,
+  Fingerprint, Activity, Radio, Lock
 } from "lucide-react";
-import { SiDiscord, SiX } from "react-icons/si";
+import { SiDiscord, SiX, SiGithub, SiInstagram, SiTiktok, SiYoutube, SiTwitch, SiTelegram, SiReddit, SiSpotify, SiSteam } from "react-icons/si";
 
 // ──────────────────────────────────────────────
 // UNICODE FONT CONVERSION MAPS
@@ -111,6 +112,25 @@ const UNICODE_FONTS = [
   }
 ];
 
+// DISCORD PERMISSIONS BITWISE FLAGS
+const DISCORD_PERMISSIONS = [
+  { name: "Administrator", value: 0x8, desc: "Full administrative bypass" },
+  { name: "Manage Server", value: 0x20, desc: "Edit server settings & vanity" },
+  { name: "Manage Roles", value: 0x10000000, desc: "Assign and create server roles" },
+  { name: "Manage Channels", value: 0x10, desc: "Create, edit, or delete channels" },
+  { name: "Kick Members", value: 0x2, desc: "Remove rule-breakers" },
+  { name: "Ban Members", value: 0x4, desc: "Permanently ban accounts" },
+  { name: "Send Messages", value: 0x800, desc: "Post in text channels" },
+  { name: "Embed Links", value: 0x4000, desc: "Render rich embeds & leaderboards" },
+  { name: "Attach Files", value: 0x8000, desc: "Upload images and media" },
+  { name: "Read Message History", value: 0x10000, desc: "View past chat logs" },
+  { name: "Mention Everyone", value: 0x20000, desc: "Ping @everyone and @here" },
+  { name: "Use External Emojis", value: 0x40000, desc: "Display cross-server emojis" },
+  { name: "Add Reactions", value: 0x40, desc: "React with emoji icons" },
+  { name: "Connect (Voice)", value: 0x100000, desc: "Join voice channels" },
+  { name: "Speak (Voice)", value: 0x200000, desc: "Transmit voice audio" },
+];
+
 export default function ToolsSection() {
   const { user, mutate } = useAuth();
   const [toolTab, setToolTab] = useState("metadata");
@@ -129,7 +149,6 @@ export default function ToolsSection() {
   const [twitterCardType, setTwitterCardType] = useState(userSettings.twitter_card || "summary_large_image");
   const [savingMeta, setSavingMeta] = useState(false);
 
-  // Sync when user changes
   useEffect(() => {
     if (user?.settings) {
       if (user.settings.meta_title) setMetaTitle(user.settings.meta_title);
@@ -262,7 +281,7 @@ export default function ToolsSection() {
   };
 
   // ──────────────────────────────────────────────
-  // 6. DISCORD SNOWFLAKE DECODER STATE
+  // 6. ENHANCED DISCORD SNOWFLAKE & EPOCH DECODER
   // ──────────────────────────────────────────────
   const [snowflakeInput, setSnowflakeInput] = useState("");
   const [snowflakeResult, setSnowflakeResult] = useState(null);
@@ -283,15 +302,19 @@ export default function ToolsSection() {
       const increment = Number(snowflakeBig & 0xFFFn);
 
       const date = new Date(timestampMs);
+      const diffDays = Math.floor((Date.now() - timestampMs) / (1000 * 60 * 60 * 24));
+
       setSnowflakeResult({
         id,
         dateString: date.toUTCString(),
         iso: date.toISOString(),
-        relative: date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+        relative: date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
         timestampMs,
+        diffDays,
         internalWorkerId,
         internalProcessId,
-        increment
+        increment,
+        binaryString: snowflakeBig.toString(2).padStart(64, "0")
       });
       toast.success("Snowflake decoded successfully!");
     } catch {
@@ -300,90 +323,116 @@ export default function ToolsSection() {
   };
 
   // ──────────────────────────────────────────────
-  // 7. CUSTOM DOMAIN & DNS VALIDATOR
+  // 7. DISCORD BOT PERMISSIONS & INVITE CALCULATOR
+  // ──────────────────────────────────────────────
+  const [botClientId, setBotClientId] = useState("");
+  const [selectedPerms, setSelectedPerms] = useState([0x800, 0x4000, 0x8000, 0x10000, 0x40]); // default messaging perms
+
+  const computedPermissionInteger = useMemo(() => {
+    return selectedPerms.reduce((acc, curr) => acc | curr, 0);
+  }, [selectedPerms]);
+
+  const togglePerm = (permValue) => {
+    if (selectedPerms.includes(permValue)) {
+      setSelectedPerms(selectedPerms.filter(p => p !== permValue));
+    } else {
+      setSelectedPerms([...selectedPerms, permValue]);
+    }
+  };
+
+  const botInviteUrl = useMemo(() => {
+    const cid = botClientId.trim() || "YOUR_BOT_CLIENT_ID";
+    return `https://discord.com/api/oauth2/authorize?client_id=${cid}&permissions=${computedPermissionInteger}&scope=bot%20applications.commands`;
+  }, [botClientId, computedPermissionInteger]);
+
+  // ──────────────────────────────────────────────
+  // 8. DISCORD BOT TOKEN HEADER INSPECTOR (OSINT)
+  // ──────────────────────────────────────────────
+  const [tokenInput, setTokenInput] = useState("");
+  const [tokenResult, setTokenResult] = useState(null);
+
+  const handleInspectToken = (e) => {
+    e.preventDefault();
+    const raw = tokenInput.trim();
+    if (!raw.includes(".")) {
+      toast.error("Paste a valid Discord Bot token (contains 3 dot-separated parts)");
+      return;
+    }
+    try {
+      const parts = raw.split(".");
+      const firstPart = parts[0];
+      // Base64 decode ID
+      let decodedId = "";
+      try {
+        decodedId = atob(firstPart);
+      } catch {
+        // url safe base64 decode
+        const b64 = firstPart.replace(/-/g, "+").replace(/_/g, "/");
+        decodedId = atob(b64);
+      }
+
+      if (!/^\d+$/.test(decodedId)) {
+        toast.error("Could not decode valid user ID from token header.");
+        return;
+      }
+
+      const discordEpoch = 1420070400000n;
+      const snowflakeBig = BigInt(decodedId);
+      const timestampMs = Number((snowflakeBig >> 22n) + discordEpoch);
+      const date = new Date(timestampMs);
+
+      setTokenResult({
+        botId: decodedId,
+        createdAt: date.toUTCString(),
+        relativeAge: date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }),
+        epochMs: timestampMs,
+        tokenPrefix: `${firstPart.slice(0, 6)}...`
+      });
+      toast.success(`Decoded Bot ID: ${decodedId}`);
+    } catch {
+      toast.error("Failed to inspect token structure.");
+    }
+  };
+
+  // ──────────────────────────────────────────────
+  // 9. SOCIAL MEDIA OSINT USERNAME SCANNER
+  // ──────────────────────────────────────────────
+  const [osintUsername, setOsintUsername] = useState(user?.username || "");
+  const [osintChecked, setOsintChecked] = useState(false);
+
+  const OSINT_PLATFORMS = [
+    { name: "GitHub", icon: SiGithub, url: `https://github.com/${osintUsername}` },
+    { name: "Twitter / X", icon: SiX, url: `https://x.com/${osintUsername}` },
+    { name: "Instagram", icon: SiInstagram, url: `https://instagram.com/${osintUsername}` },
+    { name: "YouTube", icon: SiYoutube, url: `https://youtube.com/@${osintUsername}` },
+    { name: "TikTok", icon: SiTiktok, url: `https://tiktok.com/@${osintUsername}` },
+    { name: "Twitch", icon: SiTwitch, url: `https://twitch.tv/${osintUsername}` },
+    { name: "Telegram", icon: SiTelegram, url: `https://t.me/${osintUsername}` },
+    { name: "Reddit", icon: SiReddit, url: `https://reddit.com/user/${osintUsername}` },
+    { name: "Spotify", icon: SiSpotify, url: `https://open.spotify.com/search/${osintUsername}` },
+    { name: "Steam Community", icon: SiSteam, url: `https://steamcommunity.com/id/${osintUsername}` },
+  ];
+
+  // ──────────────────────────────────────────────
+  // 10. CLOUDFLARE PROTECTION & DNS GUIDE
   // ──────────────────────────────────────────────
   const [domainInput, setDomainInput] = useState("");
   const [dnsResult, setDnsResult] = useState(null);
-  const [checkingDns, setCheckingDns] = useState(false);
 
   const handleCheckDns = (e) => {
     e.preventDefault();
     if (!domainInput.trim()) return;
-    setCheckingDns(true);
-    setTimeout(() => {
-      const clean = domainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-      setDnsResult({
-        domain: clean,
-        cnameTarget: "swatsbio-production.up.railway.app",
-        status: "Ready for Mapping",
-        recommendedCname: `CNAME  ${clean}  ->  swatsbio-production.up.railway.app`,
-        recommendedA: `A  ${clean}  ->  Railway / Custom Edge IP`,
-        sslReady: true
-      });
-      setCheckingDns(false);
-      toast.success("DNS analysis generated!");
-    }, 500);
-  };
-
-  // ──────────────────────────────────────────────
-  // 8. PROFILE HEALTH SCORE AUDIT
-  // ──────────────────────────────────────────────
-  const healthScore = useMemo(() => {
-    let score = 20; // base
-    const checks = [
-      { label: "Custom Display Name & Bio description", passed: Boolean(user?.description && user.description.length > 5), points: 15 },
-      { label: "Profile Avatar (PFP) Uploaded", passed: Boolean(userSettings.pfp), points: 15 },
-      { label: "Header Banner / Cover Art Active", passed: Boolean(userSettings.banner || userSettings.header_banner), points: 15 },
-      { label: "Custom OpenGraph & Metadata Configured", passed: Boolean(userSettings.meta_title || userSettings.meta_desc), points: 15 },
-      { label: "Background Aesthetic Effect or Video", passed: Boolean(userSettings.bg_effect && userSettings.bg_effect !== "none"), points: 10 },
-      { label: "Discord or Spotify Connection Linked", passed: Boolean(user?.connections?.discord || user?.connections?.spotify), points: 10 },
-    ];
-
-    checks.forEach(c => {
-      if (c.passed) score += c.points;
-    });
-
-    return { score: Math.min(100, score), checks };
-  }, [user, userSettings]);
-
-  // ──────────────────────────────────────────────
-  // 9. FAVICON GRABBER STATE
-  // ──────────────────────────────────────────────
-  const [faviconUrl, setFaviconUrl] = useState("");
-  const [faviconData, setFaviconData] = useState(null);
-
-  const handleGrabFavicon = (e) => {
-    e.preventDefault();
-    if (!faviconUrl.trim()) return;
-    let clean = faviconUrl.trim().replace(/^https?:\/\//, "").split("/")[0];
-    setFaviconData({
+    const clean = domainInput.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    setDnsResult({
       domain: clean,
-      googleFavicon: `https://www.google.com/s2/favicons?domain=${clean}&sz=128`,
-      duckduckgoFavicon: `https://icons.duckduckgo.com/ip3/${clean}.ico`
+      cnameTarget: "swatsbio-production.up.railway.app",
+      status: "Configured for Cloudflare Proxy",
+      recommendedCname: `CNAME  ${clean}  ->  swatsbio-production.up.railway.app  (Proxied - Orange Cloud ☁️)`,
+      recommendedA: `A  ${clean}  ->  Railway / Custom Edge IP`,
+      sslMode: "Full (Strict)",
+      botFightMode: "Enabled"
     });
-    toast.success(`Favicons extracted for ${clean}`);
-  };
-
-  // ──────────────────────────────────────────────
-  // 10. PROFILE BACKUP JSON
-  // ──────────────────────────────────────────────
-  const handleExportBackup = () => {
-    const backupData = {
-      version: "3.0",
-      username: user?.username,
-      exported_at: new Date().toISOString(),
-      settings: user?.settings || {},
-      badges: user?.badges || [],
-      connections: user?.connections || {}
-    };
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `swatsbio-backup-${user?.username || "profile"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Profile JSON backup downloaded!");
+    toast.success("Cloudflare DNS configuration generated!");
   };
 
   const copyToClipboard = (text) => {
@@ -403,11 +452,11 @@ export default function ToolsSection() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white font-display flex items-center gap-2">
-              <span>Creator Power & Metadata Studio</span>
-              <span className="px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] text-[10px] font-mono font-bold border border-[#5B8DB8]/30">PRO</span>
+              <span>Creator Power, OSINT & Metadata Studio</span>
+              <span className="px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] text-[10px] font-mono font-bold border border-[#5B8DB8]/30">V3.0</span>
             </h1>
             <p className="text-xs text-[#E5E7EB]/60">
-              OpenGraph metadata customization, Discord embed dispatchers, aesthetic fonts, and health auditor
+              OpenGraph metadata customization, Discord embed dispatchers, Snowflake OSINT, Cloudflare protection & permission calculators
             </p>
           </div>
         </div>
@@ -417,14 +466,14 @@ export default function ToolsSection() {
           {[
             { id: "metadata", label: "Metadata & Embeds", icon: Share2 },
             { id: "webhook", label: "Discord Webhooks", icon: SiDiscord },
+            { id: "snowflake", label: "Snowflake OSINT", icon: Cpu },
+            { id: "discord_perms", label: "Discord Perms & Bot", icon: Key },
+            { id: "token_osint", label: "Token Inspector", icon: Fingerprint },
+            { id: "social_osint", label: "Social OSINT", icon: Search },
+            { id: "cloudflare", label: "Cloudflare & DNS", icon: Shield },
             { id: "fonts", label: "Bio Fonts", icon: Type },
             { id: "gradients", label: "Gradient Studio", icon: Palette },
             { id: "qr", label: "QR Generator", icon: QrCode },
-            { id: "snowflake", label: "Snowflake Decoder", icon: Cpu },
-            { id: "domain", label: "DNS & Domain", icon: Globe },
-            { id: "health", label: "Profile Audit", icon: CheckCircle2 },
-            { id: "favicon", label: "Favicon Grabber", icon: Search },
-            { id: "backup", label: "JSON Backup", icon: FileJson },
           ].map((t) => (
             <button
               key={t.id}
@@ -448,7 +497,6 @@ export default function ToolsSection() {
       {/* ────────────────────────────────────────────────────────── */}
       {toolTab === "metadata" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Controls Column */}
           <div className="lg:col-span-6 space-y-4">
             <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
               <div className="flex items-center justify-between">
@@ -530,16 +578,6 @@ export default function ToolsSection() {
                     value={metaImage}
                     onChange={(e) => setMetaImage(e.target.value)}
                     placeholder="https://... or upload in Profile Editor"
-                    className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white focus:border-[#5B8DB8]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-white/80 block mb-1">Search Keywords (comma-separated)</label>
-                  <Input
-                    value={metaKeywords}
-                    onChange={(e) => setMetaKeywords(e.target.value)}
-                    placeholder="swats, biolink, creator, gamer"
                     className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white focus:border-[#5B8DB8]"
                   />
                 </div>
@@ -747,7 +785,351 @@ export default function ToolsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 3. AESTHETIC UNICODE BIO FONTS */}
+      {/* 3. ENHANCED DISCORD SNOWFLAKE & EPOCH OSINT */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {toolTab === "snowflake" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+              <Cpu size={16} className="text-[#5B8DB8]" />
+              <span>Advanced Discord Snowflake & Epoch Investigator (OSINT)</span>
+            </h2>
+            <p className="text-xs text-[#E5E7EB]/60">
+              Dissect 64-bit Discord snowflake IDs to reveal exact millisecond creation time, internal worker ID, process ID, and account lifespan.
+            </p>
+          </div>
+
+          <form onSubmit={handleDecodeSnowflake} className="flex gap-2">
+            <Input
+              value={snowflakeInput}
+              onChange={(e) => setSnowflakeInput(e.target.value)}
+              placeholder="e.g. 1557281277734813806 or user/channel/role ID"
+              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-[#5B8DB8]"
+            />
+            <Button
+              type="submit"
+              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
+            >
+              Analyze Snowflake
+            </Button>
+          </form>
+
+          {snowflakeResult && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Creation Date (UTC)</div>
+                  <div className="text-xs font-bold text-white mt-0.5">{snowflakeResult.dateString}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Relative Age</div>
+                  <div className="text-xs font-bold text-emerald-400 mt-0.5">{snowflakeResult.diffDays} days old ({snowflakeResult.relative})</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Epoch Milliseconds</div>
+                  <div className="text-xs font-mono text-white/80 mt-0.5">{snowflakeResult.timestampMs} ms</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Worker / Process / Inc</div>
+                  <div className="text-xs font-mono text-[#5B8DB8] mt-0.5">W: {snowflakeResult.internalWorkerId} • P: {snowflakeResult.internalProcessId} • #{snowflakeResult.increment}</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-1 font-mono text-[11px] text-white/70">
+                <div className="text-[10px] text-white/40 uppercase font-sans font-bold">Bitwise Binary Representation (64-Bit)</div>
+                <div className="break-all tracking-wider text-[#5B8DB8]">{snowflakeResult.binaryString}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 4. DISCORD PERMISSIONS & BOT INVITE CALCULATOR */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {toolTab === "discord_perms" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+              <Key size={16} className="text-[#5865F2]" />
+              <span>Discord Permissions & OAuth2 Invite Generator</span>
+            </h2>
+            <p className="text-xs text-[#E5E7EB]/60">
+              Calculate exact bitwise permission integers and generate verified OAuth2 bot invite links for your server bots.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-white/80 block mb-1">Bot Client / Application ID</label>
+              <Input
+                value={botClientId}
+                onChange={(e) => setBotClientId(e.target.value)}
+                placeholder="e.g. 134567890123456789"
+                className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white focus:border-[#5865F2]"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-white/80 block mb-1">Computed Bitwise Integer</label>
+              <div className="h-9 px-3 rounded-xl bg-[#08090d] border border-white/10 flex items-center justify-between text-xs font-mono text-[#5865F2]">
+                <span>{computedPermissionInteger}</span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(String(computedPermissionInteger))}
+                  className="text-xs text-white/50 hover:text-white"
+                >
+                  Copy Integer
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Permissions Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-2">
+            {DISCORD_PERMISSIONS.map((p) => {
+              const active = selectedPerms.includes(p.value);
+              return (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => togglePerm(p.value)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between ${
+                    active
+                      ? "bg-[#5865F2]/20 border-[#5865F2]/50 text-white"
+                      : "bg-[#08090d] border-white/5 text-white/60 hover:border-white/15 hover:text-white"
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-bold">{p.name}</div>
+                    <div className="text-[10px] text-white/40">{p.desc}</div>
+                  </div>
+                  <div className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${active ? "bg-[#5865F2] text-white font-bold" : "border border-white/20"}`}>
+                    {active ? "✓" : ""}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 space-y-2">
+            <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Generated OAuth2 Bot Invite Link</div>
+            <div className="text-xs text-[#5865F2] font-mono break-all">{botInviteUrl}</div>
+            <div className="flex gap-2 pt-1">
+              <a
+                href={botInviteUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <ExternalLink size={12} />
+                <span>Invite Bot to Server</span>
+              </a>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => copyToClipboard(botInviteUrl)}
+                className="border-white/10 text-white text-xs rounded-lg hover:bg-white/5"
+              >
+                Copy Invite Link
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 5. DISCORD BOT TOKEN HEADER INSPECTOR */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {toolTab === "token_osint" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+              <Fingerprint size={16} className="text-[#5B8DB8]" />
+              <span>Discord Token Header Inspector (Safe OSINT)</span>
+            </h2>
+            <p className="text-xs text-[#E5E7EB]/60">
+              Inspect the public Base64 header of a Discord bot token to extract the Bot User ID and registration timestamp without exposing secret keys.
+            </p>
+          </div>
+
+          <form onSubmit={handleInspectToken} className="space-y-3">
+            <Input
+              type="password"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Paste Discord Bot Token (processed locally in browser memory only)..."
+              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white focus:border-[#5B8DB8]"
+            />
+            <Button
+              type="submit"
+              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
+            >
+              Analyze Token Header
+            </Button>
+          </form>
+
+          {tokenResult && (
+            <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Extracted Bot User ID</div>
+                <div className="text-xs font-bold text-[#5B8DB8] font-mono mt-0.5">{tokenResult.botId}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Account Registered</div>
+                <div className="text-xs font-bold text-white mt-0.5">{tokenResult.createdAt}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Token Prefix Hash</div>
+                <div className="text-xs font-mono text-white/60 mt-0.5">{tokenResult.tokenPrefix}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 6. SOCIAL MEDIA OSINT SCANNER */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {toolTab === "social_osint" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+              <Search size={16} className="text-[#5B8DB8]" />
+              <span>Cross-Platform Social OSINT Handle Scanner</span>
+            </h2>
+            <p className="text-xs text-[#E5E7EB]/60">
+              Instantly check profile availability and handle footprints across 10+ major social networks.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <AtSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+              <Input
+                value={osintUsername}
+                onChange={(e) => setOsintUsername(e.target.value.replace(/^@/, ""))}
+                placeholder="Enter handle to scan..."
+                className="pl-8 text-xs bg-[#08090d] border-white/10 rounded-xl text-white focus:border-[#5B8DB8]"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                setOsintChecked(true);
+                toast.success(`Generated direct scan links for @${osintUsername}`);
+              }}
+              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
+            >
+              Scan Handles
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {OSINT_PLATFORMS.map((p) => (
+              <a
+                key={p.name}
+                href={p.url}
+                target="_blank"
+                rel="noreferrer"
+                className="p-3 rounded-xl bg-[#08090d] border border-white/10 flex items-center justify-between hover:border-[#5B8DB8]/50 hover:bg-white/5 transition-all group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white">
+                    <p.icon size={16} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white group-hover:text-[#5B8DB8] transition-colors">{p.name}</div>
+                    <div className="text-[10px] text-white/40 font-mono">@{osintUsername || "user"}</div>
+                  </div>
+                </div>
+                <ExternalLink size={13} className="text-white/40 group-hover:text-white transition-colors" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 7. CLOUDFLARE & DDOS PROTECTION CONFIGURATOR */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {toolTab === "cloudflare" && (
+        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
+          <div>
+            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
+              <Shield size={16} className="text-amber-400" />
+              <span>Cloudflare Protection & Custom Domain Setup</span>
+            </h2>
+            <p className="text-xs text-[#E5E7EB]/60">
+              Step-by-step setup guide to proxy your domain through Cloudflare for free DDoS mitigation, rate limiting, and Bot Fight Mode.
+            </p>
+          </div>
+
+          <form onSubmit={handleCheckDns} className="flex gap-2">
+            <Input
+              value={domainInput}
+              onChange={(e) => setDomainInput(e.target.value)}
+              placeholder="e.g. bio.yourdomain.com or myname.me"
+              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-amber-400"
+            />
+            <Button
+              type="submit"
+              className="bg-amber-500 hover:bg-amber-600 text-black text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
+            >
+              Generate DNS Map
+            </Button>
+          </form>
+
+          {dnsResult && (
+            <div className="p-4 rounded-xl bg-[#08090d] border border-amber-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Target Domain: {dnsResult.domain}</span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                  {dnsResult.status}
+                </span>
+              </div>
+              <div className="space-y-2 text-xs font-mono text-white/80 bg-black/40 p-3 rounded-lg border border-white/5">
+                <div>{dnsResult.recommendedCname}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Step-by-Step Cloudflare Protection Guide */}
+          <div className="space-y-3 pt-2">
+            <div className="text-xs font-bold text-white uppercase tracking-wider">Cloudflare Protection Checklist</div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
+                <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <span>1. Orange Cloud Proxy</span>
+                </div>
+                <p className="text-[11px] text-white/70 leading-relaxed">
+                  In Cloudflare DNS, ensure the CNAME points to <code className="text-[#5B8DB8]">swatsbio-production.up.railway.app</code> with <strong>Proxy status: Proxied (Orange cloud)</strong>.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
+                <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span>2. SSL/TLS Full (Strict)</span>
+                </div>
+                <p className="text-[11px] text-white/70 leading-relaxed">
+                  Go to <strong>SSL/TLS &gt; Overview</strong> in Cloudflare and set encryption mode to <strong>Full (Strict)</strong> for end-to-end HTTPS encryption.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#08090d] border border-white/10 space-y-1.5">
+                <div className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                  <span>3. Bot Fight Mode & WAF</span>
+                </div>
+                <p className="text-[11px] text-white/70 leading-relaxed">
+                  Go to <strong>Security &gt; Bots</strong> and enable <strong>Bot Fight Mode</strong> to automatically block malicious automated crawlers and scrapers.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 8. BIO FONTS */}
       {/* ────────────────────────────────────────────────────────── */}
       {toolTab === "fonts" && (
         <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
@@ -800,7 +1182,7 @@ export default function ToolsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 4. GRADIENT & PALETTE STUDIO */}
+      {/* 9. GRADIENT STUDIO */}
       {/* ────────────────────────────────────────────────────────── */}
       {toolTab === "gradients" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -930,7 +1312,7 @@ export default function ToolsSection() {
       )}
 
       {/* ────────────────────────────────────────────────────────── */}
-      {/* 5. QR CODE GENERATOR */}
+      {/* 10. QR CODE GENERATOR */}
       {/* ────────────────────────────────────────────────────────── */}
       {toolTab === "qr" && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -1013,242 +1395,6 @@ export default function ToolsSection() {
               <img src={qrImageUrl} alt="QR Code Preview" className="w-56 h-56 rounded-xl object-contain" />
             </div>
             <p className="text-xs text-white/50 pt-2">Scan with camera to open https://swats.bio/{user?.username}</p>
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 6. DISCORD SNOWFLAKE DECODER */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "snowflake" && (
-        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <Cpu size={16} className="text-[#5B8DB8]" />
-              <span>Discord Snowflake / ID Timestamp Decoder</span>
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Paste any Discord user ID, message ID, or channel ID to reveal exact account creation timestamps.
-            </p>
-          </div>
-
-          <form onSubmit={handleDecodeSnowflake} className="flex gap-2">
-            <Input
-              value={snowflakeInput}
-              onChange={(e) => setSnowflakeInput(e.target.value)}
-              placeholder="e.g. 1557281277734813806"
-              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-[#5B8DB8]"
-            />
-            <Button
-              type="submit"
-              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
-            >
-              Decode ID
-            </Button>
-          </form>
-
-          {snowflakeResult && (
-            <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Creation Date (UTC)</div>
-                <div className="text-xs font-bold text-white mt-0.5">{snowflakeResult.dateString}</div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Relative Age</div>
-                <div className="text-xs font-bold text-[#5B8DB8] mt-0.5">{snowflakeResult.relative}</div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Unix Epoch Timestamp</div>
-                <div className="text-xs font-mono text-white/80 mt-0.5">{snowflakeResult.timestampMs} ms</div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Worker / Increment</div>
-                <div className="text-xs font-mono text-white/80 mt-0.5">W: {snowflakeResult.internalWorkerId} | Inc: {snowflakeResult.increment}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 7. CUSTOM DOMAIN & DNS VALIDATOR */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "domain" && (
-        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <Globe size={16} className="text-[#5B8DB8]" />
-              <span>Custom Domain & DNS Validator</span>
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Verify your custom domain DNS records to point directly to your Swats.bio profile.
-            </p>
-          </div>
-
-          <form onSubmit={handleCheckDns} className="flex gap-2">
-            <Input
-              value={domainInput}
-              onChange={(e) => setDomainInput(e.target.value)}
-              placeholder="e.g. bio.yourdomain.com or myname.me"
-              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-[#5B8DB8]"
-            />
-            <Button
-              type="submit"
-              disabled={checkingDns}
-              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
-            >
-              {checkingDns ? "Scanning..." : "Check DNS"}
-            </Button>
-          </form>
-
-          {dnsResult && (
-            <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white">Target Domain: {dnsResult.domain}</span>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
-                  {dnsResult.status}
-                </span>
-              </div>
-              <div className="space-y-2 text-xs font-mono text-white/80 bg-black/40 p-3 rounded-lg border border-white/5">
-                <div>{dnsResult.recommendedCname}</div>
-                <div>{dnsResult.recommendedA}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 8. PROFILE HEALTH AUDITOR */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "health" && (
-        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-5 shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-                <CheckCircle2 size={16} className="text-emerald-400" />
-                <span>Profile Discovery & Health Score</span>
-              </h2>
-              <p className="text-xs text-[#E5E7EB]/60">
-                Automated checklist measuring your profile optimization and SEO health.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-2xl font-bold font-display text-white">{healthScore.score}%</div>
-              <div className="w-24 h-2.5 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#5B8DB8] to-emerald-400 rounded-full transition-all duration-500"
-                  style={{ width: `${healthScore.score}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            {healthScore.checks.map((c) => (
-              <div
-                key={c.label}
-                className="p-3 rounded-xl bg-[#08090d] border border-white/10 flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-2.5">
-                  {c.passed ? (
-                    <div className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                      <Check size={12} />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full bg-white/10 text-white/40 flex items-center justify-center">
-                      <AlertCircle size={12} />
-                    </div>
-                  )}
-                  <span className={`text-xs font-semibold ${c.passed ? "text-white" : "text-white/50"}`}>
-                    {c.label}
-                  </span>
-                </div>
-                <span className={`text-[10px] font-bold ${c.passed ? "text-emerald-400" : "text-white/40"}`}>
-                  {c.passed ? `+${c.points} PTS` : "0 PTS"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 9. FAVICON EXTRACTOR */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "favicon" && (
-        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <Search size={16} className="text-[#5B8DB8]" />
-              <span>Favicon & Icon Extractor</span>
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Extract high-resolution favicons and touch icons from any external website URL.
-            </p>
-          </div>
-
-          <form onSubmit={handleGrabFavicon} className="flex gap-2">
-            <Input
-              value={faviconUrl}
-              onChange={(e) => setFaviconUrl(e.target.value)}
-              placeholder="e.g. spotify.com or github.com"
-              className="text-xs bg-[#08090d] border-white/10 rounded-xl text-white flex-1 focus:border-[#5B8DB8]"
-            />
-            <Button
-              type="submit"
-              className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold px-4 rounded-xl shadow cursor-pointer"
-            >
-              Extract Icon
-            </Button>
-          </form>
-
-          {faviconData && (
-            <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 flex items-center gap-4">
-              <img src={faviconData.googleFavicon} alt="Favicon" className="w-12 h-12 rounded-xl object-contain bg-black/40 p-2 border border-white/10" />
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-white">{faviconData.domain}</div>
-                <div className="text-[10px] text-white/40 font-mono truncate">{faviconData.googleFavicon}</div>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => copyToClipboard(faviconData.googleFavicon)}
-                className="bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs rounded-lg cursor-pointer"
-              >
-                Copy URL
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* 10. PROFILE BACKUP JSON */}
-      {/* ────────────────────────────────────────────────────────── */}
-      {toolTab === "backup" && (
-        <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
-          <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 font-display">
-              <FileJson size={16} className="text-[#5B8DB8]" />
-              <span>Bio Profile Backup & JSON Sync</span>
-            </h2>
-            <p className="text-xs text-[#E5E7EB]/60">
-              Export and download a complete cryptographic JSON snapshot of your entire bio configuration.
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-[#08090d] border border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-white">Full Profile Configuration Backup</span>
-              <span className="text-[10px] text-white/40">JSON Schema v3.0</span>
-            </div>
-            <Button
-              onClick={handleExportBackup}
-              className="w-full bg-[#5B8DB8] hover:bg-[#4a7a9f] text-white text-xs font-bold h-10 rounded-xl shadow-lg cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Download size={14} />
-              <span>Export & Download Backup JSON</span>
-            </Button>
           </div>
         </div>
       )}

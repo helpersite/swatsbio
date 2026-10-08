@@ -3,6 +3,32 @@
   "outputDirectory": "frontend/dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/api/$1"
+    },
+    {
+      "source": "/meta/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/meta/$1"
+    },
+    {
+      "source": "/raw-meta/(.*)",
+      "destination": "https://swatsbio-production.up.railway.app/meta/$1"
+    },
+    {
+      "source": "/:username",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": "(?i).*(discordbot|twitterbot|facebookexternalhit|telegrambot|whatsapp|slackbot|linkedinbot|embedly|quora|rogerbot|showyoubot|outbrain|pinterest|bingpreview|vkshare|w3c_validator|curl|wget).*"
+        }
+      ],
+      "destination": "https://swatsbio-production.up.railway.app/meta/:username"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
