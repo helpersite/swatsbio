@@ -1,142 +1,128 @@
-import React, { useEffect, useState } from "react";
-import { useAuth, api, fileUrl } from "@/lib/auth";
+import React, { useState, useEffect } from "react";
+import { useAuth, api } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  Sparkles, Search, Check, Trash2, Eye, Plus, LayoutTemplate,
-  Loader2, Download, ShieldCheck, Palette, Layers, Star, Zap
-} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { renderBioText } from "@/lib/textEffects";
+import {
+  Sparkles, Star, Check, Eye, Loader2, Plus, Search,
+  Trash2, Edit3, Shield, Lock, Globe, Users, Sliders,
+  CheckSquare, Square, Music, Layers, Image as ImageIcon,
+  Share2, Type, MousePointer
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export const OFFICIAL_STYLE_PRESETS = [
+// ─────────────────────────────────────────────────────────────
+// OFFICIAL HIGH-AESTHETIC STYLE PRESETS
+// ─────────────────────────────────────────────────────────────
+const OFFICIAL_STYLE_PRESETS = [
   {
     id: "preset_cyberpunk",
-    name: "Cyber Neon Glow",
+    name: "Neon Cyberpunk 2077",
     category: "Cyber & Gaming",
-    tagline: "High-contrast neon cyan & magenta glitch aesthetics with frosted glass",
-    accent: "#00F0FF",
+    tagline: "High-voltage cyan & hot pink neon glow, holographic scanlines, and dark terminal glass",
+    accent: "#00FFCC",
     bg_gradient: "from-cyan-950/60 via-purple-950/40 to-[#08090d]",
     settings: {
-      accent_color: "#00F0FF",
-      card_color: "#0c0e18",
+      accent_color: "#00FFCC",
+      glow_color: "#FF007F",
+      card_color: "#0b0f19",
       card_opacity: 85,
       card_blur: 16,
-      border_color: "#00F0FF",
+      border_color: "#00FFCC",
       border_radius: 18,
-      bg_effect: "cyber_grid",
-      avatar_fx: "neon_rim",
-      avatar_fx_color: "#00F0FF",
-      banner_fx: "scan",
-      name_effect: "neon_rim",
-      name_color: "#00F0FF",
+      bg_effect: "matrix",
+      avatar_fx: "neon_pulse",
+      avatar_fx_color: "#00FFCC",
+      banner_fx: "scanlines",
+      name_effect: "neon",
+      name_color: "#00FFCC",
       bio_effect: "glow",
-      layout: "floating_glass",
+      layout: "classic",
       font_family: "Space Grotesk",
     },
   },
   {
-    id: "preset_minimal",
-    name: "Minimalist Slate",
+    id: "preset_minimal_mono",
+    name: "Monochrome Studio",
     category: "Minimal",
-    tagline: "Ultra clean monochrome dark glass with crisp minimalist typography",
-    accent: "#E5E7EB",
-    bg_gradient: "from-slate-900/60 via-zinc-900/40 to-[#08090d]",
+    tagline: "Ultra-clean monochrome frosted glass, minimalist typography, subtle drop shadows",
+    accent: "#E2E8F0",
+    bg_gradient: "from-zinc-900/60 via-stone-900/40 to-[#050505]",
     settings: {
-      accent_color: "#FFFFFF",
-      card_color: "#0f1117",
-      card_opacity: 90,
-      card_blur: 24,
+      accent_color: "#E2E8F0",
+      card_color: "#09090b",
+      card_opacity: 75,
+      card_blur: 20,
       border_color: "#27272a",
-      border_radius: 14,
-      bg_effect: "static",
-      avatar_fx: "none",
-      banner_fx: "dark_vignette",
+      border_radius: 24,
+      bg_effect: "subtle_stars",
+      avatar_fx: "soft_glow",
+      avatar_fx_color: "#ffffff",
+      banner_fx: "none",
       name_effect: "none",
-      name_color: "#FFFFFF",
+      name_color: "#ffffff",
       bio_effect: "none",
-      layout: "minimal",
+      layout: "compact_feed",
       font_family: "Inter",
     },
   },
   {
-    id: "preset_anime",
-    name: "Violet Nebula",
+    id: "preset_anime_cherry",
+    name: "Sakura Dreamscape",
     category: "Anime & Cosmos",
-    tagline: "Purple & rose celestial gradients with deep starfield animations",
-    accent: "#E879F9",
-    bg_gradient: "from-fuchsia-950/60 via-purple-950/40 to-[#08090d]",
+    tagline: "Soft pastel cherry blossoms, dreamy rose quartz glowing borders & falling sakura petals",
+    accent: "#F472B6",
+    bg_gradient: "from-pink-950/50 via-purple-950/30 to-[#0c0a14]",
     settings: {
-      accent_color: "#E879F9",
-      card_color: "#130e1f",
+      accent_color: "#F472B6",
+      card_color: "#180d19",
       card_opacity: 80,
-      card_blur: 20,
-      border_color: "#E879F9",
-      border_radius: 20,
-      bg_effect: "stars",
-      avatar_fx: "ripple",
-      avatar_fx_color: "#E879F9",
+      card_blur: 18,
+      border_color: "#F472B6",
+      border_radius: 22,
+      bg_effect: "cherry_blossom",
+      avatar_fx: "rainbow_ring",
+      avatar_fx_color: "#F472B6",
       banner_fx: "shimmer",
-      name_effect: "waveflow",
-      name_color: "#E879F9",
-      bio_effect: "sparkle",
-      layout: "bento_grid",
+      name_effect: "gradient",
+      name_color: "#F472B6",
+      bio_effect: "glow",
+      layout: "floating_island",
       font_family: "Outfit",
     },
   },
   {
-    id: "preset_developer",
-    name: "Terminal Matrix",
+    id: "preset_terminal_hacker",
+    name: "Kernel Rootkit",
     category: "Developer",
-    tagline: "Terminal aesthetics, Matrix rain particle stream & monospaced layout",
-    accent: "#10B981",
-    bg_gradient: "from-emerald-950/60 via-slate-950/40 to-[#08090d]",
+    tagline: "Retro green phosphor CRT monitor glow, monospaced ASCII aesthetics & terminal scanlines",
+    accent: "#22C55E",
+    bg_gradient: "from-emerald-950/60 via-green-950/40 to-[#020d06]",
     settings: {
-      accent_color: "#10B981",
-      card_color: "#0a120e",
-      card_opacity: 88,
-      card_blur: 14,
-      border_color: "#10B981",
+      accent_color: "#22C55E",
+      card_color: "#041007",
+      card_opacity: 90,
+      card_blur: 12,
+      border_color: "#15803d",
       border_radius: 12,
-      bg_effect: "matrix",
-      avatar_fx: "neon_rim",
-      avatar_fx_color: "#10B981",
-      banner_fx: "scan",
-      name_effect: "glow",
-      name_color: "#10B981",
-      bio_effect: "none",
-      layout: "two_column",
-      font_family: "JetBrains Mono",
+      bg_effect: "crt_scanlines",
+      avatar_fx: "glitch",
+      avatar_fx_color: "#22C55E",
+      banner_fx: "scanlines",
+      name_effect: "typewriter",
+      name_color: "#22C55E",
+      bio_effect: "glitch",
+      layout: "classic",
+      font_family: "Fira Code",
     },
   },
   {
-    id: "preset_store",
-    name: "Store & Projects Showcase",
-    category: "Store & Projects",
-    tagline: "Product showcases, instant action buttons & multi-deck interactive slides",
-    accent: "#5B8DB8",
-    bg_gradient: "from-sky-950/60 via-blue-950/40 to-[#08090d]",
-    settings: {
-      accent_color: "#5B8DB8",
-      card_color: "#0c101c",
-      card_opacity: 92,
-      card_blur: 20,
-      border_color: "#5B8DB8",
-      border_radius: 16,
-      bg_effect: "anti_fall",
-      avatar_fx: "spin",
-      avatar_fx_color: "#5B8DB8",
-      banner_fx: "fade_overlay",
-      name_effect: "rgbglow",
-      name_color: "#5B8DB8",
-      bio_effect: "glow",
-      layout: "slideshow",
-      font_family: "Inter",
-    },
-  },
-  {
-    id: "preset_luxury",
+    id: "preset_vip_gold",
     name: "VIP Obsidian Gold",
     category: "Luxury VIP",
     tagline: "Deep onyx obsidian with gold foil reflections, glowing border & royal badges",
@@ -164,6 +150,8 @@ export const OFFICIAL_STYLE_PRESETS = [
 
 export default function ProfileTemplatesSection() {
   const { user, setUser } = useAuth();
+  const isAdmin = user?.role === "admin";
+
   const [communityTemplates, setCommunityTemplates] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
@@ -174,41 +162,81 @@ export default function ProfileTemplatesSection() {
   // Publish Form Modal
   const [publishOpen, setPublishOpen] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [templateDesc, setTemplateDesc] = useState("");
+  const [templateVisibility, setTemplateVisibility] = useState("public");
+  const [templateRole, setTemplateRole] = useState("");
   const [publishing, setPublishing] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    api.get("/templates?limit=100")
-      .then(({ data }) => { if (active) setCommunityTemplates(Array.isArray(data) ? data : []); })
+  // Component inclusion toggles
+  const [includeTheme, setIncludeTheme] = useState(true);
+  const [includeLayout, setIncludeLayout] = useState(true);
+  const [includeAudio, setIncludeAudio] = useState(true);
+  const [includeSlideshow, setIncludeSlideshow] = useState(true);
+  const [includeLinks, setIncludeLinks] = useState(true);
+  const [includeFonts, setIncludeFonts] = useState(true);
+  const [includeCursor, setIncludeCursor] = useState(true);
+
+  // Admin Edit Modal
+  const [editModal, setEditModal] = useState({
+    open: false,
+    template: null,
+    name: "",
+    description: "",
+    visibility: "public",
+    target_role: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const fetchTemplates = () => {
+    api.get("/templates?limit=150")
+      .then(({ data }) => setCommunityTemplates(Array.isArray(data) ? data : []))
       .catch(() => {})
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchTemplates();
   }, []);
 
-  const categories = ["All", "Style Presets", "Cyber & Gaming", "Minimal", "Anime & Cosmos", "Developer", "Store & Projects", "Luxury VIP", "My Published"];
+  const categories = [
+    "All",
+    "Style Presets",
+    "Cyber & Gaming",
+    "Minimal",
+    "Anime & Cosmos",
+    "Developer",
+    "Store & Projects",
+    "Luxury VIP",
+    "My Published",
+    ...(isAdmin ? ["Admin Moderation"] : [])
+  ];
 
   const allTemplates = [
     ...OFFICIAL_STYLE_PRESETS.map((t) => ({ ...t, is_curated: true })),
     ...communityTemplates.map((t) => ({
       id: t.id,
       name: t.name,
-      category: "Community",
+      category: t.visibility === "role" ? "Role Restricted" : (t.visibility === "unlisted" ? "Unlisted" : "Community"),
       tagline: t.description || `Shared template by @${t.owner_username || "creator"}`,
       author: `@${t.owner_username || "creator"}`,
       accent: t.settings?.accent_color || "#5B8DB8",
       bg_gradient: "from-blue-950/40 via-purple-950/20 to-[#08090d]",
       settings: t.settings || {},
       owner_id: t.owner_id,
+      owner_username: t.owner_username,
+      visibility: t.visibility,
+      target_role: t.target_role,
       is_curated: false,
     })),
   ];
 
   const filteredTemplates = allTemplates.filter((t) => {
-    const matchSearch = `${t.name} ${t.tagline}`.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = `${t.name} ${t.tagline} ${t.author || ""}`.toLowerCase().includes(search.toLowerCase());
     if (!matchSearch) return false;
     if (activeCategory === "All") return true;
     if (activeCategory === "Style Presets") return t.is_curated;
     if (activeCategory === "My Published") return t.owner_id === user?.id;
+    if (activeCategory === "Admin Moderation") return !t.is_curated;
     return t.category === activeCategory;
   });
 
@@ -238,25 +266,103 @@ export default function ProfileTemplatesSection() {
     if (!templateName.trim()) return toast.error("Please enter a template name");
     setPublishing(true);
     try {
+      const userSettings = { ...(user?.settings || {}) };
+      delete userSettings.profile_templates;
+
+      const filteredSettings = {};
+      if (includeTheme) {
+        filteredSettings.accent_color = userSettings.accent_color;
+        filteredSettings.glow_color = userSettings.glow_color;
+        filteredSettings.border_color = userSettings.border_color;
+        filteredSettings.card_color = userSettings.card_color;
+      }
+      if (includeLayout) {
+        filteredSettings.layout = userSettings.layout;
+        filteredSettings.card_style = userSettings.card_style;
+        filteredSettings.card_opacity = userSettings.card_opacity;
+        filteredSettings.card_blur = userSettings.card_blur;
+        filteredSettings.bg_effect = userSettings.bg_effect;
+      }
+      if (includeAudio) {
+        filteredSettings.audio = userSettings.audio;
+      }
+      if (includeSlideshow) {
+        filteredSettings.slideshow = userSettings.slideshow;
+        filteredSettings.backgrounds = userSettings.backgrounds;
+      }
+      if (includeFonts) {
+        filteredSettings.font_family = userSettings.font_family;
+        filteredSettings.name_effect = userSettings.name_effect;
+      }
+      if (includeCursor) {
+        filteredSettings.cursor = userSettings.cursor;
+      }
+
       const { data: linkData } = await api.get("/links");
-      const cleanSettings = { ...(user?.settings || {}) };
-      delete cleanSettings.profile_templates;
+      const filteredLinks = includeLinks && Array.isArray(linkData) ? linkData : [];
+
       const { data } = await api.post("/templates", {
         name: templateName.trim(),
-        visibility: "public",
+        visibility: templateVisibility,
+        target_role: templateRole.trim(),
         display_name: user?.display_name || "",
-        description: user?.description || "",
-        settings: cleanSettings,
-        links: Array.isArray(linkData) ? linkData : [],
+        description: templateDesc.trim() || `Custom bio preset created by @${user?.username || "creator"}`,
+        settings: Object.keys(filteredSettings).length > 0 ? filteredSettings : userSettings,
+        links: filteredLinks,
       });
+
       setCommunityTemplates((prev) => [data, ...prev]);
       setTemplateName("");
+      setTemplateDesc("");
       setPublishOpen(false);
-      toast.success("🚀 Template published to global community library!");
+      toast.success("🚀 Template published to global library!");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Could not publish template.");
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (templateId, templateName) => {
+    if (!window.confirm(`Are you sure you want to delete template "${templateName}"?`)) return;
+    try {
+      await api.delete(`/templates/${templateId}`);
+      toast.success(`Template "${templateName}" deleted successfully.`);
+      setCommunityTemplates((prev) => prev.filter((t) => t.id !== templateId));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to delete template.");
+    }
+  };
+
+  const handleOpenEdit = (t) => {
+    setEditModal({
+      open: true,
+      template: t,
+      name: t.name,
+      description: t.tagline || t.description || "",
+      visibility: t.visibility || "public",
+      target_role: t.target_role || "",
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editModal.template) return;
+    setSavingEdit(true);
+    try {
+      const { data } = await api.put(`/templates/${editModal.template.id}`, {
+        name: editModal.name.trim(),
+        description: editModal.description.trim(),
+        visibility: editModal.visibility,
+        target_role: editModal.target_role.trim(),
+      });
+      toast.success("Template updated successfully!");
+      setCommunityTemplates((prev) => prev.map((t) => (t.id === data.id ? { ...t, ...data } : t)));
+      setEditModal({ open: false, template: null, name: "", description: "", visibility: "public", target_role: "" });
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to update template.");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -267,7 +373,14 @@ export default function ProfileTemplatesSection() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="text-[#5B8DB8]" size={18} />
-            <h1 className="text-base font-bold text-white font-display">Profile Style Presets & Themes</h1>
+            <h1 className="text-base font-bold text-white font-display flex items-center gap-2">
+              <span>Profile Style Presets & Themes</span>
+              {isAdmin && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold border border-emerald-500/30 flex items-center gap-1">
+                  <Shield size={10} /> Admin Manager Active
+                </span>
+              )}
+            </h1>
           </div>
           <p className="text-xs text-[#E5E7EB]/50">
             One-click apply clean layouts, background FX, frosted glass themes, and glowing fonts directly to your live bio
@@ -278,7 +391,7 @@ export default function ProfileTemplatesSection() {
           onClick={() => setPublishOpen(true)}
           className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(91,141,184,0.35)] gap-1.5 cursor-pointer shrink-0"
         >
-          <Plus size={14} /> Publish My Current Bio
+          <Plus size={14} /> Publish Custom Template
         </Button>
       </div>
 
@@ -322,6 +435,8 @@ export default function ProfileTemplatesSection() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTemplates.map((t) => {
           const isApplying = applyingId === t.id;
+          const canManage = isAdmin || (!t.is_curated && t.owner_id === user?.id);
+
           return (
             <div
               key={t.id}
@@ -330,24 +445,54 @@ export default function ProfileTemplatesSection() {
               {/* Card Banner / Aesthetic Header */}
               <div className={`relative h-28 bg-gradient-to-br ${t.bg_gradient} p-3.5 flex flex-col justify-between border-b border-white/10 overflow-hidden`}>
                 <div className="flex items-center justify-between z-10">
-                  <span
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm"
-                    style={{
-                      backgroundColor: `${t.accent}20`,
-                      borderColor: `${t.accent}60`,
-                      color: t.accent,
-                    }}
-                  >
-                    {t.category}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm"
+                      style={{
+                        backgroundColor: `${t.accent}20`,
+                        borderColor: `${t.accent}60`,
+                        color: t.accent,
+                      }}
+                    >
+                      {t.category}
+                    </span>
+                    {t.visibility === "role" && (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-mono">
+                        Role: {t.target_role || "VIP"}
+                      </span>
+                    )}
+                  </div>
+
                   {t.is_curated ? (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20">
                       <Star size={10} className="fill-amber-400" /> Official Preset
                     </span>
                   ) : (
-                    <span className="text-[10px] text-white/60 font-mono">
-                      {t.author}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(t)}
+                          className="w-6 h-6 rounded-lg bg-black/50 hover:bg-[#5B8DB8] text-white flex items-center justify-center text-xs transition-colors"
+                          title="Edit Template"
+                        >
+                          <Edit3 size={11} />
+                        </button>
+                      )}
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTemplate(t.id, t.name)}
+                          className="w-6 h-6 rounded-lg bg-black/50 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors"
+                          title="Delete Template"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                      <span className="text-[10px] text-white/60 font-mono">
+                        {t.author}
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -483,23 +628,123 @@ export default function ProfileTemplatesSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Publish Modal */}
+      {/* Enhanced Publish Modal */}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
-        <DialogContent className="max-w-md bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)]">
+        <DialogContent className="max-w-lg bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] max-h-[90vh] overflow-y-auto">
           <DialogTitle className="text-base font-bold text-white font-display flex items-center gap-2">
             <Plus className="text-[#5B8DB8]" size={16} />
             <span>Publish Current Bio as Template</span>
           </DialogTitle>
-          <form onSubmit={handlePublish} className="space-y-4 pt-2">
+          <form onSubmit={handlePublish} className="space-y-4 pt-2 text-xs">
             <div className="space-y-1.5">
-              <label className="text-xs text-white/70 font-semibold">Template Name</label>
+              <label className="text-white/80 font-semibold block">Template Name</label>
               <Input
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g. Neon Horizon"
+                placeholder="e.g. Neon Horizon 2026"
                 className="bg-[#07080c] border-white/10 text-white text-xs h-9 rounded-xl"
               />
             </div>
+
+            <div className="space-y-1.5">
+              <label className="text-white/80 font-semibold block">Tagline / Description</label>
+              <Textarea
+                value={templateDesc}
+                onChange={(e) => setTemplateDesc(e.target.value)}
+                placeholder="Describe your theme layout, colors, and ideal style..."
+                rows={2}
+                className="bg-[#07080c] border-white/10 text-white text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-white/80 font-semibold block mb-1">Privacy & Visibility</label>
+                <select
+                  value={templateVisibility}
+                  onChange={(e) => setTemplateVisibility(e.target.value)}
+                  className="w-full h-9 rounded-xl bg-[#07080c] border border-white/10 text-xs text-white px-3 focus:border-[#5B8DB8]"
+                >
+                  <option value="public">🌐 Public Library</option>
+                  <option value="unlisted">🔗 Unlisted (Direct Link)</option>
+                  <option value="role">👑 Role Restricted</option>
+                  <option value="private">🔒 Private (Me Only)</option>
+                </select>
+              </div>
+
+              {templateVisibility === "role" && (
+                <div>
+                  <label className="text-white/80 font-semibold block mb-1">Target Role</label>
+                  <Input
+                    value={templateRole}
+                    onChange={(e) => setTemplateRole(e.target.value)}
+                    placeholder="e.g. booster, vip, admin"
+                    className="bg-[#07080c] border-white/10 text-white text-xs h-9 rounded-xl"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* What to include in template */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <span className="text-xs font-bold text-white block">Components to Include in Preset</span>
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-white/80">
+                <button
+                  type="button"
+                  onClick={() => setIncludeTheme(!includeTheme)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeTheme ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Theme & Accent Colors</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeLayout(!includeLayout)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeLayout ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Layout & Glass Blur</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeAudio(!includeAudio)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeAudio ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Audio & Tracks</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeSlideshow(!includeSlideshow)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeSlideshow ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Slideshow & Wallpapers</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeLinks(!includeLinks)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeLinks ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Social Links & Icons</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIncludeFonts(!includeFonts)}
+                  className="flex items-center gap-2 p-2 rounded-xl bg-[#07080c] border border-white/10 text-left hover:border-white/20"
+                >
+                  {includeFonts ? <CheckSquare size={14} className="text-[#5B8DB8]" /> : <Square size={14} />}
+                  <span>Fonts & Typography</span>
+                </button>
+              </div>
+            </div>
+
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
               <Button
                 type="button"
@@ -515,6 +760,82 @@ export default function ProfileTemplatesSection() {
                 className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
               >
                 {publishing ? "Publishing..." : "Publish to Library"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Edit Modal */}
+      <Dialog open={editModal.open} onOpenChange={(o) => !o && setEditModal({ ...editModal, open: false })}>
+        <DialogContent className="max-w-md bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)]">
+          <DialogTitle className="text-base font-bold text-white font-display flex items-center gap-2">
+            <Edit3 className="text-[#5B8DB8]" size={16} />
+            <span>Moderate / Edit Template</span>
+          </DialogTitle>
+          <form onSubmit={handleSaveEdit} className="space-y-4 pt-2 text-xs">
+            <div className="space-y-1">
+              <label className="text-white/80 font-semibold block">Template Name</label>
+              <Input
+                value={editModal.name}
+                onChange={(e) => setEditModal({ ...editModal, name: e.target.value })}
+                className="bg-[#07080c] border-white/10 text-white text-xs h-9 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-white/80 font-semibold block">Description</label>
+              <Textarea
+                value={editModal.description}
+                onChange={(e) => setEditModal({ ...editModal, description: e.target.value })}
+                rows={2}
+                className="bg-[#07080c] border-white/10 text-white text-xs rounded-xl"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-white/80 font-semibold block mb-1">Visibility</label>
+                <select
+                  value={editModal.visibility}
+                  onChange={(e) => setEditModal({ ...editModal, visibility: e.target.value })}
+                  className="w-full h-9 rounded-xl bg-[#07080c] border border-white/10 text-xs text-white px-3"
+                >
+                  <option value="public">Public</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="role">Role Restricted</option>
+                  <option value="private">Private</option>
+                </select>
+              </div>
+
+              {editModal.visibility === "role" && (
+                <div>
+                  <label className="text-white/80 font-semibold block mb-1">Target Role</label>
+                  <Input
+                    value={editModal.target_role}
+                    onChange={(e) => setEditModal({ ...editModal, target_role: e.target.value })}
+                    placeholder="e.g. booster"
+                    className="bg-[#07080c] border-white/10 text-white text-xs h-9 rounded-xl"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditModal({ ...editModal, open: false })}
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingEdit || !editModal.name.trim()}
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>

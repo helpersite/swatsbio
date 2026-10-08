@@ -1024,17 +1024,33 @@ def _shared_template_snapshot(row) -> dict:
     item["links"] = _j(item.get("links")) or []
     return item
 
+class SharedTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    display_name: Optional[str] = None
+    description: Optional[str] = None
+    visibility: Optional[str] = None
+    target_role: Optional[str] = None
+    settings: Optional[dict] = None
+    links: Optional[list] = None
+
 @api.get("/templates")
 async def list_shared_templates(limit: int = Query(100, ge=1, le=200), viewer: Optional[dict] = Depends(get_optional_current_user), db: AsyncSession = Depends(get_db)):
+    is_admin = bool(viewer and viewer.get("role") == "admin")
     conditions = ["t.visibility = 'public'"]
     params = {"limit": limit}
-    if viewer:
-        params["viewer_id"] = viewer["id"]
-        params["viewer_role"] = viewer.get("role", "")
-        conditions.append("t.owner_id = :viewer_id")
-        conditions.append("(t.visibility = 'role' AND t.target_role = :viewer_role)")
     
-    where_clause = " OR ".join(f"({c})" for c in conditions)
+    if is_admin:
+        # Admins see all community templates for moderation
+        where_clause = "1=1"
+    else:
+        if viewer:
+            params["viewer_id"] = viewer["id"]
+            params["viewer_role"] = viewer.get("role", "")
+            conditions.append("t.owner_id = :viewer_id")
+            conditions.append("(t.visibility = 'role' AND t.target_role = :viewer_role)")
+            conditions.append("t.visibility = 'unlisted'")
+        where_clause = " OR ".join(f"({c})" for c in conditions)
+
     query_str = f"""
         SELECT t.id, t.owner_id, u.username AS owner_username, t.name, t.display_name,
                t.description, t.settings, t.links, t.downloads, t.created_at,
@@ -1063,19 +1079,21 @@ async def publish_shared_template(body: ProfileTemplateCreate, user: dict = Depe
     name = body.name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Template name is required.")
-    if body.visibility not in {"public", "private", "role"}:
-        raise HTTPException(status_code=400, detail="Choose public, private, or role visibility.")
+    if body.visibility not in {"public", "private", "role", "unlisted"}:
+        raise HTTPException(status_code=400, detail="Choose public, unlisted, private, or role visibility.")
     target_role = (body.target_role or "").strip()[:64]
     if body.visibility == "role":
         role_exists = await db.execute(text("SELECT 1 FROM users WHERE role = :role LIMIT 1"), {"role": target_role})
         if not target_role or not role_exists.fetchone():
             raise HTTPException(status_code=400, detail="Choose a role currently assigned to an account.")
 
+    is_admin = user.get("role") == "admin"
     lock_clause = "" if IS_SQLITE else " FOR UPDATE"
     await db.execute(text(f"SELECT id FROM users WHERE id = :id{lock_clause}"), {"id": user["id"]})
-    count = (await db.execute(text("SELECT COUNT(*) FROM shared_profile_templates WHERE owner_id = :id"), {"id": user["id"]})).scalar() or 0
-    if count >= 3:
-        raise HTTPException(status_code=409, detail="You can publish up to 3 templates. Delete one of yours before publishing another.")
+    if not is_admin:
+        count = (await db.execute(text("SELECT COUNT(*) FROM shared_profile_templates WHERE owner_id = :id"), {"id": user["id"]})).scalar() or 0
+        if count >= 6:
+            raise HTTPException(status_code=409, detail="You can publish up to 6 templates. Delete one of yours before publishing another.")
 
     settings = dict(body.settings)
     settings.pop("profile_templates", None)
@@ -1102,7 +1120,7 @@ async def publish_shared_template(body: ProfileTemplateCreate, user: dict = Depe
         "description": body.description or "",
         "display_name": body.display_name or "",
     }
-    if len(_jdump(snapshot).encode("utf-8")) > 300_000:
+    if len(_jdump(snapshot).encode("utf-8")) > 500_000:
         raise HTTPException(status_code=413, detail="This template is too large to publish.")
 
     template_id = str(uuid.uuid4())
@@ -1120,18 +1138,60 @@ async def publish_shared_template(body: ProfileTemplateCreate, user: dict = Depe
         "settings": _jdump(settings),
         "links": _jdump(links),
         "created_at": created_at,
-        "visibility": body.visibility,
+        "visibility": body.visibility or "public",
         "target_role": target_role,
     })
     await db.commit()
     await cleanup_unused_uploads(user["id"])
-    return {"id": template_id, "owner_id": user["id"], "owner_username": user["username"], "name": name[:60], "display_name": body.display_name or "", "description": body.description or "", "settings": settings, "links": links, "downloads": 0, "created_at": created_at, "visibility": body.visibility, "target_role": target_role}
+    return {"id": template_id, "owner_id": user["id"], "owner_username": user["username"], "name": name[:60], "display_name": body.display_name or "", "description": body.description or "", "settings": settings, "links": links, "downloads": 0, "created_at": created_at, "visibility": body.visibility or "public", "target_role": target_role}
+
+@api.put("/templates/{template_id}")
+async def update_shared_template(template_id: str, body: SharedTemplateUpdate, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    is_admin = user.get("role") == "admin"
+    row = await db.execute(text("SELECT * FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    t = row.fetchone()
+    if not t:
+        raise HTTPException(status_code=404, detail="Template not found")
+    
+    t_mapping = dict(t._mapping)
+    if not is_admin and t_mapping.get("owner_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Only the template author or an admin can edit this template.")
+    
+    updates = {}
+    if body.name is not None:
+        updates["name"] = body.name.strip()[:60]
+    if body.display_name is not None:
+        updates["display_name"] = body.display_name.strip()[:60]
+    if body.description is not None:
+        updates["description"] = body.description.strip()[:500]
+    if body.visibility is not None and body.visibility in {"public", "private", "role", "unlisted"}:
+        updates["visibility"] = body.visibility
+    if body.target_role is not None:
+        updates["target_role"] = body.target_role.strip()[:64]
+    if body.settings is not None and is_admin:
+        updates["settings"] = _jdump(body.settings)
+    if body.links is not None and is_admin:
+        updates["links"] = _jdump(body.links)
+
+    if updates:
+        set_parts = ", ".join(f"{k} = :{k}" for k in updates)
+        updates["id"] = template_id
+        await db.execute(text(f"UPDATE shared_profile_templates SET {set_parts} WHERE id = :id"), updates)
+        await db.commit()
+    
+    updated_row = await db.execute(text("SELECT * FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    return _shared_template_snapshot(updated_row.fetchone())
 
 @api.delete("/templates/{template_id}")
 async def delete_shared_template(template_id: str, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(text("DELETE FROM shared_profile_templates WHERE id = :id AND owner_id = :owner_id"), {"id": template_id, "owner_id": user["id"]})
+    is_admin = user.get("role") == "admin"
+    if is_admin:
+        result = await db.execute(text("DELETE FROM shared_profile_templates WHERE id = :id"), {"id": template_id})
+    else:
+        result = await db.execute(text("DELETE FROM shared_profile_templates WHERE id = :id AND owner_id = :owner_id"), {"id": template_id, "owner_id": user["id"]})
+    
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Your template was not found.")
+        raise HTTPException(status_code=404, detail="Template not found or permission denied.")
     await db.commit()
     await cleanup_unused_uploads()
     return {"ok": True}
@@ -4208,6 +4268,161 @@ async def spotify_callback_root_alias(request: Request, code: str = Query(None),
 @app.get("/connect/spotify/login")
 async def spotify_login_root_alias(user: dict = Depends(get_current_user)):
     return await spotify_login(user=user)
+
+# ─────────────────────────────────────────
+# OpenGraph, Discord Activity & Metadata Endpoints
+# ─────────────────────────────────────────
+
+def render_metadata_html(user_data: Optional[dict], raw_username: str) -> str:
+    username = raw_username.lstrip("@").strip().lower()
+    if user_data:
+        display_name = user_data.get("display_name") or user_data.get("username") or username
+        st = user_data.get("settings") or {}
+        bio_url = f"https://swats.bio/{user_data.get('username', username)}"
+        
+        meta_title = st.get("meta_title") or f"{display_name} (@{user_data.get('username', username)}) • Swats.bio"
+        meta_desc = st.get("meta_desc") or user_data.get("description") or "Explore my official links, social channels, and exclusive content on Swats.bio."
+        meta_theme_color = st.get("meta_theme_color") or st.get("accent_color") or "#5B8DB8"
+        if not meta_theme_color.startswith("#"):
+            meta_theme_color = f"#{meta_theme_color}"
+            
+        meta_image = st.get("meta_image") or st.get("profile_embed_image") or st.get("pfp") or st.get("banner") or "https://www.swats.bio/logo.png"
+        if meta_image.startswith("/"):
+            meta_image = f"https://www.swats.bio{meta_image}"
+            
+        twitter_card = st.get("twitter_card") or "summary_large_image"
+        meta_keywords = st.get("meta_keywords") or f"swats bio, biolink, {username}, creator, gaming, social"
+    else:
+        display_name = username
+        bio_url = f"https://swats.bio/{username}"
+        meta_title = f"{username} (@{username}) • Swats.bio"
+        meta_desc = "Claim this profile and create your custom private bio link on Swats.bio."
+        meta_theme_color = "#5B8DB8"
+        meta_image = "https://www.swats.bio/logo.png"
+        twitter_card = "summary_large_image"
+        meta_keywords = "swats bio, biolink, profile"
+
+    def esc(text: Any) -> str:
+        return str(text or "").replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+
+    return f"""<!DOCTYPE html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{esc(meta_title)}</title>
+    
+    <!-- Standard Metadata -->
+    <meta name="description" content="{esc(meta_desc)}" />
+    <meta name="keywords" content="{esc(meta_keywords)}" />
+    <meta name="author" content="{esc(display_name)}" />
+    <meta name="theme-color" content="{esc(meta_theme_color)}" />
+    <meta name="msapplication-TileColor" content="{esc(meta_theme_color)}" />
+    
+    <!-- OpenGraph & Discord Rich Embeds -->
+    <meta property="og:site_name" content="Swats.bio" />
+    <meta property="og:title" content="{esc(meta_title)}" />
+    <meta property="og:description" content="{esc(meta_desc)}" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:url" content="{bio_url}" />
+    <meta property="og:image" content="{esc(meta_image)}" />
+    <meta property="og:image:secure_url" content="{esc(meta_image)}" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="{esc(meta_title)}" />
+    <meta property="profile:username" content="{esc(username)}" />
+    
+    <!-- Twitter / X Meta -->
+    <meta name="twitter:card" content="{esc(twitter_card)}" />
+    <meta name="twitter:site" content="@swatsbio" />
+    <meta name="twitter:creator" content="@{esc(username)}" />
+    <meta name="twitter:title" content="{esc(meta_title)}" />
+    <meta name="twitter:description" content="{esc(meta_desc)}" />
+    <meta name="twitter:image" content="{esc(meta_image)}" />
+    <meta name="twitter:image:alt" content="{esc(meta_title)}" />
+    
+    <!-- Discord Activity & oEmbed Spec -->
+    <link rel="canonical" href="{bio_url}" />
+    <link rel="alternate" type="application/json+oembed" href="https://swatsbio-production.up.railway.app/api/oembed?username={esc(username)}" title="{esc(meta_title)}" />
+
+    <meta http-equiv="refresh" content="0; url={bio_url}" />
+</head>
+<body style="background:#08090d;color:#ffffff;font-family:Inter,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px;box-sizing:border-box;text-align:center;">
+    <div>
+        <h2 style="margin:0 0 10px;font-size:20px;color:#ffffff;">{esc(meta_title)}</h2>
+        <p style="margin:0 0 16px;color:#94a3b8;font-size:14px;max-width:500px;">{esc(meta_desc)}</p>
+        <a href="{bio_url}" style="display:inline-block;padding:10px 24px;border-radius:12px;background:#5B8DB8;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;">Open Swats.bio Profile &rarr;</a>
+    </div>
+    <script>window.location.replace("{bio_url}");</script>
+</body>
+</html>"""
+
+@app.get("/meta/{username}", response_class=HTMLResponse)
+@app.get("/raw-meta/{username}", response_class=HTMLResponse)
+@api.get("/meta/{username}", response_class=HTMLResponse)
+async def serve_meta_tags(username: str, db: AsyncSession = Depends(get_db)):
+    clean_u = username.lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT id, username, display_name, description, settings FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u"), {"u": clean_u})
+    user_row = row.fetchone()
+    user_data = None
+    if user_row:
+        user_data = {
+            "id": user_row[0],
+            "username": user_row[1],
+            "display_name": user_row[2] or user_row[1],
+            "description": user_row[3] or "",
+            "settings": _j(user_row[4]) or {}
+        }
+    html_content = render_metadata_html(user_data, clean_u)
+    return HTMLResponse(content=html_content, status_code=200)
+
+@api.get("/oembed")
+@app.get("/oembed")
+async def oembed_endpoint(username: Optional[str] = Query(None), url: Optional[str] = Query(None), db: AsyncSession = Depends(get_db)):
+    target_username = username
+    if not target_username and url:
+        parts = url.rstrip("/").split("/")
+        target_username = parts[-1] if parts else None
+    if not target_username:
+        return {
+            "version": "1.0",
+            "type": "link",
+            "title": "Swats.bio — #1 Private Bio Handler",
+            "author_name": "Swats.bio",
+            "author_url": "https://swats.bio",
+            "provider_name": "Swats.bio",
+            "provider_url": "https://swats.bio"
+        }
+    clean_u = target_username.lstrip("@").strip().lower()
+    row = await db.execute(text("SELECT username, display_name, description, settings FROM users WHERE LOWER(username) = :u OR LOWER(subdomain) = :u"), {"u": clean_u})
+    user_row = row.fetchone()
+    if not user_row:
+        return {
+            "version": "1.0",
+            "type": "link",
+            "title": f"@{clean_u} • Swats.bio",
+            "author_name": f"@{clean_u}",
+            "author_url": f"https://swats.bio/{clean_u}",
+            "provider_name": "Swats.bio",
+            "provider_url": "https://swats.bio",
+            "thumbnail_url": "https://www.swats.bio/logo.png"
+        }
+    st = _j(user_row[3]) or {}
+    m_title = st.get("meta_title") or f"{user_row[1] or user_row[0]} (@{user_row[0]}) • Swats.bio"
+    m_img = st.get("meta_image") or st.get("profile_embed_image") or st.get("pfp") or ""
+    if m_img and m_img.startswith("/"):
+        m_img = f"https://www.swats.bio{m_img}"
+    return {
+        "version": "1.0",
+        "type": "link",
+        "title": m_title,
+        "author_name": user_row[1] or f"@{user_row[0]}",
+        "author_url": f"https://swats.bio/{user_row[0]}",
+        "provider_name": "Swats.bio • Bio Handler",
+        "provider_url": "https://swats.bio",
+        "thumbnail_url": m_img or "https://www.swats.bio/logo.png"
+    }
 
 
 

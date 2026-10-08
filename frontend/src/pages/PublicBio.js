@@ -345,15 +345,15 @@ export default function PublicBio() {
     if (!bio) return;
     const s = bio.settings || {};
     const cleanedName = stripEffectSyntax(bio.display_name || bio.username);
-    const defaultTitle = `${cleanedName || bio.username} (@${bio.username}) · swats.bio`;
-    const shareTitle = `${cleanedName || bio.username} (@${bio.username})`;
-    const shareDescription = stripEffectSyntax(bio.description || `View @${bio.username}'s bio & links on swats.bio`);
+    const customTitle = s.meta_title ? stripEffectSyntax(s.meta_title) : `${cleanedName || bio.username} (@${bio.username}) • Swats.bio`;
+    const customDesc = s.meta_desc ? stripEffectSyntax(s.meta_desc) : stripEffectSyntax(bio.description || `View @${bio.username}'s bio & links on Swats.bio`);
     const pfpUrl = s.pfp ? fileUrl(s.pfp) : "";
-    const shareImages = [s.profile_embed_image, s.header_banner, ...(Array.isArray(s.backgrounds) ? s.backgrounds : []), s.banner]
-      .map((image) => fileUrl(image))
-      .filter((image) => image && !/\.(mp4|webm|mov|m4v|ogg)([?#]|$)/i.test(image) && !image.includes("/video/upload/"));
-    const shareImage = shareImages[0] || pfpUrl || "https://www.swats.bio/logo.png";
-    document.title = defaultTitle;
+    const shareImage = s.meta_image || s.profile_embed_image || s.header_banner || s.banner || pfpUrl || "https://www.swats.bio/logo.png";
+    const themeColor = s.meta_theme_color || s.accent_color || "#5B8DB8";
+    const twitterCard = s.twitter_card || "summary_large_image";
+    const bioUrl = `https://swats.bio/${bio.username}`;
+
+    document.title = customTitle;
 
     const setMeta = (name, content, isProperty = false) => {
       const selector = isProperty ? `meta[property="${name}"]` : `meta[name="${name}"]`;
@@ -367,17 +367,36 @@ export default function PublicBio() {
       tag.setAttribute("content", content);
     };
 
-    setMeta("twitter:card", "summary_large_image");
-    setMeta("twitter:title", shareTitle);
-    setMeta("twitter:description", shareDescription);
+    setMeta("description", customDesc);
+    setMeta("theme-color", themeColor);
+    setMeta("msapplication-TileColor", themeColor);
+    setMeta("twitter:card", twitterCard);
+    setMeta("twitter:site", "@swatsbio");
+    setMeta("twitter:creator", `@${bio.username}`);
+    setMeta("twitter:title", customTitle);
+    setMeta("twitter:description", customDesc);
     setMeta("twitter:image", shareImage);
-    setMeta("og:title", shareTitle, true);
-    setMeta("og:description", shareDescription, true);
+    setMeta("twitter:image:alt", customTitle);
+    setMeta("og:title", customTitle, true);
+    setMeta("og:description", customDesc, true);
     setMeta("og:image", shareImage, true);
-    setMeta("og:image:alt", shareTitle, true);
-    setMeta("og:site_name", "swats.bio", true);
+    setMeta("og:image:secure_url", shareImage, true);
+    setMeta("og:image:alt", customTitle, true);
+    setMeta("og:site_name", "Swats.bio", true);
     setMeta("og:type", "profile", true);
-    setMeta("theme-color", s.accent_color || "#5B8DB8");
+    setMeta("og:url", bioUrl, true);
+    setMeta("profile:username", bio.username, true);
+
+    // oEmbed and Canonical link injection
+    let oembedLink = document.head.querySelector("link[type='application/json+oembed']");
+    if (!oembedLink) {
+      oembedLink = document.createElement("link");
+      oembedLink.setAttribute("rel", "alternate");
+      oembedLink.setAttribute("type", "application/json+oembed");
+      document.head.appendChild(oembedLink);
+    }
+    oembedLink.setAttribute("href", `https://swatsbio-production.up.railway.app/api/oembed?username=${bio.username}`);
+    oembedLink.setAttribute("title", customTitle);
 
     // Automatic User Avatar Favicon
     let originalFavicon = null;
