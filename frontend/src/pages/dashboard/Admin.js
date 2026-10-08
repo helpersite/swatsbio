@@ -5,6 +5,7 @@ import { BADGE_DEFS } from "@/pages/dashboard/badges";
 import { renderBioText } from "@/lib/textEffects";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -1171,8 +1172,8 @@ export function AdminBotSection() {
   return (
     <div className="space-y-6">
       <Header
-        title="Discord Bot & Leaderboard Command"
-        subtitle="Manage Discord authentication gateway, server booster roles, and leaderboard sync."
+        title="Discord Bot"
+        subtitle="Manage Discord bot connection, verification, server roles, and leaderboard synchronization."
         action={
           <div className="flex items-center gap-2">
             <Button
@@ -1182,15 +1183,15 @@ export function AdminBotSection() {
               variant="outline"
               className="border-white/10 text-white text-xs font-semibold px-3 h-9 rounded-xl hover:bg-white/5 cursor-pointer"
             >
-              {testingToken ? "Testing..." : "🔍 Test Bot Gateway"}
+              {testingToken ? "Testing..." : "Test Connection"}
             </Button>
             <Button
               type="button"
               disabled={postingLeaderboard}
               onClick={handlePostLeaderboard}
-              className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-[0_0_15px_rgba(88,101,242,0.4)] gap-1.5 cursor-pointer"
+              className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold px-4 h-9 rounded-xl shadow-md cursor-pointer"
             >
-              {postingLeaderboard ? "Broadcasting..." : "⚡ Sync Leaderboard Now"}
+              {postingLeaderboard ? "Syncing..." : "Sync Leaderboard"}
             </Button>
           </div>
         }
@@ -1199,15 +1200,15 @@ export function AdminBotSection() {
       {/* Test Result Banner */}
       {testResult && (
         <div className={`p-4 rounded-2xl border ${testResult.ok ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300" : "bg-red-500/10 border-red-500/30 text-red-300"} text-xs space-y-1`}>
-          <div className="font-bold flex items-center gap-2">
-            <span>{testResult.ok ? (testResult.mode === "autonomous" ? "✓ Autonomous Gateway Active (No Discord Bot Token Required)" : "✓ Live Discord Bot Connection Verified") : "✗ Bot Gateway Notice"}</span>
+          <div className="font-bold">
+            {testResult.ok ? "Discord Gateway Active" : "Connection Notice"}
           </div>
           {testResult.ok ? (
             <p className="text-white/80">
-              Gateway account: <strong>@{testResult.username}</strong> (ID: {testResult.id}) • {testResult.detail || `Joined ${testResult.guild_count} Discord servers.`}
+              Account: <strong>@{testResult.username}</strong> ({testResult.id}) • {testResult.detail || `${testResult.guild_count} servers`}
             </p>
           ) : (
-            <p className="text-white/80">{testResult.error || "Gateway running in self-hosted fallback mode."}</p>
+            <p className="text-white/80">{testResult.error || "Running in self-hosted fallback mode."}</p>
           )}
         </div>
       )}
@@ -1216,30 +1217,30 @@ export function AdminBotSection() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
           <div className="text-[11px] text-[#E5E7EB]/50 font-medium flex items-center justify-between">
-            <span>Bot Gateway</span>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Bot Status</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
           </div>
           <div className="text-lg font-bold text-white">
-            {botData?.bot_mode === "live" ? "Live Discord Bot" : "Autonomous Gateway"}
+            {botData?.bot_mode === "live" ? "Live" : "Ready"}
           </div>
           <div className="text-[10px] text-[#5B8DB8] font-mono">Channel: {customChannel}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
-          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Authed Discord Users</div>
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Verified Accounts</div>
           <div className="text-lg font-bold text-white">{botData?.total_authed_users || 0}</div>
-          <div className="text-[10px] text-emerald-400 font-mono">OAuth2 Verified</div>
+          <div className="text-[10px] text-emerald-400 font-mono">OAuth2</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
-          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Active Boosters</div>
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Server Boosters</div>
           <div className="text-lg font-bold text-white">{botData?.total_boosters || 0}</div>
-          <div className="text-[10px] text-purple-400 font-mono">Server Booster Perks</div>
+          <div className="text-[10px] text-purple-400 font-mono">Booster Role</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-1">
-          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">24h Leaderboard Sync</div>
-          <div className="text-lg font-bold text-emerald-400">Active (Autonomous)</div>
+          <div className="text-[11px] text-[#E5E7EB]/50 font-medium">Leaderboard Sync</div>
+          <div className="text-lg font-bold text-emerald-400">Enabled</div>
           <div className="text-[10px] text-white/40 font-mono">Channel #{customChannel}</div>
         </div>
       </div>
@@ -1252,7 +1253,7 @@ export function AdminBotSection() {
           </div>
           <div>
             <div className="text-xs font-bold text-white">Target Discord Channel ID</div>
-            <div className="text-[10px] text-[#E5E7EB]/50">Default leaderboard broadcast channel</div>
+            <div className="text-[10px] text-[#E5E7EB]/50">Leaderboard broadcast destination</div>
           </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -1268,19 +1269,18 @@ export function AdminBotSection() {
             onClick={handlePostLeaderboard}
             className="bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs rounded-xl h-8 shrink-0"
           >
-            Broadcast Embed
+            Broadcast
           </Button>
         </div>
       </div>
-
 
       {/* Authed Users Management Table */}
       <div className="p-5 rounded-2xl bg-[#0c0e18] border border-white/10 space-y-4 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="text-xs font-bold text-white flex items-center gap-2">
-            <span>Authed Discord Accounts & Verification Status</span>
+            <span>Connected Discord Accounts</span>
             <span className="px-2 py-0.5 rounded bg-white/5 text-[10px] text-white/60 font-mono">
-              {botData?.users?.length || 0} Registered
+              {botData?.users?.length || 0} Total
             </span>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={loadBotData} className="border-white/10 text-white text-xs h-7 rounded-lg">
@@ -1292,10 +1292,10 @@ export function AdminBotSection() {
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="border-b border-white/10 text-[#E5E7EB]/40 uppercase tracking-wider text-[10px]">
-                <th className="p-3">Swats User</th>
+                <th className="p-3">User</th>
                 <th className="p-3">Discord Tag & ID</th>
                 <th className="p-3">Verification</th>
-                <th className="p-3">Server Booster</th>
+                <th className="p-3">Booster</th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -1303,7 +1303,7 @@ export function AdminBotSection() {
               {(!botData?.users || botData.users.length === 0) ? (
                 <tr>
                   <td colSpan={5} className="text-center py-8 text-white/40 text-xs">
-                    No connected Discord accounts yet.
+                    No connected Discord accounts.
                   </td>
                 </tr>
               ) : (
@@ -1320,18 +1320,18 @@ export function AdminBotSection() {
                     <td className="p-3">
                       {u.verified ? (
                         <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
-                          ✓ Verified
+                          Verified
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold">
-                          Pending Code
+                          Pending
                         </span>
                       )}
                     </td>
                     <td className="p-3">
                       {u.is_booster ? (
                         <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">
-                          🚀 Server Booster
+                          Booster
                         </span>
                       ) : (
                         <span className="text-white/30 text-[11px]">—</span>
@@ -1346,7 +1346,7 @@ export function AdminBotSection() {
                           onClick={() => setDmModal({ open: true, user: u, message: "" })}
                           className="h-7 px-2.5 text-[11px] border-white/10 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 rounded-lg"
                         >
-                          Send DM
+                          Message
                         </Button>
                         {u.is_booster ? (
                           <Button
