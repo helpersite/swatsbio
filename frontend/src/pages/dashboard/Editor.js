@@ -16,7 +16,8 @@ import {
   Edit3, Shield, Star, Gamepad2, ArrowRight, Wand, X,
   Radio, Volume2, VolumeX, ListMusic, Music2, Play, Pause,
   Disc, SlidersHorizontal, Share2, MoveHorizontal, MoveVertical,
-  AlignLeft, AlignCenter, AlignRight, FileText, DoorOpen, Lock, KeyRound, Monitor
+  AlignLeft, AlignCenter, AlignRight, FileText, DoorOpen, Lock, KeyRound, Monitor,
+  CloudSun, Clock, AppWindow, Bot, Globe, Code
 } from "lucide-react";
 import { SiSpotify, SiDiscord } from "react-icons/si";
 import CustomColorPicker from "@/components/ColorPicker";
@@ -376,6 +377,19 @@ export default function Editor({ initialTab = "profile" }) {
     }));
   };
 
+  const patchWidgets = (widgetKey, field, val) => {
+    setS((p) => ({
+      ...p,
+      widgets: {
+        ...(p.widgets || {}),
+        [widgetKey]: {
+          ...((p.widgets && p.widgets[widgetKey]) || {}),
+          [field]: val,
+        },
+      },
+    }));
+  };
+
   const uploadFile = async (file) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -549,14 +563,36 @@ export default function Editor({ initialTab = "profile" }) {
         </button>
         <button
           type="button"
-          onClick={() => setEditorCategory("presence")}
+          onClick={() => setEditorCategory("discord")}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-            editorCategory === "presence"
-              ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20"
+            editorCategory === "discord"
+              ? "bg-[#5865F2] text-white shadow-md shadow-[#5865F2]/20"
               : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
           }`}
         >
-          <SiSpotify size={14} className="text-[#1DB954]" /> Live Presence & Spotify
+          <SiDiscord size={14} className="text-[#5865F2]" /> Discord Presence
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorCategory("spotify")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            editorCategory === "spotify"
+              ? "bg-[#1DB954] text-white shadow-md shadow-[#1DB954]/20"
+              : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <SiSpotify size={14} className="text-[#1DB954]" /> Spotify Integration
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditorCategory("widgets")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            editorCategory === "widgets"
+              ? "bg-[#F59E0B] text-white shadow-md shadow-[#F59E0B]/20"
+              : "bg-white/5 text-[#E5E7EB]/70 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <AppWindow size={14} className="text-[#F59E0B]" /> Live Widgets Studio
         </button>
         <button
           type="button"
@@ -1100,6 +1136,56 @@ export default function Editor({ initialTab = "profile" }) {
                   value={s.accent_color || "#5B8DB8"}
                   onChange={(v) => patch("accent_color", v)}
                 />
+          {/* Global Badge Color & Glow Overlap */}
+          <Panel title="Global Badge Color & Glow Overlap (Override All Badges)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ColorRow
+                  label="Override All Badge Colors"
+                  value={s.badge_color_overlap || ""}
+                  onChange={(v) => patch("badge_color_overlap", v)}
+                />
+                <div className="text-[10px] text-[#E5E7EB]/50">
+                  Overrides the primary icon/border color for all displayed badges uniformly. Leave empty for original badge colors.
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ColorRow
+                  label="Override All Badge Glow Colors"
+                  value={s.badge_glow_overlap || ""}
+                  onChange={(v) => patch("badge_glow_overlap", v)}
+                />
+                <div className="text-[10px] text-[#E5E7EB]/50">
+                  Custom glowing shadow color applied behind every badge icon and container.
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+          {/* Global Link Color & Glow Overlap */}
+          <Panel title="Global Link Color & Glow Overlap (Override All Links)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ColorRow
+                  label="Override All Link Button Colors"
+                  value={s.link_color_overlap || ""}
+                  onChange={(v) => patch("link_color_overlap", v)}
+                />
+                <div className="text-[10px] text-[#E5E7EB]/50">
+                  Forces all link cards and tiles to use this uniform background color/glass overlay.
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ColorRow
+                  label="Override All Link Glow Colors"
+                  value={s.link_glow_overlap || ""}
+                  onChange={(v) => patch("link_glow_overlap", v)}
+                />
+                <div className="text-[10px] text-[#E5E7EB]/50">
+                  Ambient box-shadow and hover glow color across all social buttons and link cards.
+                </div>
               </div>
             </div>
           </Panel>
@@ -1290,82 +1376,42 @@ export default function Editor({ initialTab = "profile" }) {
       )}
 
       {/* ========================================================================= */}
-      {/* SUBTAB 4: LIVE PRESENCE & SPOTIFY                                         */}
+      {/* SUBTAB 4: DISCORD LIVE PRESENCE                                           */}
       {/* ========================================================================= */}
-      {editorCategory === "presence" && (
+      {editorCategory === "discord" && (
         <div className="space-y-6">
-          {/* Spotify Presence Format */}
-          <Panel title="Spotify Real-Time Listening Presence">
+          <Panel title="Discord Live Presence (Real Status & Rich Activity)">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
                 <ToggleRow
-                  label="Show Spotify Live Presence"
-                  description="Streams real-time Spotify listening card from connected account"
-                  checked={s.presence?.spotify !== false}
-                  onChange={(v) => patchPresence("spotify", v)}
-                />
-                <SelectRow
-                  label="Spotify Display Format"
-                  value={s.spotify_presence_format || s.spotify_presence_style || s.presence?.spotify_format || "card"}
-                  onChange={(v) => {
-                    patch("spotify_presence_format", v);
-                    patch("spotify_presence_style", v);
-                    patchPresence("spotify_format", v);
-                  }}
-                  options={SPOTIFY_PRESENCE_FORMATS}
-                />
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#080a10] border border-white/5 space-y-2">
-                <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <SiSpotify size={14} className="text-[#1DB954]" /> Format Preview Details
-                </div>
-                <div className="text-[11px] text-[#E5E7EB]/60 space-y-1">
-                  <div>• <b>Rich Card:</b> Album art, equalizer bars, clickable title & live timeline.</div>
-                  <div>• <b>Compact Player:</b> Sleek horizontal row player with cover & progress.</div>
-                  <div>• <b>Minimalist Pill:</b> Glowing floating pill with live track title.</div>
-                  <div>• <b>Marquee Ticker:</b> Full-width animated scrolling status bar.</div>
-                </div>
-              </div>
-            </div>
-          </Panel>
-
-          {/* Discord Presence */}
-          <Panel title="Discord Live Presence & Assets">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
-                <ToggleRow
-                  label="Show Discord Presence Widget"
-                  description="Live status, avatar and rich presence activity badge"
+                  label="Enable Live Discord Widget"
+                  description="Real-time WebSocket streaming of your online status, game, and rich activity"
                   checked={s.presence?.discord !== false}
                   onChange={(v) => patchPresence("discord", v)}
                 />
                 <ToggleRow
                   label="Use Discord PFP as Profile Avatar"
-                  description="Sync live Discord avatar automatically"
+                  description="Keep profile avatar synchronized with your active Discord avatar"
                   checked={s.presence?.use_discord_pfp === true}
                   onChange={(v) => patchPresence("use_discord_pfp", v)}
                 />
                 <ToggleRow
-                  label="Show Discord Role Badge"
-                  description="Display verified member badge next to presence"
+                  label="Show Verified Discord Member Badge"
+                  description="Display official badge next to presence widget"
                   checked={s.presence?.show_discord_badge !== false}
                   onChange={(v) => patchPresence("show_discord_badge", v)}
+                />
+                <ToggleRow
+                  label="Display Rich Game & Streaming Activities"
+                  description="Show currently playing game details and timestamps"
+                  checked={s.presence?.show_activities !== false}
+                  onChange={(v) => patchPresence("show_activities", v)}
                 />
               </div>
 
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Discord Banner Cover URL</Label>
-                  <Input
-                    value={s.discord_larp_banner || ""}
-                    onChange={(e) => patch("discord_larp_banner", e.target.value)}
-                    placeholder="https://...banner.png"
-                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1 pt-1">
-                  <Label className="text-[11px] text-[#E5E7EB]/70">Discord User ID Override (Snowflake)</Label>
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Discord User ID (Snowflake Override)</Label>
                   <Input
                     value={s.presence?.discord_user_id || s.discord_user_id || ""}
                     onChange={(e) => {
@@ -1376,9 +1422,263 @@ export default function Editor({ initialTab = "profile" }) {
                     className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
                   />
                   <div className="text-[10px] text-[#E5E7EB]/45">
-                    Stream live Discord status & Spotify via Lanyard WebSocket even without OAuth.
+                    Connects directly to Lanyard WebSocket for zero-lag live presence without requiring OAuth.
                   </div>
                 </div>
+
+                <div className="space-y-1 pt-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Discord Banner Cover URL</Label>
+                  <Input
+                    value={s.discord_larp_banner || ""}
+                    onChange={(e) => patch("discord_larp_banner", e.target.value)}
+                    placeholder="https://...banner.png"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                  />
+                  <div className="text-[10px] text-[#E5E7EB]/45">
+                    Header banner displayed inside the interactive Discord presence modal.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB 5: SPOTIFY INTEGRATION                                             */}
+      {/* ========================================================================= */}
+      {editorCategory === "spotify" && (
+        <div className="space-y-6">
+          <Panel title="Spotify Playback & Profile Integration">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Show Spotify Live Playback"
+                  description="Display currently playing song from active Spotify session"
+                  checked={s.presence?.spotify !== false}
+                  onChange={(v) => patchPresence("spotify", v)}
+                />
+                <SelectRow
+                  label="Playback Display Mode"
+                  value={s.spotify_mode || "live_song"}
+                  onChange={(v) => patch("spotify_mode", v)}
+                  options={[
+                    { v: "live_song", l: "Real-Time Playing Song" },
+                    { v: "profile_embed", l: "Spotify Artist / User Profile Embed" },
+                    { v: "pinned_song", l: "Pinned Favorite Track / Album" },
+                  ]}
+                />
+                <SelectRow
+                  label="Player Card Visual Format"
+                  value={s.spotify_presence_format || s.spotify_presence_style || s.presence?.spotify_format || "card"}
+                  onChange={(v) => {
+                    patch("spotify_presence_format", v);
+                    patch("spotify_presence_style", v);
+                    patchPresence("spotify_format", v);
+                  }}
+                  options={SPOTIFY_PRESENCE_FORMATS}
+                />
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Pinned Spotify Track or Playlist URL</Label>
+                  <Input
+                    value={s.spotify_embed_url || ""}
+                    onChange={(e) => patch("spotify_embed_url", e.target.value)}
+                    placeholder="https://open.spotify.com/track/..."
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+                <div className="space-y-1 pt-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Spotify Profile URL</Label>
+                  <Input
+                    value={s.spotify_profile_url || ""}
+                    onChange={(e) => patch("spotify_profile_url", e.target.value)}
+                    placeholder="https://open.spotify.com/user/..."
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+                <ToggleRow
+                  label="Show Synced Lyrics Button"
+                  description="Enable expandable real-time lyrics viewer"
+                  checked={s.presence?.show_lyrics !== false}
+                  onChange={(v) => patchPresence("show_lyrics", v)}
+                />
+              </div>
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUBTAB 6: LIVE WIDGETS STUDIO                                             */}
+      {/* ========================================================================= */}
+      {editorCategory === "widgets" && (
+        <div className="space-y-6">
+          {/* 1. Spotify Favorite Playlist / Song Widget */}
+          <Panel title="Spotify Favorite Playlist & Library Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Spotify Library Widget"
+                  description="Embed your favorite curated playlist on your profile"
+                  checked={s.widgets?.spotify?.enabled === true}
+                  onChange={(v) => patchWidgets("spotify", "enabled", v)}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Favorite Playlist URL / Embed</Label>
+                  <Input
+                    value={s.widgets?.spotify?.playlist_url || ""}
+                    onChange={(e) => patchWidgets("spotify", "playlist_url", e.target.value)}
+                    placeholder="https://open.spotify.com/playlist/..."
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Favorite Song Track URL</Label>
+                  <Input
+                    value={s.widgets?.spotify?.fav_song_url || ""}
+                    onChange={(e) => patchWidgets("spotify", "fav_song_url", e.target.value)}
+                    placeholder="https://open.spotify.com/track/..."
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+                <SelectRow
+                  label="Widget Frame Theme"
+                  value={s.widgets?.spotify?.theme || "glass"}
+                  onChange={(v) => patchWidgets("spotify", "theme", v)}
+                  options={[
+                    { v: "glass", l: "Frosted Glass" },
+                    { v: "compact", l: "Compact Card" },
+                    { v: "neon", l: "Cyber Neon" },
+                  ]}
+                />
+              </div>
+            </div>
+          </Panel>
+
+          {/* 2. Roblox Profile & Avatar Widget */}
+          <Panel title="Roblox Profile & Avatar Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Roblox Profile Card"
+                  description="Showcase your Roblox avatar and profile badges"
+                  checked={s.widgets?.roblox?.enabled === true}
+                  onChange={(v) => patchWidgets("roblox", "enabled", v)}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Roblox Username or User ID</Label>
+                  <Input
+                    value={s.widgets?.roblox?.username || ""}
+                    onChange={(e) => patchWidgets("roblox", "username", e.target.value.trim())}
+                    placeholder="e.g. Builderman"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Display 3D Rendered Avatar"
+                  description="Fetch official Roblox 3D avatar headshot / bust"
+                  checked={s.widgets?.roblox?.show_avatar !== false}
+                  onChange={(v) => patchWidgets("roblox", "show_avatar", v)}
+                />
+                <ToggleRow
+                  label="Show Activity & Online Status"
+                  description="Live status badge on Roblox card"
+                  checked={s.widgets?.roblox?.show_presence !== false}
+                  onChange={(v) => patchWidgets("roblox", "show_presence", v)}
+                />
+              </div>
+            </div>
+          </Panel>
+
+          {/* 3. Live Weather Widget */}
+          <Panel title="Live Weather & Atmospheric Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Weather Widget"
+                  description="Display real-time temperature, sky condition & location"
+                  checked={s.widgets?.weather?.enabled === true}
+                  onChange={(v) => patchWidgets("weather", "enabled", v)}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">City & Country Location</Label>
+                  <Input
+                    value={s.widgets?.weather?.location || ""}
+                    onChange={(e) => patchWidgets("weather", "location", e.target.value)}
+                    placeholder="e.g. Tokyo, JP or New York, US"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="Temperature Unit"
+                  value={s.widgets?.weather?.unit || "celsius"}
+                  onChange={(v) => patchWidgets("weather", "unit", v)}
+                  options={[
+                    { v: "celsius", l: "Celsius (°C)" },
+                    { v: "fahrenheit", l: "Fahrenheit (°F)" },
+                  ]}
+                />
+              </div>
+            </div>
+          </Panel>
+
+          {/* 4. Live Clock & Timezone Widget */}
+          <Panel title="Live Timezone & Clock Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Live Clock Widget"
+                  description="Display real-time ticking clock with seconds"
+                  checked={s.widgets?.clock?.enabled === true}
+                  onChange={(v) => patchWidgets("clock", "enabled", v)}
+                />
+                <SelectRow
+                  label="Timezone Offset"
+                  value={s.widgets?.clock?.timezone || "local"}
+                  onChange={(v) => patchWidgets("clock", "timezone", v)}
+                  options={[
+                    { v: "local", l: "Visitor's Local Time" },
+                    { v: "UTC", l: "UTC (Coordinated Universal Time)" },
+                    { v: "America/New_York", l: "New York (EST/EDT)" },
+                    { v: "America/Los_Angeles", l: "Los Angeles (PST/PDT)" },
+                    { v: "Europe/London", l: "London (GMT/BST)" },
+                    { v: "Asia/Tokyo", l: "Tokyo (JST)" },
+                    { v: "Australia/Sydney", l: "Sydney (AEST)" },
+                  ]}
+                />
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="Clock Format"
+                  value={s.widgets?.clock?.format || "12h"}
+                  onChange={(v) => patchWidgets("clock", "format", v)}
+                  options={[
+                    { v: "12h", l: "12-Hour (AM / PM)" },
+                    { v: "24h", l: "24-Hour (Military Time)" },
+                  ]}
+                />
+                <SelectRow
+                  label="Clock Face Style"
+                  value={s.widgets?.clock?.style || "digital"}
+                  onChange={(v) => patchWidgets("clock", "style", v)}
+                  options={[
+                    { v: "digital", l: "Cyber Digital Glow HUD" },
+                    { v: "minimal", l: "Minimal Monospace Pill" },
+                  ]}
+                />
               </div>
             </div>
           </Panel>

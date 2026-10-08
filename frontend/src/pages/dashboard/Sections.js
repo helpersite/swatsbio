@@ -16,10 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RTooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
 import * as Icons from "lucide-react";
-import { Eye, EyeOff, X, Plus, Trophy, Lock, Pencil, Upload, Link2, TrendingUp, Sparkles, Loader2, ExternalLink, Award, ShieldCheck, Shield, Check, Copy, Search, Users, Trash2, HelpCircle, Activity, Rocket, Palette, Sun, Disc3 } from "lucide-react";
+import { Eye, EyeOff, X, Plus, Trophy, Lock, Pencil, Upload, Link2, TrendingUp, Sparkles, Loader2, ExternalLink, Award, ShieldCheck, Shield, Check, Copy, Search, Users, Trash2, HelpCircle, Activity, Rocket, Palette, Sun, Disc3, ArrowUp, ArrowDown, ShieldAlert, Move, ChevronUp, ChevronDown } from "lucide-react";
 import CustomColorPicker from "@/components/ColorPicker";
+import { VisualDashboardEditor } from "@/components/VisualDashboardEditor";
 
 async function uploadFile(file) {
   const fd = new FormData();
@@ -84,6 +84,8 @@ export function SettingsSection() {
     toast.success("Settings and theme preferences saved.");
   };
 
+  const [showVisualEditor, setShowVisualEditor] = useState(false);
+
   return (
     <div>
       <Header title="Dashboard Settings" subtitle="Configure your account preferences, profile details, and dashboard visual themes." />
@@ -94,6 +96,7 @@ export function SettingsSection() {
             <TabsTrigger value="account" data-testid="settings-tab-account">Account info</TabsTrigger>
             <TabsTrigger value="locker" data-testid="settings-tab-locker">Password locker</TabsTrigger>
             <TabsTrigger value="stats" data-testid="settings-tab-stats">View stats</TabsTrigger>
+            <TabsTrigger value="warning" className="text-amber-400 font-bold border-amber-500/30">⚠️ WARNING: Experimental Studio</TabsTrigger>
           </TabsList>
 
           <TabsContent value="themes" className="mt-4">
@@ -158,8 +161,49 @@ export function SettingsSection() {
           <TabsContent value="stats" className="mt-4">
             <MyStatsSection embed />
           </TabsContent>
+
+          {/* WARNING & EXPERIMENTAL TESTING AREA */}
+          <TabsContent value="warning" className="mt-4">
+            <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-[#0a0c10] to-[#06080b] shadow-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <ShieldAlert size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-white text-base">⚠️ EXPERIMENTAL TESTING ZONE</h3>
+                  <p className="text-xs text-[#E5E7EB]/60">Advanced visual sandbox and interactive freeform drag-and-drop live linker studio.</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-xs space-y-2 text-[#E5E7EB]/80 leading-relaxed">
+                <div>• <b>Live Drag Canvas:</b> Freely reposition and scale any profile element with pixel/grid precision.</div>
+                <div>• <b>Right-Click Menus:</b> Contextual layer actions, center alignment, and quick styling controls.</div>
+                <div>• <b>Slide Deck Manager:</b> Add multiple slides with customizable media, project, and link layouts.</div>
+                <div>• <b>Kinetic Animation Studio:</b> Apply 15+ real-time animations to any element.</div>
+              </div>
+
+              <div className="pt-2">
+                <Button
+                  onClick={() => setShowVisualEditor(true)}
+                  className="w-full sm:w-auto rounded-2xl bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-6 py-5 gap-2 shadow-xl shadow-amber-500/20"
+                >
+                  <Move size={16} /> Launch Interactive Drag & Drop Dashboard Editor (Testing Mode)
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
+
+      <VisualDashboardEditor
+        open={showVisualEditor}
+        onClose={() => setShowVisualEditor(false)}
+        user={user}
+        onSaveSettings={async (newSettings) => {
+          const { data } = await api.put("/profile", { settings: newSettings });
+          setUser(data);
+        }}
+      />
     </div>
   );
 }
@@ -366,9 +410,9 @@ export function LinksSection() {
   const load = () => api.get("/links").then(({ data }) => setLinks(Array.isArray(data) ? data : [])).catch(() => setLinks([]));
   useEffect(() => { load(); }, []);
 
-  const s = user.settings || {};
+  const s = user?.settings || {};
   const patchSetting = async (key, val) => {
-    const nextSettings = { ...(user.settings || {}), [key]: val };
+    const nextSettings = { ...(user?.settings || {}), [key]: val };
     try {
       const { data } = await api.put("/profile", { settings: nextSettings });
       setUser(data);
@@ -425,9 +469,12 @@ export function LinksSection() {
     newLinks[targetIdx] = temp;
     setLinks(newLinks);
     try {
-      await api.put("/links/reorder", { link_ids: newLinks.map((x) => x.id) });
-    } catch {}
-    toast.success("Order updated!");
+      const { data } = await api.put("/links/reorder", { link_ids: newLinks.map((x) => x.id) });
+      if (Array.isArray(data)) setLinks(data);
+      toast.success("Link order saved!");
+    } catch {
+      toast.error("Failed to save link order");
+    }
   };
 
   const counts = useMemo(() => {
@@ -528,6 +575,19 @@ export function LinksSection() {
               checked={s.show_presence_modal !== false}
               onChange={(v) => patchSetting("show_presence_modal", v)}
               testid="presence-modal-toggle"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-white/10 grid sm:grid-cols-2 gap-4">
+            <ColorRow
+              label="Global Link Button Color Overlap"
+              value={s.link_color_overlap || ""}
+              onChange={(v) => patchSetting("link_color_overlap", v)}
+            />
+            <ColorRow
+              label="Global Link Glow Overlap"
+              value={s.link_glow_overlap || ""}
+              onChange={(v) => patchSetting("link_glow_overlap", v)}
             />
           </div>
         </div>
@@ -1053,15 +1113,37 @@ export function BadgesSection() {
 
   const toggle = (id) => setShown((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
 
+  const moveBadge = async (idx, direction) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= shown.length) return;
+    const nextShown = [...shown];
+    const temp = nextShown[idx];
+    nextShown[idx] = nextShown[targetIdx];
+    nextShown[targetIdx] = temp;
+    setShown(nextShown);
+    try {
+      await api.put("/badges/reorder", { badges: nextShown });
+      toast.success("Badge order updated!");
+    } catch {
+      toast.error("Failed to reorder badges");
+    }
+  };
+
+  const [badgeColorOverlap, setBadgeColorOverlap] = useState(user?.settings?.badge_color_overlap || "");
+  const [badgeGlowOverlap, setBadgeGlowOverlap] = useState(user?.settings?.badge_glow_overlap || "");
+
   const save = async () => {
     setSaving(true);
     try {
       const { data } = await api.put("/profile", {
         settings: {
+          ...(user?.settings || {}),
           badges_shown: shown,
           badge_layout: badgeLayout,
           custom_badges: customBadges,
           badge_style: badgeStyle,
+          badge_color_overlap: badgeColorOverlap,
+          badge_glow_overlap: badgeGlowOverlap,
         },
       });
       setUser(data);
@@ -1211,23 +1293,48 @@ export function BadgesSection() {
             No badges currently equipped. Toggle any badge below to equip it to your profile.
           </div>
         ) : (
-          <div className="flex items-center gap-2 flex-wrap p-2.5 rounded-2xl bg-[#08090B]/60 border border-white/5">
-            {equippedList.map((b) => {
+          <div className="flex items-center gap-2.5 flex-wrap p-2.5 rounded-2xl bg-[#08090B]/60 border border-white/5">
+            {equippedList.map((b, idx) => {
               const Ic = Icons[b.icon] || Icons.Award;
-              const col = b.color || "#5B8DB8";
+              const col = badgeColorOverlap || b.color || "#5B8DB8";
+              const glowCol = badgeGlowOverlap || col;
               return (
                 <div
                   key={b.id}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform hover:scale-110 cursor-pointer shadow-md"
-                  style={{
-                    background: badgeStyle.background === false ? "transparent" : `${col}25`,
-                    border: badgeStyle.outline === false ? "none" : `1.5px solid ${col}77`,
-                    color: col,
-                    boxShadow: badgeStyle.glow === false ? "none" : `0 0 12px ${col}66`,
-                  }}
-                  title={`${b.name}: ${b.desc}`}
+                  className="group relative flex items-center p-1 rounded-xl bg-white/5 border border-white/10"
                 >
-                  <Ic size={18} />
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform hover:scale-110 cursor-pointer shadow-md"
+                    style={{
+                      background: badgeStyle.background === false ? "transparent" : `${col}25`,
+                      border: badgeStyle.outline === false ? "none" : `1.5px solid ${col}77`,
+                      color: col,
+                      boxShadow: badgeStyle.glow === false ? "none" : `0 0 12px ${glowCol}66`,
+                    }}
+                    title={`${b.name}: ${b.desc}`}
+                  >
+                    <Ic size={16} />
+                  </div>
+                  <div className="flex flex-col ml-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveBadge(idx, -1)}
+                      className="text-[#E5E7EB]/60 hover:text-white disabled:opacity-20 p-0.5"
+                      title="Move Left"
+                    >
+                      <ChevronUp size={10} className="-rotate-90" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === equippedList.length - 1}
+                      onClick={() => moveBadge(idx, 1)}
+                      className="text-[#E5E7EB]/60 hover:text-white disabled:opacity-20 p-0.5"
+                      title="Move Right"
+                    >
+                      <ChevronDown size={10} className="-rotate-90" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -1263,7 +1370,7 @@ export function BadgesSection() {
           />
           <SelectRow
             label="Tooltip mode"
-            value={badgeStyle.tooltip_style || user.settings?.badge_tooltip_style || "normal"}
+            value={badgeStyle.tooltip_style || user?.settings?.badge_tooltip_style || "normal"}
             onChange={(value) => setBadgeStyle((style) => ({ ...style, tooltip_style: value }))}
             options={[
               { v: "normal", l: "Normal (Rich Glowing Card)" },
@@ -1278,6 +1385,20 @@ export function BadgesSection() {
             <span className="font-mono text-[#5B8DB8]">{badgeStyle.size ?? 28}px</span>
           </div>
           <Slider value={[badgeStyle.size ?? 28]} min={20} max={44} step={1} onValueChange={(value) => setBadgeStyle((style) => ({ ...style, size: value[0] }))} />
+        </div>
+
+        {/* Global Badge Color & Glow Overlap */}
+        <div className="pt-3 border-t border-white/10 grid sm:grid-cols-2 gap-4">
+          <ColorRow
+            label="Global Badge Color Overlap"
+            value={badgeColorOverlap}
+            onChange={setBadgeColorOverlap}
+          />
+          <ColorRow
+            label="Global Badge Glow Overlap"
+            value={badgeGlowOverlap}
+            onChange={setBadgeGlowOverlap}
+          />
         </div>
       </div>
 

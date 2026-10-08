@@ -484,6 +484,13 @@ class LinkUpdate(BaseModel):
     hidden: Optional[bool] = None
     config: Optional[dict] = None
 
+class LinksReorderIn(BaseModel):
+    link_ids: Optional[list[str]] = None
+    ids: Optional[list[str]] = None
+
+class BadgesReorderIn(BaseModel):
+    badges: list[str] = []
+
 class InviteIn(BaseModel):
     prefix: Optional[str] = "SWAT-"
     max_uses: int = 1
@@ -1501,6 +1508,31 @@ async def update_link(link_id: str, body: LinkUpdate, user: dict = Depends(get_c
         await cleanup_unused_uploads(user["id"])
     row = await db.execute(text("SELECT * FROM links WHERE id = :id"), {"id": link_id})
     return row_to_link(row.fetchone())
+
+@api.put("/links/reorder")
+async def reorder_links(body: LinksReorderIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    ids = body.link_ids or body.ids or []
+    for idx, lid in enumerate(ids):
+        await db.execute(text("UPDATE links SET order_index = :idx WHERE id = :id AND user_id = :uid"), {
+            "idx": idx, "id": str(lid), "uid": user["id"]
+        })
+    await db.commit()
+    rows = await db.execute(text("SELECT * FROM links WHERE user_id = :uid ORDER BY order_index ASC, created_at ASC"), {"uid": user["id"]})
+    return [row_to_link(r) for r in rows.fetchall()]
+
+@api.put("/badges/reorder")
+async def reorder_badges(body: BadgesReorderIn, user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    # Update badges order in user's profile settings and badges column
+    badges = [b for b in body.badges if isinstance(b, str)]
+    settings = _j(user.get("settings")) or {}
+    settings["badge_order"] = badges
+    await db.execute(text("UPDATE users SET badges = :badges, settings = :settings WHERE id = :uid"), {
+        "badges": _jdump(badges),
+        "settings": _jdump(settings),
+        "uid": user["id"]
+    })
+    await db.commit()
+    return {"ok": True, "badges": badges, "badge_order": badges}
 
 # ─────────────────────────────────────────
 # Uploads

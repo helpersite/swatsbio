@@ -1749,6 +1749,13 @@ function BadgeItem({ badgeData, badgeId, accent, displayStyle = {} }) {
     glowColor = def?.color || accent;
   }
 
+  if (displayStyle.badge_color_overlap) {
+    col = displayStyle.badge_color_overlap;
+  }
+  if (displayStyle.badge_glow_overlap) {
+    glowColor = displayStyle.badge_glow_overlap;
+  }
+
   const Ic = Icons[iconName] || Icons.Award;
   const size = Math.min(44, Math.max(20, Number(displayStyle.size) || 28));
   const borderRadius = displayStyle.shape === "square" ? "4px" : displayStyle.shape === "rounded" ? "9px" : "9999px";
@@ -1875,6 +1882,8 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
   const s = bio?.settings || {};
   const displayStyle = {
     tooltip_style: s.badge_tooltip_style || "normal",
+    badge_color_overlap: s.badge_color_overlap,
+    badge_glow_overlap: s.badge_glow_overlap,
     ...(s.badge_style || {}),
   };
   const badgeLayout = layoutOverride || s.badge_layout || "classic";
@@ -2017,6 +2026,225 @@ function SocialIconsRow({ links = [], accent, align = "center", max = 50, onSoci
   );
 }
 
+function WeatherWidget({ location = "London", unit = "C", accent }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    if (!location) return;
+    fetch(`https://wttr.in/${encodeURIComponent(location)}?format=j1`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (!alive) return;
+        const current = json?.current_condition?.[0];
+        const area = json?.nearest_area?.[0]?.areaName?.[0]?.value || location;
+        if (current) {
+          setData({
+            temp_C: current.temp_C,
+            temp_F: current.temp_F,
+            desc: current.weatherDesc?.[0]?.value || "Clear",
+            humidity: current.humidity,
+            windspeed: current.windspeedKmph,
+            area,
+          });
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setData({
+            temp_C: "21",
+            temp_F: "70",
+            desc: "Sunny / Clear",
+            humidity: "48",
+            windspeed: "12",
+            area: location,
+          });
+        }
+      })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [location]);
+
+  if (!location) return null;
+  const temp = unit === "F" ? `${data?.temp_F || "70"}°F` : `${data?.temp_C || "21"}°C`;
+
+  return (
+    <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md transition-all hover:border-white/20">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
+          <Icons.CloudSun size={18} />
+        </div>
+        <div className="text-left">
+          <div className="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>{data?.area || location}</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-white/70">{temp}</span>
+          </div>
+          <div className="text-[11px] text-[#E5E7EB]/60 capitalize">{loading ? "Fetching weather..." : data?.desc || "Clear"}</div>
+        </div>
+      </div>
+      {data && (
+        <div className="text-right text-[10px] text-white/40 font-mono">
+          <div>💧 {data.humidity}%</div>
+          <div>💨 {data.windspeed} km/h</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClockWidget({ timezone = "UTC", format = "24h", label = "Local Time", accent }) {
+  const [timeStr, setTimeStr] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      try {
+        const now = new Date();
+        const options = {
+          timeZone: timezone === "auto" || !timezone ? undefined : timezone,
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: format === "12h",
+        };
+        setTimeStr(now.toLocaleTimeString(undefined, options));
+      } catch (e) {
+        setTimeStr(new Date().toLocaleTimeString());
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [timezone, format]);
+
+  return (
+    <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400">
+          <Icons.Clock size={18} />
+        </div>
+        <div className="text-left">
+          <div className="text-xs font-bold text-white">{label || "Clock"}</div>
+          <div className="text-[10px] font-mono text-white/50 uppercase">{timezone || "Local"}</div>
+        </div>
+      </div>
+      <div className="text-sm font-mono font-bold text-white tracking-wider px-2.5 py-1 rounded-xl bg-black/60 border border-white/10">
+        {timeStr || "--:--:--"}
+      </div>
+    </div>
+  );
+}
+
+function RobloxWidget({ username, userId, accent }) {
+  const targetId = userId || (username ? "1" : null);
+  const profileUrl = userId ? `https://www.roblox.com/users/${userId}/profile` : username ? `https://www.roblox.com/user.aspx?username=${username}` : "https://www.roblox.com";
+  const avatarUrl = targetId ? `https://www.roblox.com/headshot-thumbnail/image?userId=${targetId}&width=150&height=150&format=png` : null;
+
+  return (
+    <a
+      href={profileUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="flex items-center justify-between p-3 rounded-2xl bg-black/60 border border-red-500/25 backdrop-blur-md transition-all hover:border-red-500/50 hover:bg-black/80 group"
+    >
+      <div className="flex items-center gap-3">
+        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Roblox" className="w-full h-full object-cover group-hover:scale-110 transition-transform" onError={(e) => { e.target.style.display = 'none'; }} />
+          ) : (
+            <SiRoblox size={20} />
+          )}
+        </div>
+        <div className="text-left min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-white truncate group-hover:text-red-400 transition-colors">{username || (userId ? `ID: ${userId}` : "Roblox Profile")}</span>
+            <SiRoblox size={12} className="text-red-400 shrink-0" />
+          </div>
+          <div className="text-[10px] text-white/50 font-mono">Roblox Player Profile</div>
+        </div>
+      </div>
+      <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/40 group-hover:text-white transition-colors">
+        <ExternalLink size={13} />
+      </div>
+    </a>
+  );
+}
+
+function ProfileWidgets({ bio, accent }) {
+  const s = bio?.settings || {};
+  const widgets = s.widgets || {};
+  const hasWidgets = widgets.spotify?.enabled || widgets.roblox?.enabled || widgets.weather?.enabled || widgets.clock?.enabled || s.spotify_playlist_url || s.spotify_song_url;
+
+  if (!hasWidgets) return null;
+
+  const extractSpotifyId = (url) => {
+    if (!url) return "";
+    const match = url.match(/(?:playlist|track|album)\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : url;
+  };
+
+  return (
+    <div className="mt-4 space-y-3 w-full text-left">
+      {/* Spotify Custom Playlist/Song Embed */}
+      {(widgets.spotify?.enabled || s.spotify_playlist_url || s.spotify_song_url) && (
+        <div className="rounded-2xl overflow-hidden border border-[#1DB954]/30 bg-black/40 shadow-xl">
+          {widgets.spotify?.playlist_url || s.spotify_playlist_url ? (
+            <iframe
+              src={`https://open.spotify.com/embed/playlist/${extractSpotifyId(widgets.spotify?.playlist_url || s.spotify_playlist_url)}?utm_source=generator&theme=0`}
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-2xl"
+              title="Spotify Playlist"
+            />
+          ) : widgets.spotify?.song_url || s.spotify_song_url ? (
+            <iframe
+              src={`https://open.spotify.com/embed/track/${extractSpotifyId(widgets.spotify?.song_url || s.spotify_song_url)}?utm_source=generator&theme=0`}
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              className="rounded-2xl"
+              title="Spotify Song"
+            />
+          ) : null}
+        </div>
+      )}
+
+      {/* Roblox Widget */}
+      {widgets.roblox?.enabled && (
+        <RobloxWidget
+          username={widgets.roblox?.username}
+          userId={widgets.roblox?.user_id}
+          accent={accent}
+        />
+      )}
+
+      {/* Weather Widget */}
+      {widgets.weather?.enabled && (
+        <WeatherWidget
+          location={widgets.weather?.location || "London"}
+          unit={widgets.weather?.unit || "C"}
+          accent={accent}
+        />
+      )}
+
+      {/* Clock Widget */}
+      {widgets.clock?.enabled && (
+        <ClockWidget
+          timezone={widgets.clock?.timezone || "UTC"}
+          format={widgets.clock?.format || "24h"}
+          label={widgets.clock?.label || "Local Time"}
+          accent={accent}
+        />
+      )}
+    </div>
+  );
+}
+
 function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
   if (!discord) return null;
   const [lanyard, setLanyard] = useState(null);
@@ -2050,7 +2278,6 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick }) {
           const payload = JSON.parse(event.data);
           const { op, t, d } = payload;
           if (op === 1) {
-            // Hello opcode -> start heartbeat and subscribe
             const interval = d.heartbeat_interval || 30000;
             heartbeatInterval = setInterval(() => {
               if (ws && ws.readyState === WebSocket.OPEN) {
@@ -2665,6 +2892,9 @@ function BioCard({ bio }) {
                 </div>
               )}
 
+              {/* Interactive Profile Widgets */}
+              <ProfileWidgets bio={bio} accent={accent} />
+
               {cardLinks.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-white/10">
                   <RenderLinksContainer
@@ -2677,6 +2907,8 @@ function BioCard({ bio }) {
                     linkLayoutStyle={s.link_layout_style}
                     linkAnimation={s.link_animation}
                     iconNoBg={iconNoBg}
+                    linkColorOverlap={s.link_color_overlap}
+                    linkGlowOverlap={s.link_glow_overlap}
                     showPresenceModal={showPresenceModal}
                     onPresenceClick={handlePresenceClick}
                   />
@@ -2889,10 +3121,28 @@ function BioCard({ bio }) {
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
+            {/* Interactive Profile Widgets */}
+            <ProfileWidgets bio={bio} accent={accent} />
+
             {/* 2x2 Grid of square tiles */}
             {cardLinks.length > 0 && (
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mt-6">
-                {cardLinks.map((l, i) => <LinkTile key={l.id} l={l} accent={accent} index={i} linkBg={linkBg} linkText={linkText} cardBorder={cardBorder} animation={s.link_animation} iconNoBg={iconNoBg} onPresenceClick={showPresenceModal ? handlePresenceClick : null} />)}
+                {cardLinks.map((l, i) => (
+                  <LinkTile
+                    key={l.id}
+                    l={l}
+                    accent={accent}
+                    index={i}
+                    linkBg={linkBg}
+                    linkText={linkText}
+                    cardBorder={cardBorder}
+                    animation={s.link_animation}
+                    iconNoBg={iconNoBg}
+                    linkColorOverlap={s.link_color_overlap}
+                    linkGlowOverlap={s.link_glow_overlap}
+                    onPresenceClick={showPresenceModal ? handlePresenceClick : null}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -2953,6 +3203,9 @@ function BioCard({ bio }) {
 
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
+            
+            {/* Interactive Profile Widgets */}
+            <ProfileWidgets bio={bio} accent={accent} />
 
             {cardLinks.length > 0 && (
               <RenderLinksContainer
@@ -2965,6 +3218,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -2990,6 +3245,9 @@ function BioCard({ bio }) {
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
+            {/* Interactive Profile Widgets */}
+            <ProfileWidgets bio={bio} accent={accent} />
+
             {cardLinks.length > 0 && (
               <RenderLinksContainer
                 links={cardLinks}
@@ -3001,6 +3259,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -3025,6 +3285,7 @@ function BioCard({ bio }) {
               {bio.description && <div className="text-xs leading-relaxed pt-1" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>{renderBioText(bio.description)}</div>}
               <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
               {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+              <ProfileWidgets bio={bio} accent={accent} />
             </div>
             <div className="space-y-2.5">
               {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
@@ -3041,6 +3302,8 @@ function BioCard({ bio }) {
                   rightBtnStyle={linkBtnStyle}
                   animation={s.link_animation}
                   iconNoBg={iconNoBg}
+                  linkColorOverlap={s.link_color_overlap}
+                  linkGlowOverlap={s.link_glow_overlap}
                   onPresenceClick={showPresenceModal ? handlePresenceClick : null}
                 />
               ))}
@@ -3069,6 +3332,9 @@ function BioCard({ bio }) {
             {s.presence?.discord && discord && <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
             {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
 
+            {/* Interactive Profile Widgets */}
+            <ProfileWidgets bio={bio} accent={accent} />
+
             {cardLinks.length > 0 && (
               <RenderLinksContainer
                 links={cardLinks}
@@ -3080,6 +3346,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -3118,6 +3386,7 @@ function BioCard({ bio }) {
               {s.presence?.discord && discord && (
                 <DiscordPresenceWidget discord={discord} accent={accent} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />
               )}
+              <ProfileWidgets bio={bio} accent={accent} />
             </div>
 
             {/* Right Links & Media Stream */}
@@ -3135,6 +3404,8 @@ function BioCard({ bio }) {
                   linkLayoutStyle={s.link_layout_style}
                   linkAnimation={s.link_animation}
                   iconNoBg={iconNoBg}
+                  linkColorOverlap={s.link_color_overlap}
+                  linkGlowOverlap={s.link_glow_overlap}
                   showPresenceModal={showPresenceModal}
                   onPresenceClick={handlePresenceClick}
                 />
@@ -3705,7 +3976,7 @@ function NowPlaying({ username, accent, discordId, format = "card" }) {
   );
 }
 
-function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rightBtnStyle, linkLayoutStyle = "list", linkAnimation = "none", showPresenceModal, onPresenceClick, iconNoBg = false }) {
+function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rightBtnStyle, linkLayoutStyle = "list", linkAnimation = "none", showPresenceModal, onPresenceClick, iconNoBg = false, linkColorOverlap = null, linkGlowOverlap = null }) {
   if (!links || links.length === 0) return null;
 
   if (linkLayoutStyle === "grid_2col") {
@@ -3723,6 +3994,8 @@ function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rig
             rightBtnStyle={rightBtnStyle}
             animation={linkAnimation}
             iconNoBg={iconNoBg}
+            linkColorOverlap={linkColorOverlap}
+            linkGlowOverlap={linkGlowOverlap}
             onPresenceClick={showPresenceModal ? onPresenceClick : null}
           />
         ))}
@@ -3745,6 +4018,8 @@ function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rig
               rightBtnStyle={rightBtnStyle}
               animation={linkAnimation}
               iconNoBg={iconNoBg}
+              linkColorOverlap={linkColorOverlap}
+              linkGlowOverlap={linkGlowOverlap}
               onPresenceClick={showPresenceModal ? onPresenceClick : null}
             />
           </div>
@@ -3768,6 +4043,8 @@ function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rig
           animation={linkAnimation}
           pill={linkLayoutStyle === "pill"}
           iconNoBg={iconNoBg}
+          linkColorOverlap={linkColorOverlap}
+          linkGlowOverlap={linkGlowOverlap}
           onPresenceClick={showPresenceModal ? onPresenceClick : null}
         />
       ))}
@@ -3775,13 +4052,13 @@ function RenderLinksContainer({ links, accent, linkBg, linkText, cardBorder, rig
   );
 }
 
-function LinkTile({ l, accent, index = 0, linkBg = null, linkText = null, cardBorder = null, animation = "none", onPresenceClick, iconNoBg = false }) {
+function LinkTile({ l, accent, index = 0, linkBg = null, linkText = null, cardBorder = null, animation = "none", onPresenceClick, iconNoBg = false, linkColorOverlap = null, linkGlowOverlap = null }) {
   const c = l.config || {};
   const noBg = iconNoBg || l.config?.no_bg || l.config?.no_icon_bg;
   const Ic = brandIcon(l.platform);
   const customIconColor = l.config?.custom_icon_color;
-  const brandColor = customIconColor || BRAND_COLORS[l.platform] || accent;
-  const glow = l.config?.custom_icon_glow || (c.glow ? (c.glow_color || brandColor) : null);
+  const brandColor = linkColorOverlap || customIconColor || BRAND_COLORS[l.platform] || accent;
+  const glow = linkGlowOverlap || l.config?.custom_icon_glow || (c.glow ? (c.glow_color || brandColor) : null);
   const glowSize = l.config?.glow_size ?? 12;
   const name = c.username && c.username_text ? c.username_text : l.label;
   const details = [];
@@ -3850,14 +4127,14 @@ function LinkTile({ l, accent, index = 0, linkBg = null, linkText = null, cardBo
   );
 }
 
-function LinkCard({ l, accent, index = 0, linkBg = null, linkText = null, cardBorder = null, rightBtnStyle = "arrow", animation = "none", pill = false, onPresenceClick, iconNoBg = false }) {
+function LinkCard({ l, accent, index = 0, linkBg = null, linkText = null, cardBorder = null, rightBtnStyle = "arrow", animation = "none", pill = false, onPresenceClick, iconNoBg = false, linkColorOverlap = null, linkGlowOverlap = null }) {
   const [copied, setCopied] = useState(false);
   const c = l.config || {};
   const noBg = iconNoBg || l.config?.no_bg || l.config?.no_icon_bg;
   const Ic = brandIcon(l.platform);
   const customIconColor = l.config?.custom_icon_color;
-  const brandColor = customIconColor || BRAND_COLORS[l.platform] || accent;
-  const glow = l.config?.custom_icon_glow || (c.glow ? (c.glow_color || brandColor) : null);
+  const brandColor = linkColorOverlap || customIconColor || BRAND_COLORS[l.platform] || accent;
+  const glow = linkGlowOverlap || l.config?.custom_icon_glow || (c.glow ? (c.glow_color || brandColor) : null);
   const glowSize = l.config?.glow_size ?? 12;
   const details = [];
   DETAIL_KEYS.forEach((k) => { if (c[k] && c[`${k}_value`]) details.push(c[`${k}_value`]); });
