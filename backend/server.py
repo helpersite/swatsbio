@@ -695,6 +695,17 @@ DEFAULT_SITE = {
 def set_cookie(resp: Response, token: str):
     resp.set_cookie(key="access_token", value=token, httponly=True, secure=True, samesite="none", max_age=604800, path="/")
 
+def strip_effect_syntax(text: str) -> str:
+    if not text:
+        return ""
+    clean = str(text)
+    clean = re.sub(r':([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):', r'\2', clean)
+    clean = re.sub(r':([a-zA-Z0-9_#-]+):([^:\n]+):', r'\2', clean)
+    clean = re.sub(r':([a-zA-Z0-9_#-]+):', '', clean)
+    clean = re.sub(r'\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire)[^\]]*\]', '', clean, flags=re.IGNORECASE)
+    clean = re.sub(r'[\*\_~`]', '', clean)
+    return clean.strip()
+
 def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse:
     import html as html_lib
     if not user:
@@ -705,11 +716,10 @@ def generate_user_meta_html(user: Optional[dict], username: str) -> HTMLResponse
         card_type = "summary_large_image"
     else:
         settings = _j(user.get("settings")) or {}
-        display_name = user.get("display_name") or username
+        display_name = strip_effect_syntax(user.get("display_name") or username) or username
         meta_title = settings.get("meta_title") or f"{display_name} (@{username}) • Swats.bio"
         raw_desc = settings.get("meta_desc") or user.get("description") or f"View @{username}'s official bio, social links, and music on Swats.bio."
-        # Strip BBCode/effect markers from description for clean embed
-        meta_desc = re.sub(r':[a-zA-Z0-9_-]+:', '', raw_desc).strip()
+        meta_desc = strip_effect_syntax(raw_desc)
         if not meta_desc:
             meta_desc = f"View @{username}'s official profile on Swats.bio."
         
@@ -3550,30 +3560,21 @@ async def post_discord_leaderboard(db: AsyncSession, custom_channel: Optional[st
     """))
     top_users = rows.fetchall()
 
-    medals = ["👑 **#1**", "🥈 **#2**", "🥉 **#3**", "4️⃣ **#4**", "5️⃣ **#5**", "6️⃣ **#6**", "7️⃣ **#7**", "8️⃣ **#8**", "9️⃣ **#9**", "🔟 **#10**"]
     leaderboard_lines = []
     for idx, u in enumerate(top_users):
-        medal = medals[idx] if idx < len(medals) else f"**#{idx+1}**"
-        dname = u[1] or u[0]
+        uname = u[0]
+        raw_dname = u[1] or uname
+        clean_dname = strip_effect_syntax(raw_dname) or uname
         vcount = f"{u[2]:,}" if u[2] else "0"
-        b_list = _j(u[3]) if u[3] else []
-        badge_str = " ".join([f"`[{b.upper()}]`" for b in b_list[:3]]) if b_list else ""
-        leaderboard_lines.append(f"{medal} **[{dname}](https://swats.bio/{u[0]})** (`@{u[0]}`) • **{vcount}** views {badge_str}")
+        leaderboard_lines.append(f"#{idx+1} [{clean_dname}](https://swats.bio/{uname}) (@{uname}) • {vcount} views")
 
-    desc = "\n".join(leaderboard_lines) if leaderboard_lines else "*No active bio profiles yet.*"
+    leaderboard_body = "\n".join(leaderboard_lines) if leaderboard_lines else "No active bio profiles yet."
 
     embed = {
         "title": "🏆 Swats.bio Official Leaderboard",
-        "description": f"Here are the most viewed bio profiles on **Swats.bio**!\n\n{desc}\n\n*Synced in real-time from https://swats.bio*",
+        "description": f"Here are the most viewed bio profiles on Swats.bio!\n\n{leaderboard_body}\n\nSynced in real-time from https://swats.bio/",
         "color": 0x5B8DB8,
         "thumbnail": {"url": "https://www.swats.bio/logo.png"},
-        "fields": [
-            {
-                "name": "⚡ Claim Your Custom Bio",
-                "value": "[Create your profile at swats.bio](https://swats.bio) • Connect Discord & unlock custom perks",
-                "inline": False
-            }
-        ],
         "footer": {
             "text": "Swats.bio • Automated 24h Leaderboard Sync",
             "icon_url": "https://www.swats.bio/logo.png"
