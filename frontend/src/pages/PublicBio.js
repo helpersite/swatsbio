@@ -10,7 +10,12 @@ import { SiDiscord, SiSpotify, SiTiktok, SiYoutube, SiTwitch, SiKick, SiInstagra
 import { brandIcon, BRAND_COLORS } from "@/lib/brandIcons";
 import { DETAIL_KEYS } from "@/lib/linkConfig";
 import { injectCustomFonts } from "@/lib/fonts";
-import { BackgroundEffect, CursorEffectsRenderer } from "@/components/BackgroundEffects";
+import { BackgroundEffect } from "@/components/BackgroundEffects";
+import { BackgroundEffectsLayer } from "@/components/effects/BackgroundEffects";
+import { CursorEffectsLayer } from "@/components/effects/CursorEffects";
+import { TextEffect } from "@/components/effects/TextEffects";
+import { useCardTilt, profilePanelClassName, profilePanelStyle, ProfilePanelOverlays, TiltGlare } from "@/components/effects/ProfileEffects";
+import { readEffectState } from "@/lib/effectsRegistry";
 import { AvatarDecoration } from "@/components/AvatarDecorations";
 import { MediaDisplay } from "@/components/MediaDisplay";
 import { DeckCustomSlide, TiltCard } from "@/components/DeckSlides";
@@ -3105,32 +3110,16 @@ function BioCard({ bio }) {
   const hasAudio = (a.tracks || []).length > 0;
   useEffect(() => injectCustomFonts(s.custom_fonts), [s.custom_fonts]);
 
-  const cardRef = useRef(null);
-  const rafId = useRef(null);
+  // Effects engine state (text / cursor / background / profile + card tilt)
+  const fx = readEffectState(s);
+  const tilt = useCardTilt(fx.cardTilt);
 
-  const handleMouseMove = (e) => {
-    if (s.tilt_effect === false || !cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    const rotateY = x * 18;
-    const rotateX = -(y * 18);
-    const translateX = x * 10;
-    const translateY = y * 10;
-
-    if (rafId.current) cancelAnimationFrame(rafId.current);
-    rafId.current = requestAnimationFrame(() => {
-      if (cardRef.current) {
-        cardRef.current.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translate3d(${translateX}px, ${translateY}px, 0) scale(1.01)`;
-      }
-    });
-  };
-
-  const handleMouseLeave = () => {
-    if (rafId.current) cancelAnimationFrame(rafId.current);
-    if (cardRef.current) {
-      cardRef.current.style.transform = "perspective(1200px) rotateX(0deg) rotateY(0deg) translate3d(0, 0, 0) scale(1)";
+  const renderName = (value) => {
+    const textFx = fx.text;
+    if (textFx && textFx.effect && textFx.effect !== "none") {
+      return <TextEffect effect={textFx.effect} config={textFx.config} text={stripEffectSyntax(value || "")} />;
     }
+    return renderBioText(value);
   };
 
   const adv = s.advanced_positioning_enabled === true ? s : {};
@@ -3481,11 +3470,11 @@ function BioCard({ bio }) {
         />
       )}
 
-      {/* Dynamic Animated Background Effect */}
-      <BackgroundEffect effect={s.bg_effect} />
+      {/* Ambient background effect (new engine; legacy ids resolve) */}
+      <BackgroundEffectsLayer effect={fx.background.effect} config={fx.background.config} accent={accent} />
 
-      {/* Interactive Cursor Effects Renderer (Trail, Sparkles, Reticle, Halo, Dot) */}
-      <CursorEffectsRenderer effect={s.cursor_fx} color={s.cursor_fx_color || accent} size={s.cursor_fx_size || 18} />
+      {/* Cursor decoration layer */}
+      <CursorEffectsLayer effect={fx.cursor.effect} config={fx.cursor.config} accent={accent} />
 
       {/* Guns.lol / Feds Slideshow Floating HUD Overlays */}
       {layout === "slideshow" && s.slideshow_hud_enabled !== false && typeof document !== "undefined" && createPortal(
@@ -3531,7 +3520,7 @@ function BioCard({ bio }) {
                 <AvatarDecoration decoration={s.avatar_decoration} />
               </div>
               <h1 className={`profile-title-3d text-2xl sm:text-3xl font-black mt-3.5 ${titleAlignClass}`} style={titleVisual}>
-                {renderBioText(bio.display_name || bio.username)}
+                {renderName(bio.display_name || bio.username)}
                 {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
               </h1>
               <div className="text-xs font-semibold mt-1 tracking-wider uppercase" style={{ color: accent }}>@{bio.username}</div>
@@ -3770,18 +3759,20 @@ function BioCard({ bio }) {
 
           {/* Main Profile Card Container */}
           <div
-            ref={cardRef}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            className={`w-full relative z-10 transition-transform duration-75 overflow-hidden ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8"} ${cardFxClass}`}
+            ref={tilt.tiltRef}
+            {...tilt.tiltHandlers}
+            className={`w-full relative z-10 overflow-hidden ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8"} ${cardFxClass} ${profilePanelClassName(fx.profile.effect)}`}
             style={{
               ...(layout === "minimal" || isCardInvisible ? { background: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", border: showCardBorder && cardBorder ? `1px solid ${cardBorder}` : "none", boxShadow: "none" } : cardMaterial),
               ...(layout === "minimal" || isCardInvisible ? {} : cardShape),
               ...(isClippedShape && layout !== "minimal" && !isCardInvisible ? { filter: `drop-shadow(0 20px 40px rgba(0,0,0,0.7))` } : {}),
+              ...profilePanelStyle(fx.profile.effect, fx.profile.config),
               fontFamily: s.font || "Outfit",
               willChange: "transform",
             }}
           >
+            <ProfilePanelOverlays effect={fx.profile.effect} config={fx.profile.config} />
+            <TiltGlare config={fx.cardTilt} />
             {/* Corner Views Badges */}
             <ViewsBadge bio={bio} position="top_left" />
             <ViewsBadge bio={bio} position="top_right" />
@@ -3804,7 +3795,7 @@ function BioCard({ bio }) {
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
             <h1 className={`profile-title-3d text-2xl font-extrabold mt-3.5 ${titleAlignClass}`} style={customTitleStyle}>
-              {renderBioText(bio.display_name || bio.username)}
+              {renderName(bio.display_name || bio.username)}
               {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
             </h1>
             <div className="text-xs font-medium mt-0.5" style={{ color: accent }}>@{bio.username}</div>
@@ -3884,7 +3875,7 @@ function BioCard({ bio }) {
             <div className="text-left px-1 mt-1">
               <div className="flex items-center flex-wrap gap-1.5">
                 <h1 className={`profile-title-3d text-xl sm:text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                 </h1>
                 {badgesPos === "next_to_name" && (
                   <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
@@ -3967,7 +3958,7 @@ function BioCard({ bio }) {
             <div className="text-left px-1 mt-1">
               <div className="flex items-center flex-wrap gap-2">
                 <h1 className={`profile-title-3d text-2xl sm:text-3xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                 </h1>
                 {badgesPos === "next_to_name" && (
                   <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
@@ -4021,7 +4012,7 @@ function BioCard({ bio }) {
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
             <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5">
-              <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+              <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>{renderName(bio.display_name || bio.username)}</h1>
               {badgesPos === "next_to_name" && (
                 <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
               )}
@@ -4069,7 +4060,7 @@ function BioCard({ bio }) {
               </div>
               <div>
                 <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                   {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-sm font-medium mt-0.5" style={{ color: accent }}>@{bio.username}</div>
@@ -4111,7 +4102,7 @@ function BioCard({ bio }) {
             <div className="flex items-center justify-between gap-4 text-left">
               <div className="flex-1 min-w-0">
                 <h1 className={`profile-title-3d text-2xl font-extrabold truncate ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                   {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-xs font-medium" style={{ color: accent }}>@{bio.username}</div>
@@ -4163,7 +4154,7 @@ function BioCard({ bio }) {
               </div>
               <div>
                 <h1 className={`profile-title-3d text-2xl font-bold truncate ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                   {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
@@ -4222,7 +4213,7 @@ function BioCard({ bio }) {
                 <AvatarDecoration decoration={s.avatar_decoration} />
               </div>
               <h1 className={`profile-title-3d text-2xl font-extrabold mt-3 ${titleAlignClass}`} style={customTitleStyle}>
-                {renderBioText(bio.display_name || bio.username)}
+                {renderName(bio.display_name || bio.username)}
                 {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
               </h1>
               <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
@@ -4274,7 +4265,7 @@ function BioCard({ bio }) {
               </div>
               <div className="min-w-0 flex-1">
                 <h1 className={`profile-title-3d text-2xl font-extrabold truncate ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                   {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
@@ -4323,7 +4314,7 @@ function BioCard({ bio }) {
             </div>
             <div>
               <h1 className={`profile-title-3d text-xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
-                {renderBioText(bio.display_name || bio.username)}
+                {renderName(bio.display_name || bio.username)}
                 {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
               </h1>
               <div className="text-xs" style={{ color: accent }}>@{bio.username}</div>
@@ -4370,7 +4361,7 @@ function BioCard({ bio }) {
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
             <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
-              {renderBioText(bio.display_name || bio.username)}
+              {renderName(bio.display_name || bio.username)}
               {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
             </h1>
             <div className="mt-0.5 text-xs font-medium" style={{ color: accent }}>@{bio.username}</div>
@@ -4409,7 +4400,7 @@ function BioCard({ bio }) {
               </div>
               <div>
                 <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
-                  {renderBioText(bio.display_name || bio.username)}
+                  {renderName(bio.display_name || bio.username)}
                   {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="mt-0.5 text-xs" style={{ color: accent }}>@{bio.username}</div>

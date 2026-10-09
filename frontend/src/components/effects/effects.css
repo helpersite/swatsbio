@@ -1,0 +1,399 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Effects engine styles
+   Keyframes + utility classes only. All colours / sizes / speeds are driven
+   by CSS custom properties set inline from the effect config so the same
+   class can back many configurations without becoming generic.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ══ CATEGORY 1 — TEXT & TYPOGRAPHY ══════════════════════════════════════ */
+
+.fx-text { display: inline-block; }
+.fx-char { display: inline-block; will-change: transform, filter, opacity; }
+
+/* 2. Fuzzy — soft unstable blur + chromatic separation */
+@keyframes fx-fuzzy-shift {
+  0%   { filter: blur(calc(var(--fx-blur) * 0.6)) contrast(1.05); text-shadow: calc(var(--fx-blur) * 0.6) 0 var(--fx-ca), calc(var(--fx-blur) * -0.6) 0 var(--fx-cb); }
+  50%  { filter: blur(var(--fx-blur)) contrast(1.1); text-shadow: calc(var(--fx-blur) * -0.8) 0 var(--fx-ca), calc(var(--fx-blur) * 0.8) 0 var(--fx-cb); }
+  100% { filter: blur(calc(var(--fx-blur) * 0.6)) contrast(1.05); text-shadow: calc(var(--fx-blur) * 0.6) 0 var(--fx-ca), calc(var(--fx-blur) * -0.6) 0 var(--fx-cb); }
+}
+.fx-fuzzy { animation: fx-fuzzy-shift calc(2.6s / var(--fx-speed)) ease-in-out infinite; letter-spacing: 0.02em; }
+
+/* 4. Glitch — clipped fragment layers with colour separation */
+@keyframes fx-glitch-a {
+  0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+  12% { clip-path: inset(12% 0 62% 0); transform: translate(calc(var(--fx-i) * -3px), 0); }
+  26% { clip-path: inset(58% 0 18% 0); transform: translate(calc(var(--fx-i) * 2px), 0); }
+  40% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+  62% { clip-path: inset(34% 0 40% 0); transform: translate(calc(var(--fx-i) * 3px), 0); }
+  100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+}
+@keyframes fx-glitch-b {
+  0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0, 0); }
+  20% { clip-path: inset(72% 0 8% 0); transform: translate(calc(var(--fx-i) * 3px), 0); }
+  48% { clip-path: inset(20% 0 58% 0); transform: translate(calc(var(--fx-i) * -2px), 0); }
+  76% { clip-path: inset(46% 0 30% 0); transform: translate(calc(var(--fx-i) * 2px), 0); }
+}
+.fx-glitch { position: relative; display: inline-block; }
+.fx-glitch::before,
+.fx-glitch::after {
+  content: attr(data-fx-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.fx-glitch::before { color: var(--fx-ca); animation: fx-glitch-a calc(2.4s / var(--fx-freq)) steps(2, end) infinite; }
+.fx-glitch::after { color: var(--fx-cb); animation: fx-glitch-b calc(2.4s / var(--fx-freq)) steps(2, end) infinite; }
+
+/* 5. RGB Split / chromatic aberration */
+@keyframes fx-rgb-jitter {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(calc(var(--fx-ox) * 0.6), calc(var(--fx-oy) * 0.6)); }
+  66% { transform: translate(calc(var(--fx-ox) * -0.7), calc(var(--fx-oy) * -0.7)); }
+}
+.fx-rgb { position: relative; display: inline-block; }
+.fx-rgb::before,
+.fx-rgb::after {
+  content: attr(data-fx-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-rgb::before { color: #ff2d55; transform: translate(calc(var(--fx-ox) * -1), calc(var(--fx-oy) * -1)); mix-blend-mode: screen; }
+.fx-rgb::after { color: #00e0ff; transform: translate(var(--fx-ox), var(--fx-oy)); mix-blend-mode: screen; }
+.fx-rgb.fx-rgb-animated::before { animation: fx-rgb-jitter 0.9s ease-in-out infinite; }
+.fx-rgb.fx-rgb-animated::after { animation: fx-rgb-jitter 0.9s ease-in-out infinite reverse; }
+
+/* 6. Glitch Lines — horizontal interference bands */
+@keyframes fx-band-sweep {
+  0%, 100% { transform: translateY(0); opacity: 0; }
+  8% { opacity: var(--fx-op); }
+  40% { opacity: var(--fx-op); }
+  55% { opacity: 0; transform: translateY(calc(var(--fx-h) * 0.35)); }
+}
+.fx-glitch-lines { position: relative; display: inline-block; overflow: hidden; }
+.fx-glitch-lines .fx-band {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: var(--fx-th);
+  background: var(--fx-color);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: fx-band-sweep calc(3.4s / var(--fx-freq)) linear infinite;
+}
+
+/* 7. Scanline text — lines clipped to the glyphs */
+@keyframes fx-scan-scroll { from { background-position-y: 0; } to { background-position-y: calc(var(--fx-sp) * 16); } }
+.fx-scanline {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) calc(var(--fx-sp) - 1px),
+    rgba(0, 0, 0, var(--fx-op)) calc(var(--fx-sp) - 1px),
+    rgba(0, 0, 0, var(--fx-op)) var(--fx-sp)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: fx-scan-scroll var(--fx-spd, 0s) linear infinite;
+}
+
+/* 8. Flicker */
+@keyframes fx-flicker-stable {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  47% { opacity: 1; filter: brightness(1.06); }
+  48% { opacity: 0.86; filter: brightness(0.9); }
+  49% { opacity: 1; filter: brightness(1); }
+  72% { opacity: calc(1 - var(--fx-i) * 0.24); filter: brightness(calc(1 - var(--fx-i) * 0.2)); }
+}
+@keyframes fx-flicker-irregular {
+  0%, 100% { opacity: 1; }
+  6% { opacity: calc(1 - var(--fx-i) * 0.9); }
+  7% { opacity: 1; }
+  18%, 21% { opacity: calc(1 - var(--fx-i) * 0.7); }
+  22% { opacity: 1; }
+  41% { opacity: calc(1 - var(--fx-i) * 0.4); }
+  42% { opacity: 1; }
+  70% { opacity: calc(1 - var(--fx-i) * 0.85); }
+  71% { opacity: 1; }
+}
+.fx-flicker { text-shadow: 0 0 8px var(--fx-color), 0 0 22px var(--fx-color); }
+.fx-flicker-stable { animation: fx-flicker-stable calc(3s / var(--fx-freq)) linear infinite; }
+.fx-flicker-irregular { animation: fx-flicker-irregular calc(4s / var(--fx-freq)) steps(1, end) infinite; }
+
+/* 9. Wave */
+@keyframes fx-wave-h { 0%, 100% { transform: translateY(calc(var(--fx-amp) * -1)); } 50% { transform: translateY(var(--fx-amp)); } }
+@keyframes fx-wave-v { 0%, 100% { transform: translateX(calc(var(--fx-amp) * -1)); } 50% { transform: translateX(var(--fx-amp)); } }
+@keyframes fx-wave-d { 0%, 100% { transform: translate(calc(var(--fx-amp) * -0.7), calc(var(--fx-amp) * -0.7)); } 50% { transform: translate(calc(var(--fx-amp) * 0.7), calc(var(--fx-amp) * 0.7)); } }
+.fx-wave-h .fx-char { animation: fx-wave-h calc(2.2s / var(--fx-speed)) ease-in-out infinite; }
+.fx-wave-v .fx-char { animation: fx-wave-v calc(2.2s / var(--fx-speed)) ease-in-out infinite; }
+.fx-wave-d .fx-char { animation: fx-wave-d calc(2.2s / var(--fx-speed)) ease-in-out infinite; }
+
+/* 10. Jitter */
+@keyframes fx-jitter-a { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(var(--fx-i), calc(var(--fx-i) * -0.6)); } 50% { transform: translate(calc(var(--fx-i) * -0.8), var(--fx-i)); } 75% { transform: translate(calc(var(--fx-i) * 0.5), calc(var(--fx-i) * 0.7)); } }
+@keyframes fx-jitter-b { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(calc(var(--fx-i) * -0.7), var(--fx-i)); } 60% { transform: translate(var(--fx-i), calc(var(--fx-i) * -0.5)); } }
+.fx-jitter .fx-char { animation: fx-jitter-a calc(1.8s / var(--fx-freq)) ease-in-out infinite; }
+.fx-jitter.fx-jitter-alt .fx-char:nth-child(odd) { animation-name: fx-jitter-b; }
+
+/* 12. Marquee */
+@keyframes fx-marquee-l { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fx-marquee-r { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+.fx-marquee { overflow: hidden; white-space: nowrap; display: block; }
+.fx-marquee-track { display: inline-flex; white-space: nowrap; }
+.fx-marquee-l .fx-marquee-track { animation: fx-marquee-l var(--fx-speed) linear infinite; }
+.fx-marquee-r .fx-marquee-track { animation: fx-marquee-r var(--fx-speed) linear infinite; }
+.fx-marquee.fx-pause:hover .fx-marquee-track { animation-play-state: paused; }
+
+/* 13. Fade */
+@keyframes fx-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-fade-out { from { opacity: 1; } to { opacity: var(--fx-end, 0); } }
+.fx-fade-in { animation: fx-fade-in var(--fx-dur) var(--fx-ease, ease-out) both; }
+.fx-fade-out { animation: fx-fade-out var(--fx-dur) var(--fx-ease, ease-out) both; }
+.fx-fade-stagger .fx-char { animation: fx-fade-in var(--fx-dur) var(--fx-ease, ease-out) both; }
+
+/* 14. Letter reveal */
+@keyframes fx-reveal-up { from { opacity: 0; transform: translateY(var(--fx-rise)); } to { opacity: 1; transform: translateY(0); } }
+.fx-letter-reveal .fx-char,
+.fx-letter-reveal .fx-word { animation: fx-reveal-up var(--fx-dur, 0.6s) cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+/* 15. Blur reveal */
+@keyframes fx-blur-reveal { from { opacity: 0; filter: blur(var(--fx-blur)); } to { opacity: 1; filter: blur(0); } }
+.fx-blur-reveal { animation: fx-blur-reveal var(--fx-dur) ease-out both; }
+.fx-blur-reveal-stagger .fx-char { animation: fx-blur-reveal var(--fx-dur) ease-out both; }
+
+/* 16. Pop */
+@keyframes fx-pop { from { opacity: 0; transform: scale(var(--fx-scale)); } 60% { opacity: 1; transform: scale(1.02); } to { opacity: 1; transform: scale(1); } }
+.fx-pop { animation: fx-pop var(--fx-dur) cubic-bezier(0.2, 0.8, 0.2, 1) both; display: inline-block; }
+.fx-pop .fx-char { animation: fx-pop var(--fx-dur) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* 18. Animated gradient text */
+@keyframes fx-grad-move { from { background-position: 0% 50%; } to { background-position: var(--fx-w, 220%) 50%; } }
+.fx-anim-gradient {
+  background-image: var(--fx-grad);
+  background-size: var(--fx-w, 220%) auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: fx-grad-move var(--fx-speed) linear infinite;
+}
+
+/* 19. Neon */
+@keyframes fx-neon-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+.fx-neon {
+  color: #fff;
+  text-shadow:
+    0 0 calc(var(--fx-r) * 0.35) var(--fx-color),
+    0 0 calc(var(--fx-r) * 0.6) var(--fx-color),
+    0 0 calc(var(--fx-r) * 1.2) var(--fx-color),
+    0 0 calc(var(--fx-r) * 2) var(--fx-color);
+}
+.fx-neon-pulse { animation: fx-neon-pulse calc(var(--fx-speed, 2s)) ease-in-out infinite; }
+
+/* 21. Chrome */
+@keyframes fx-chrome-shine { from { background-position: 0% 50%; } to { background-position: 200% 50%; } }
+.fx-chrome {
+  background-image: linear-gradient(
+    100deg,
+    var(--fx-dark) 0%, var(--fx-mid) 22%, var(--fx-light) 40%,
+    var(--fx-mid) 55%, var(--fx-dark) 78%, var(--fx-mid) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.fx-chrome-animated { animation: fx-chrome-shine var(--fx-speed) linear infinite; }
+
+/* 24. CRT terminal */
+@keyframes fx-crt-scroll { from { background-position-y: 0; } to { background-position-y: var(--fx-sp); } }
+.fx-crt-scan {
+  background-image: repeating-linear-gradient(0deg, transparent 0, transparent calc(var(--fx-sp) - 1px), rgba(0, 0, 0, 0.45) calc(var(--fx-sp) - 1px), rgba(0, 0, 0, 0.45) var(--fx-sp));
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: fx-crt-scroll 6s linear infinite;
+}
+
+/* 25. VHS */
+@keyframes fx-vhs-displace {
+  0%, 100% { transform: translateX(0); }
+  48% { transform: translateX(0); }
+  50% { transform: translateX(var(--fx-disp)); }
+  52% { transform: translateX(0); }
+}
+@keyframes fx-vhs-noise { 0% { background-position: 0 0; } 100% { background-position: 120px 90px; } }
+.fx-vhs { position: relative; display: inline-block; }
+.fx-vhs-shift { animation: fx-vhs-displace calc(6s / var(--fx-freq)) steps(1, end) infinite; }
+.fx-vhs-noise {
+  position: absolute; inset: -2px; pointer-events: none; opacity: var(--fx-noise); mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: fx-vhs-noise 0.5s steps(4) infinite;
+}
+
+/* ══ CATEGORY 3 — BACKGROUND OVERLAYS (CSS-driven) ═══════════════════════ */
+
+.fx-bg { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+
+/* Aurora / mesh / fluid / floating gradients share blob keyframes */
+@keyframes fx-blob-a { 0%, 100% { transform: translate3d(0, 0, 0) scale(1); } 50% { transform: translate3d(6%, -8%, 0) scale(1.15); } }
+@keyframes fx-blob-b { 0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); } 50% { transform: translate3d(-8%, 6%, 0) scale(0.92); } }
+@keyframes fx-blob-c { 0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); } 50% { transform: translate3d(5%, 9%, 0) scale(1.2); } }
+.fx-blob { position: absolute; border-radius: 50%; filter: blur(var(--fx-blur)); will-change: transform; }
+
+.fx-aurora-band { position: absolute; left: -20%; width: 140%; height: 60%; border-radius: 50%; filter: blur(var(--fx-blur)); mix-blend-mode: screen; }
+
+/* Dither / dithered texture */
+.fx-dither {
+  background-size: var(--fx-scale) var(--fx-scale);
+  background-image: radial-gradient(circle at center, var(--fx-color) calc(var(--fx-scale) * 0.18), transparent calc(var(--fx-scale) * 0.2));
+  opacity: var(--fx-opacity);
+  filter: contrast(var(--fx-contrast));
+}
+.fx-dither-checker {
+  background-image:
+    linear-gradient(45deg, var(--fx-color) 25%, transparent 25%, transparent 75%, var(--fx-color) 75%),
+    linear-gradient(45deg, var(--fx-color) 25%, transparent 25%, transparent 75%, var(--fx-color) 75%);
+  background-size: calc(var(--fx-scale) * 2) calc(var(--fx-scale) * 2);
+  background-position: 0 0, var(--fx-scale) var(--fx-scale);
+}
+@keyframes fx-dither-shift { from { background-position: 0 0; } to { background-position: var(--fx-scale) var(--fx-scale); } }
+.fx-dither-animated { animation: fx-dither-shift 0.6s steps(2) infinite; }
+
+/* Animated gradient background */
+@keyframes fx-bg-grad { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.fx-bg-gradient {
+  background-image: linear-gradient(var(--fx-deg, 135deg), var(--fx-c1), var(--fx-c2), var(--fx-c3, var(--fx-c1)));
+  background-size: 300% 300%;
+  animation: fx-bg-grad var(--fx-speed) ease infinite;
+  opacity: var(--fx-opacity, 1);
+}
+
+/* Waves (CSS fallback when canvas disabled) */
+@keyframes fx-bg-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.fx-bg-wave { position: absolute; left: 0; width: 200%; height: 100%; animation: fx-bg-wave var(--fx-speed) linear infinite; }
+
+/* Scanlines overlay */
+@keyframes fx-scan-bg-scroll { from { background-position-y: 0; } to { background-position-y: calc(var(--fx-spacing) * 10); } }
+.fx-bg-scanlines {
+  background-image: repeating-linear-gradient(0deg, transparent 0, transparent calc(var(--fx-spacing) - var(--fx-thickness)), rgba(255,255,255,var(--fx-opacity)) calc(var(--fx-spacing) - var(--fx-thickness)), rgba(255,255,255,var(--fx-opacity)) var(--fx-spacing));
+  animation: fx-scan-bg-scroll var(--fx-speed, 0s) linear infinite;
+}
+
+/* CRT */
+.fx-bg-crt-glow { background: radial-gradient(120% 90% at 50% 45%, transparent 40%, var(--fx-glow) 130%); opacity: 0.35; mix-blend-mode: screen; }
+.fx-bg-vignette { background: radial-gradient(circle at 50% 50%, transparent calc(var(--fx-inner) * 1%), color-mix(in srgb, var(--fx-color) calc(var(--fx-intensity) * 100%), transparent) calc(var(--fx-inner) + var(--fx-soft))); }
+
+/* Static / noise */
+@keyframes fx-static-flash { 0%, 100% { opacity: var(--fx-opacity); } 50% { opacity: calc(var(--fx-opacity) * 0.4); } }
+.fx-bg-static {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+  animation: fx-static-flash calc(1s / var(--fx-speed)) steps(3) infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Glitch interference background */
+@keyframes fx-bg-glitch { 0%, 100% { transform: translateX(0); opacity: 0; } 5% { opacity: var(--fx-intensity); transform: translateX(calc(var(--fx-i) * -6px)); } 10% { opacity: 0; } 60% { opacity: 0; transform: translateX(0); } 65% { opacity: var(--fx-intensity); transform: translateX(calc(var(--fx-i) * 6px)); } 70% { opacity: 0; } }
+.fx-bg-glitch-band { position: absolute; left: 0; width: 100%; height: var(--fx-th); background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); mix-blend-mode: screen; animation: fx-bg-glitch calc(6s / var(--fx-freq)) steps(1) infinite; }
+
+/* Pixel grid / moving grid */
+@keyframes fx-grid-drift { from { background-position: 0 0; } to { background-position: var(--fx-cell) var(--fx-cell); } }
+.fx-bg-pixel-grid {
+  background-image:
+    linear-gradient(to right, var(--fx-color) var(--fx-thickness), transparent var(--fx-thickness)),
+    linear-gradient(to bottom, var(--fx-color) var(--fx-thickness), transparent var(--fx-thickness));
+  background-size: var(--fx-cell) var(--fx-cell);
+  opacity: var(--fx-opacity);
+}
+.fx-bg-pixel-grid-animated { animation: fx-grid-drift var(--fx-speed) linear infinite; }
+
+/* Light streaks / light rays */
+@keyframes fx-streak { 0% { transform: translateX(-120%) rotate(var(--fx-angle)); } 100% { transform: translateX(120%) rotate(var(--fx-angle)); } }
+.fx-bg-streak {
+  position: absolute; top: -50%; height: 200%; width: var(--fx-width);
+  background: linear-gradient(90deg, transparent, var(--fx-color), transparent);
+  opacity: var(--fx-opacity); filter: blur(14px);
+  animation: fx-streak var(--fx-speed) linear infinite;
+}
+.fx-bg-ray {
+  position: absolute; left: 50%; top: -20%; width: var(--fx-width); height: 160%;
+  transform-origin: top center; transform: rotate(var(--fx-angle));
+  background: linear-gradient(180deg, var(--fx-color), transparent);
+  opacity: var(--fx-opacity); filter: blur(18px);
+  animation: fx-ray-drift var(--fx-speed) ease-in-out infinite alternate;
+}
+@keyframes fx-ray-drift { from { opacity: calc(var(--fx-opacity) * 0.6); } to { opacity: var(--fx-opacity); } }
+
+/* Fog */
+@keyframes fx-fog-drift { 0%, 100% { transform: translate3d(-6%, 0, 0) scale(1); } 50% { transform: translate3d(6%, -4%, 0) scale(1.12); } }
+.fx-bg-fog { position: absolute; border-radius: 50%; background: radial-gradient(circle, var(--fx-color) 0%, transparent 70%); opacity: var(--fx-opacity); filter: blur(60px); animation: fx-fog-drift var(--fx-speed-sc, 12s) ease-in-out infinite; }
+
+/* Glow haze / neon halo / pulsing glow */
+@keyframes fx-haze-pulse { 0%, 100% { opacity: var(--fx-opacity); transform: scale(1); } 50% { opacity: calc(var(--fx-opacity) * 0.6); transform: scale(1.12); } }
+.fx-bg-haze { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: var(--fx-radius); height: var(--fx-radius); border-radius: 50%; background: radial-gradient(circle, var(--fx-color), transparent 70%); filter: blur(40px); opacity: var(--fx-opacity); }
+.fx-bg-haze-pulse { animation: fx-haze-pulse var(--fx-speed) ease-in-out infinite; }
+
+/* ══ CATEGORY 4 — PROFILE / BORDER / HOVER ═══════════════════════════════ */
+
+@keyframes fx-entrance-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fx-entrance-slide { from { opacity: 0; transform: translateY(var(--fx-distance)); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fx-entrance-pop { from { opacity: 0; transform: scale(var(--fx-scale)); } to { opacity: 1; transform: scale(1); } }
+.fx-entrance-fade { animation: fx-entrance-fade var(--fx-dur) ease-out var(--fx-delay, 0s) both; }
+.fx-entrance-slide { animation: fx-entrance-slide var(--fx-dur) cubic-bezier(0.2, 0.8, 0.2, 1) var(--fx-delay, 0s) both; }
+.fx-entrance-pop { animation: fx-entrance-pop var(--fx-dur) cubic-bezier(0.2, 0.8, 0.2, 1) var(--fx-delay, 0s) both; }
+
+/* Gradient / animated border ring (drawn on the element edge via mask) */
+@keyframes fx-border-spin { to { --fx-angle: 360deg; } }
+@keyframes fx-border-hue { to { filter: hue-rotate(360deg); } }
+.fx-border-ring { position: relative; }
+.fx-border-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--fx-bw);
+  background: conic-gradient(from var(--fx-angle, 0deg), var(--fx-c1), var(--fx-c2), var(--fx-c3, var(--fx-c1)), var(--fx-c1));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: fx-border-hue var(--fx-speed) linear infinite;
+}
+
+@keyframes fx-border-pulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 18px 2px var(--fx-glow); } }
+.fx-border-pulse { animation: fx-border-pulse var(--fx-speed) ease-in-out infinite; }
+
+/* Hover treatments (pointer devices only) */
+@media (hover: hover) {
+  .fx-hover { transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease; }
+  .fx-hover-lift:hover, .fx-hover-lift:focus-visible { transform: translateY(calc(var(--fx-lift) * -1)); }
+  .fx-hover-scale:hover, .fx-hover-scale:focus-visible { transform: scale(var(--fx-scale-h)); }
+  .fx-hover-glow:hover, .fx-hover-glow:focus-visible { box-shadow: 0 0 22px 2px var(--fx-glow); filter: brightness(1.08); }
+}
+
+/* Avatar glow */
+@keyframes fx-avatar-pulse { 0%, 100% { opacity: var(--fx-intensity); } 50% { opacity: calc(var(--fx-intensity) * 0.5); } }
+.fx-avatar-glow { position: absolute; inset: calc(var(--fx-radius) * -0.6); border-radius: inherit; background: radial-gradient(circle, var(--fx-color), transparent 70%); filter: blur(calc(var(--fx-radius) * 0.5)); opacity: var(--fx-intensity); pointer-events: none; z-index: 0; }
+.fx-avatar-glow-pulse { animation: fx-avatar-pulse 3s ease-in-out infinite; }
+
+/* Panel gradient / blur surfaces */
+.fx-panel-gradient { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background-image: linear-gradient(var(--fx-angle), var(--fx-c1), var(--fx-c2)); opacity: var(--fx-opacity); }
+.fx-panel-blur { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: rgba(10, 12, 18, var(--fx-opacity)); backdrop-filter: blur(var(--fx-blur)); -webkit-backdrop-filter: blur(var(--fx-blur)); }
+
+/* Cursor DOM layers */
+.fx-cursor-img { position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9998; transform: translate(-50%, -50%); will-change: transform; }
+.fx-cursor-dot { position: fixed; top: 0; left: 0; border-radius: 50%; pointer-events: none; z-index: 9998; will-change: transform; }
+
+/* Reduced motion: neutralise all decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  .fx-fuzzy, .fx-glitch::before, .fx-glitch::after, .fx-rgb-animated::before, .fx-rgb-animated::after,
+  .fx-glitch-lines .fx-band, .fx-scanline, .fx-flicker-stable, .fx-flicker-irregular,
+  .fx-wave-d .fx-char, .fx-wave-h .fx-char, .fx-wave-v .fx-char, .fx-jitter .fx-char,
+  .fx-marquee-track, .fx-anim-gradient, .fx-neon-pulse, .fx-chrome-animated, .fx-crt-scan,
+  .fx-vhs-shift, .fx-vhs-noise, .fx-blob, .fx-aurora-band, .fx-dither-animated, .fx-bg-gradient,
+  .fx-bg-wave, .fx-bg-scanlines, .fx-bg-static, .fx-bg-glitch-band, .fx-bg-pixel-grid-animated,
+  .fx-bg-streak, .fx-bg-ray, .fx-bg-fog, .fx-bg-haze-pulse, .fx-border-ring::before,
+  .fx-border-pulse, .fx-avatar-glow-pulse, .fx-entrance-fade, .fx-entrance-slide, .fx-entrance-pop {
+    animation: none !important;
+  }
+  .fx-entrance-fade, .fx-entrance-slide, .fx-entrance-pop { opacity: 1 !important; transform: none !important; }
+}
