@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import * as Icons from "lucide-react";
 import {
   Image as ImageIcon, MousePointer2, Music, Save,
   Upload, Trash2, Plus, ExternalLink, Sparkles, Eye,
@@ -18,7 +19,7 @@ import {
   Radio, Volume2, VolumeX, ListMusic, Music2, Play, Pause,
   Disc, SlidersHorizontal, Share2, MoveHorizontal, MoveVertical,
   AlignLeft, AlignCenter, AlignRight, FileText, DoorOpen, Lock, KeyRound, Monitor,
-  CloudSun, Clock, AppWindow, Bot, Globe, Code
+  CloudSun, Clock, AppWindow, Bot, Globe, Code, User, Award, Users, ShieldCheck
 } from "lucide-react";
 import { SiSpotify, SiDiscord } from "react-icons/si";
 import CustomColorPicker from "@/components/ColorPicker";
