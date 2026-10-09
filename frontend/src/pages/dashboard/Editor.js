@@ -638,136 +638,258 @@ export default function Editor({ initialTab = "profile" }) {
       {editorCategory === "profile" && (
         <div className="space-y-6">
           {/* Main Visual Assets Box (4 Preview Boxes Stacked 165x165) */}
-          <Panel title="Profile Visual Assets (PFP, Background, Banner, Cursor)">
+          <Panel title="Profile Visual Assets & Effects Studios">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-items-center sm:justify-items-start">
               {/* 1. Profile Picture Box */}
-              <div
-                onClick={() => openMediaModal("pfp")}
-                className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
-              >
-                <div className="w-full h-full flex items-center justify-center p-3 group-hover:blur-[3px] group-hover:scale-105 transition-all duration-300">
-                  <img
-                    src={pfpSrc}
-                    alt="PFP"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-white/20 shadow-inner"
-                  />
+              <div className="w-[165px] flex flex-col gap-1.5">
+                <div
+                  onClick={() => openMediaModal("pfp")}
+                  className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
+                >
+                  <div className="w-full h-full flex items-center justify-center p-3 group-hover:blur-[2px] group-hover:scale-105 transition-all duration-300">
+                    <img
+                      src={pfpSrc}
+                      alt="PFP"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-white/20 shadow-inner"
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
+                    <Upload size={18} className="text-[#5B8DB8] mb-1 animate-bounce" />
+                    <span className="text-xs font-bold text-white leading-tight">Change Image</span>
+                    <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Upload / URL</span>
+                  </div>
+                  <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none">
+                    PFP (165×165)
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
-                  <Edit3 size={20} className="text-[#5B8DB8] mb-1 animate-bounce" />
-                  <span className="text-xs font-bold text-white leading-tight">Click to customize</span>
-                  <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Profile Picture</span>
-                </div>
-                <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none">
-                  PFP (165×165)
+                <div className="flex gap-1 w-full">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => openMediaModal("pfp")}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-[11px] h-7 rounded-lg font-medium cursor-pointer"
+                  >
+                    <Upload size={11} className="mr-1" /> Upload
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setAvatarModalOpen(true)}
+                    className="flex-1 bg-[#5B8DB8]/15 hover:bg-[#5B8DB8]/30 text-[#5B8DB8] hover:text-white border border-[#5B8DB8]/30 text-[11px] h-7 rounded-lg font-bold cursor-pointer"
+                  >
+                    <Sparkles size={11} className="mr-1" /> PFP FX
+                  </Button>
                 </div>
               </div>
 
               {/* 2. Background Media Box */}
-              <div
-                onClick={() => openMediaModal("background")}
-                className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
-              >
-                <div className="w-full h-full flex items-center justify-center group-hover:blur-[3px] group-hover:scale-105 transition-all duration-300">
-                  {bgSrc ? (
-                    <img src={bgSrc} alt="Background" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center p-3 text-white/40">
-                      <ImageIcon size={28} className="mx-auto mb-1 opacity-50" />
-                      <span className="text-[10px]">Clean Solid</span>
-                    </div>
-                  )}
+              <div className="w-[165px] flex flex-col gap-1.5">
+                <div
+                  onClick={() => openMediaModal("background")}
+                  className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
+                >
+                  <div className="w-full h-full flex items-center justify-center group-hover:blur-[2px] group-hover:scale-105 transition-all duration-300">
+                    {bgSrc ? (
+                      <img src={bgSrc} alt="Background" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-3 text-white/40">
+                        <ImageIcon size={28} className="mx-auto mb-1 opacity-50" />
+                        <span className="text-[10px]">Clean Solid</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
+                    <Upload size={18} className="text-[#5B8DB8] mb-1 animate-bounce" />
+                    <span className="text-xs font-bold text-white leading-tight">Change Background</span>
+                    <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Upload / URL</span>
+                  </div>
+                  <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none truncate max-w-[145px]">
+                    {s.bg_effect && s.bg_effect !== "none" ? `FX: ${s.bg_effect}` : "Background"}
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
-                  <Edit3 size={20} className="text-[#5B8DB8] mb-1 animate-bounce" />
-                  <span className="text-xs font-bold text-white leading-tight">Click to customize</span>
-                  <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Background</span>
-                </div>
-                <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none">
-                  Background
+                <div className="flex gap-1 w-full">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => openMediaModal("background")}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-[11px] h-7 rounded-lg font-medium cursor-pointer"
+                  >
+                    <Upload size={11} className="mr-1" /> Upload
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setBgModalOpen(true)}
+                    className="flex-1 bg-[#5B8DB8]/15 hover:bg-[#5B8DB8]/30 text-[#5B8DB8] hover:text-white border border-[#5B8DB8]/30 text-[11px] h-7 rounded-lg font-bold cursor-pointer"
+                  >
+                    <Wand2 size={11} className="mr-1" /> BG FX
+                  </Button>
                 </div>
               </div>
 
               {/* 3. Banner Box */}
-              <div
-                onClick={() => openMediaModal("banner")}
-                className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
-              >
-                <div className="w-full h-full flex items-center justify-center group-hover:blur-[3px] group-hover:scale-105 transition-all duration-300">
-                  {bannerSrc ? (
-                    <img src={bannerSrc} alt="Banner" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="text-center p-3 text-white/40">
-                      <Layers size={28} className="mx-auto mb-1 opacity-50" />
-                      <span className="text-[10px]">No Banner</span>
-                    </div>
-                  )}
+              <div className="w-[165px] flex flex-col gap-1.5">
+                <div
+                  onClick={() => openMediaModal("banner")}
+                  className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
+                >
+                  <div className="w-full h-full flex items-center justify-center group-hover:blur-[2px] group-hover:scale-105 transition-all duration-300">
+                    {bannerSrc ? (
+                      <img src={bannerSrc} alt="Banner" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-3 text-white/40">
+                        <Layers size={28} className="mx-auto mb-1 opacity-50" />
+                        <span className="text-[10px]">No Banner</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
+                    <Upload size={18} className="text-[#5B8DB8] mb-1 animate-bounce" />
+                    <span className="text-xs font-bold text-white leading-tight">Change Banner</span>
+                    <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Upload / URL</span>
+                  </div>
+                  <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none truncate max-w-[145px]">
+                    {s.banner_fx && s.banner_fx !== "none" ? `FX: ${s.banner_fx}` : "Banner"}
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
-                  <Edit3 size={20} className="text-[#5B8DB8] mb-1 animate-bounce" />
-                  <span className="text-xs font-bold text-white leading-tight">Click to customize</span>
-                  <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Banner</span>
-                </div>
-                <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none">
-                  Banner
+                <div className="flex gap-1 w-full">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => openMediaModal("banner")}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-[11px] h-7 rounded-lg font-medium cursor-pointer"
+                  >
+                    <Upload size={11} className="mr-1" /> Upload
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setBannerModalOpen(true)}
+                    className="flex-1 bg-[#5B8DB8]/15 hover:bg-[#5B8DB8]/30 text-[#5B8DB8] hover:text-white border border-[#5B8DB8]/30 text-[11px] h-7 rounded-lg font-bold cursor-pointer"
+                  >
+                    <Layers size={11} className="mr-1" /> Banner FX
+                  </Button>
                 </div>
               </div>
 
               {/* 4. Cursor Box */}
-              <div
-                onClick={() => openMediaModal("cursor")}
-                className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
-              >
-                <div className="w-full h-full flex items-center justify-center group-hover:blur-[3px] group-hover:scale-105 transition-all duration-300">
-                  {cursorSrc ? (
-                    <img src={cursorSrc} alt="Cursor" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(91,141,184,0.5)]" />
-                  ) : (
-                    <div className="text-center p-3 text-white/40">
-                      <MousePointer2 size={28} className="mx-auto mb-1 opacity-50" />
-                      <span className="text-[10px]">Default Cursor</span>
-                    </div>
-                  )}
+              <div className="w-[165px] flex flex-col gap-1.5">
+                <div
+                  onClick={() => openMediaModal("cursor")}
+                  className="group relative w-[165px] h-[165px] rounded-2xl border-2 border-white/10 hover:border-[#5B8DB8] bg-[#07090e] cursor-pointer overflow-hidden flex flex-col items-center justify-center transition-all shadow-md hover:shadow-[0_0_20px_rgba(91,141,184,0.3)]"
+                >
+                  <div className="w-full h-full flex items-center justify-center group-hover:blur-[2px] group-hover:scale-105 transition-all duration-300">
+                    {cursorSrc ? (
+                      <img src={cursorSrc} alt="Cursor" className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(91,141,184,0.5)]" />
+                    ) : (
+                      <div className="text-center p-3 text-white/40">
+                        <MousePointer2 size={28} className="mx-auto mb-1 opacity-50" />
+                        <span className="text-[10px]">Default Cursor</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
+                    <Upload size={18} className="text-[#5B8DB8] mb-1 animate-bounce" />
+                    <span className="text-xs font-bold text-white leading-tight">Change Cursor</span>
+                    <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Custom Image</span>
+                  </div>
+                  <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none truncate max-w-[145px]">
+                    {s.cursor_fx && s.cursor_fx !== "none" ? `FX: ${s.cursor_fx}` : "Cursor"}
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center p-2 text-center transition-all duration-200">
-                  <Edit3 size={20} className="text-[#5B8DB8] mb-1 animate-bounce" />
-                  <span className="text-xs font-bold text-white leading-tight">Click to customize</span>
-                  <span className="text-[10px] text-[#5B8DB8] font-mono mt-0.5">Cursor</span>
-                </div>
-                <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/80 text-[9px] font-mono text-white/70 border border-white/10 pointer-events-none">
-                  Cursor
+                <div className="flex gap-1 w-full">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => openMediaModal("cursor")}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white/80 hover:text-white border border-white/10 text-[11px] h-7 rounded-lg font-medium cursor-pointer"
+                  >
+                    <Upload size={11} className="mr-1" /> Custom
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setCursorModalOpen(true)}
+                    className="flex-1 bg-[#5B8DB8]/15 hover:bg-[#5B8DB8]/30 text-[#5B8DB8] hover:text-white border border-[#5B8DB8]/30 text-[11px] h-7 rounded-lg font-bold cursor-pointer"
+                  >
+                    <MousePointer2 size={11} className="mr-1" /> Cursor FX
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* 4 Dedicated Effect Navigation Controls */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/10">
-              <Button
-                type="button"
-                onClick={() => setAvatarModalOpen(true)}
-                className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
-              >
-                <Sparkles size={15} className="text-[#5B8DB8]" /> Effects
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setBioModalOpen(true)}
-                className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
-              >
-                <FileText size={15} className="text-[#5B8DB8]" /> Bio Effects
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setLocationModalOpen(true)}
-                className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
-              >
-                <Icons.MapPin size={15} className="text-[#5B8DB8]" /> Location Effects
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setRoleModalOpen(true)}
-                className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
-              >
-                <Award size={15} className="text-[#5B8DB8]" /> Role Effects
-              </Button>
+            {/* Quick-Access Effect Studios Bar */}
+            <div className="mt-4 pt-3 border-t border-white/10 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[#5B8DB8]">
+                Visual & Ambient Effects Studios
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <Button
+                  type="button"
+                  onClick={() => setAvatarModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Sparkles size={14} className="text-[#5B8DB8]" /> PFP & Frame FX
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setBgModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Wand2 size={14} className="text-[#5B8DB8]" /> Background FX
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setBannerModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Layers size={14} className="text-[#5B8DB8]" /> Banner FX
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setCursorModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <MousePointer2 size={14} className="text-[#5B8DB8]" /> Cursor FX
+                </Button>
+              </div>
+            </div>
+
+            {/* 4 Dedicated Identity Effect Navigation Controls */}
+            <div className="pt-2 border-t border-white/5 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[#E5E7EB]/50">
+                Identity & Text Effects Studios
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <Button
+                  type="button"
+                  onClick={() => setNameModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Sparkles size={14} className="text-[#5B8DB8]" /> Name Effects
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setBioModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <FileText size={14} className="text-[#5B8DB8]" /> Bio Effects
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setLocationModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Icons.MapPin size={14} className="text-[#5B8DB8]" /> Location Effects
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setRoleModalOpen(true)}
+                  className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-9 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
+                >
+                  <Award size={14} className="text-[#5B8DB8]" /> Role Effects
+                </Button>
+              </div>
             </div>
           </Panel>
 

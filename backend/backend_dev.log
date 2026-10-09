@@ -1,0 +1,10 @@
+WARNING:swats:DATABASE_URL not set — using SQLite for local dev
+WARNING:swats:JWT_SECRET not set; generated a temporary secret for this process. Set JWT_SECRET in your environment for stable auth tokens.
+INFO:     Started server process [14752]
+INFO:     Waiting for application startup.
+WARNING:swats:ADMIN_EMAIL and ADMIN_PASSWORD not set; skipped default admin bootstrap.
+INFO:swats:Storage ready: Local storage at C:\Users\veskx\Downloads\swatsbio-main\swatsbio-5425364bc860b97b0b913efb7021410a03185470\swatsbio-5425364bc860b97b0b913efb7021410a03185470\backend\uploads
+INFO:swats:Database ready: SQLite (local dev)
+WARNING:swats:Discord Gateway not started: DISCORD_BOT_TOKEN is not configured.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)

@@ -3357,6 +3357,37 @@ DISCORD_BOT_READY = False
 DISCORD_GATEWAY_CLIENT = None
 DISCORD_GATEWAY_TASK = None
 
+# Real, live presence captured from the Discord gateway (Server Members +
+# Presence intents). Keyed by discord id -> latest status/activities. This is
+# what makes the profile presence reflect the user's actual Discord state
+# instead of a stale "offline" snapshot taken at OAuth time.
+DISCORD_PRESENCE_CACHE = {}
+
+
+def _ser_activities(activities):
+    out = []
+    for a in activities or []:
+        out.append({
+            "name": getattr(a, "name", None),
+            "type": getattr(a, "type", None).__int__() if hasattr(getattr(a, "type", None), "__int__") else getattr(a, "type", None),
+            "details": getattr(a, "details", None),
+            "state": getattr(a, "state", None),
+            "emoji": getattr(getattr(a, "emoji", None), "name", None),
+            "large_image": None,
+        })
+    return out
+
+
+def _cache_presence(discord_id, status, activities):
+    if not discord_id:
+        return
+    DISCORD_PRESENCE_CACHE[str(discord_id)] = {
+        "status": (str(status) if status is not None else "offline"),
+        "activities": _ser_activities(activities),
+        "updated_at": now_iso(),
+    }
+
+
 async def start_discord_gateway():
     global DISCORD_BOT_READY, DISCORD_GATEWAY_CLIENT, DISCORD_GATEWAY_TASK
     if not DISCORD_BOT_TOKEN:
@@ -3368,9 +3399,11 @@ async def start_discord_gateway():
         logger.exception("Discord Gateway dependency missing; install backend requirements.")
         return
 
+    _want_presence = str(get_env("DISCORD_PRESENCE_ENABLED", "1")).lower() not in ("0", "false", "no")
     intents = discord.Intents.default()
-    intents.members = False
     intents.message_content = False
+    intents.members = bool(_want_presence)
+    intents.presences = bool(_want_presence)
     client = discord.Client(intents=intents)
     DISCORD_GATEWAY_CLIENT = client
 
@@ -3379,6 +3412,28 @@ async def start_discord_gateway():
         global DISCORD_BOT_READY
         DISCORD_BOT_READY = True
         logger.info("Discord Gateway connected as %s", client.user)
+        # Seed the presence cache so existing members show their real status
+        # immediately, without waiting for each of them to change state.
+        if DISCORD_GUILD_ID:
+            try:
+                guild = client.get_guild(int(DISCORD_GUILD_ID))
+                if guild:
+                    for member in guild.members:
+                        _cache_presence(member.id, member.status, member.activities)
+                    logger.info("Seeded live presence for %d guild members", len(guild.members))
+            except Exception as e:
+                logger.warning("Could not seed presence cache: %s", e)
+
+    @client.event
+    async def on_presence_update(before, after):
+        # Only track members of the configured guild to keep the cache small.
+        if DISCORD_GUILD_ID:
+            try:
+                if str(getattr(getattr(after, "guild", None), "id", "")) != str(DISCORD_GUILD_ID):
+                    return
+            except Exception:
+                pass
+        _cache_presence(after.id, after.status, after.activities)
 
     @client.event
     async def on_disconnect():
@@ -3392,6 +3447,18 @@ async def start_discord_gateway():
             await client.start(DISCORD_BOT_TOKEN)
         except asyncio.CancelledError:
             raise
+        except discord.errors.PrivilegedIntentsRequired:
+            DISCORD_BOT_READY = False
+            logger.error(
+                "Discord Gateway rejected privileged intents. Enable BOTH 'Server Members Intent' and "
+                "'Presence Intent' in the Discord Developer Portal (Application -> Bot -> Privileged Gateway Intents), "
+                "then redeploy. Falling back to basic intents (no live presence)."
+            )
+            try:
+                fallback = discord.Client(intents=discord.Intents.default())
+                await fallback.start(DISCORD_BOT_TOKEN)
+            except Exception:
+                logger.exception("Discord Gateway fallback start failed.")
         except Exception:
             DISCORD_BOT_READY = False
             logger.exception("Discord Gateway stopped; check the bot token and server access.")
@@ -3969,16 +4036,42 @@ async def get_discord_presence(username: str, db: AsyncSession = Depends(get_db)
     dc = (user.get("connections") or {}).get("discord") or {}
     s = user.get("settings") or {}
     
-    discord_id = s.get("discord_snowflake_id") or dc.get("id") or ""
-    status = s.get("discord_presence_status") or dc.get("status") or "online"
-    if status == "auto":
-        status = dc.get("status") or "online"
-        
+    discord_id = (
+        s.get("discord_snowflake_id")
+        or s.get("discord_user_id")
+        or (s.get("presence") or {}).get("discord_user_id")
+        or dc.get("id")
+        or ""
+    )
+
+    # Prefer live presence captured from the Discord gateway; fall back to the
+    # stored/manual values only when we have no live data for this user.
+    live = DISCORD_PRESENCE_CACHE.get(str(discord_id)) if discord_id else None
+    if live:
+        status = live.get("status") or "offline"
+    else:
+        status = s.get("discord_presence_status") or dc.get("status") or "online"
+        if status == "auto":
+            status = dc.get("status") or "online"
+
+    live_activities = (live or {}).get("activities") or []
+
     custom_status_state = s.get("discord_custom_status") or ""
     custom_status_emoji = s.get("discord_status_emoji") or ""
-    
+    if live_activities:
+        for a in live_activities:
+            if a.get("type") == 4:
+                custom_status_state = a.get("state") or custom_status_state
+                custom_status_emoji = a.get("emoji") or custom_status_emoji
+
     activity_name = s.get("discord_activity_name") or ""
     activity_details = s.get("discord_activity_details") or ""
+    if live_activities:
+        for a in live_activities:
+            if a.get("type") in (0, 1, 2, 3) and a.get("name"):
+                activity_name = a.get("name")
+                activity_details = a.get("details") or a.get("state") or ""
+                break
     
     avatar = s.get("discord_avatar_override") or dc.get("avatar") or ""
     bio_text = s.get("discord_bio") or user.get("description") or ""
@@ -4003,6 +4096,8 @@ async def get_discord_presence(username: str, db: AsyncSession = Depends(get_db)
         "bio": bio_text,
         "public_flags": dc.get("public_flags", 0),
         "premium_type": dc.get("premium_type", 0),
+        "live": bool(live),
+        "updated_at": (live or {}).get("updated_at"),
     }
 
 def _jload(val):

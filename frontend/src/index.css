@@ -691,6 +691,55 @@ select:focus {
   animation: cardSlideUpIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* ------------------------------------------------------------------ */
+/* Slideshow Deck system: interactive 3D tilt surfaces + slide reveal */
+/* ------------------------------------------------------------------ */
+.deck-tilt {
+  will-change: transform;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: perspective(1100px) rotateX(0deg) rotateY(0deg);
+}
+
+/* Moving light glare that follows the pointer across the deck card */
+.deck-tilt-glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    420px circle at var(--deck-gx, 50%) var(--deck-gy, 0%),
+    rgba(255, 255, 255, 0.14),
+    transparent 60%
+  );
+}
+.deck-tilt-glare:hover::after {
+  opacity: 1;
+}
+
+/* Each deck slide rises + fades into focus as it becomes active */
+.deck-slide {
+  scroll-margin-top: 1rem;
+}
+.deck-slide .deck-slide-card {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-tilt {
+    transition: none;
+    transform: none !important;
+  }
+  .deck-tilt-glare::after {
+    display: none;
+  }
+  .deck-slide .deck-slide-card {
+    animation: none !important;
+  }
+}
+
 @keyframes cardFadeInOnly {
   from { opacity: 0; }
   to { opacity: 1; }

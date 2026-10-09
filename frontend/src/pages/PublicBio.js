@@ -13,6 +13,7 @@ import { injectCustomFonts } from "@/lib/fonts";
 import { BackgroundEffect, CursorEffectsRenderer } from "@/components/BackgroundEffects";
 import { AvatarDecoration } from "@/components/AvatarDecorations";
 import { MediaDisplay } from "@/components/MediaDisplay";
+import { DeckCustomSlide } from "@/components/DeckSlides";
 import { getDiscordBadges, DISCORD_BADGES_CATALOG, DiscordBadgeIcon } from "@/lib/discordBadges";
 import * as Icons from "lucide-react";
 
@@ -189,6 +190,18 @@ function HudBottomCenterScroll({ onClick, accent, visible = true }) {
         </span>
         <ChevronDown size={13} className="animate-bounce" style={{ color: accent }} />
       </button>
+    </div>
+  );
+}
+
+function HudDeckProgress({ activeSlide, total, accent }) {
+  const pct = total > 1 ? ((activeSlide + 1) / total) * 100 : 100;
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 h-[3px] bg-white/5 pointer-events-none">
+      <div
+        className="h-full transition-all duration-500 ease-out rounded-r-full"
+        style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${accent}77, ${accent})`, boxShadow: `0 0 12px ${accent}` }}
+      />
     </div>
   );
 }
@@ -2775,12 +2788,13 @@ function ProfileWidgets({ bio, accent }) {
 }
 
 function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style = "discord" }) {
-  if (!discord && !bio?.connections?.discord && !bio?.settings?.discord_snowflake_id) return null;
   const s = bio?.settings || {};
+  if (!discord && !bio?.connections?.discord && !s.discord_snowflake_id && !s.discord_user_id && !s.presence?.discord_user_id) return null;
   const dc = bio?.connections?.discord || discord || {};
-  const discordId = s.discord_snowflake_id || dc?.id || dc?.user_id;
+  const discordId = s.presence?.discord_user_id || s.discord_user_id || s.discord_snowflake_id || dc?.id || dc?.user_id;
 
   const [lanyard, setLanyard] = useState(null);
+  const [backendLive, setBackendLive] = useState(null);
 
   useEffect(() => {
     if (!discordId) return;
@@ -2838,7 +2852,28 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
     };
   }, [discordId]);
 
-  const liveStatus = lanyard?.discord_status || s.discord_presence_status || dc.status || dc.presence?.status || "online";
+  // Fallback source: the backend gateway cache (real presence for members of
+  // the configured guild) so we are not fully dependent on Lanyard.
+  useEffect(() => {
+    if (lanyard || !bio?.username) return;
+    let alive = true;
+    const pull = () => {
+      api.get(`/u/${bio.username}/discord-presence`)
+        .then(({ data }) => { if (alive && data) setBackendLive(data); })
+        .catch(() => {});
+    };
+    pull();
+    const timer = setInterval(pull, 30000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [lanyard, bio?.username]);
+
+  const liveStatus =
+    lanyard?.discord_status ||
+    (backendLive?.live ? backendLive.status : null) ||
+    s.discord_presence_status ||
+    dc.status ||
+    dc.presence?.status ||
+    "online";
   const userObj = lanyard?.discord_user;
   const liveAvatar = s.discord_avatar_override
     ? fileUrl(s.discord_avatar_override)
@@ -2847,10 +2882,10 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
     : dc.avatar;
   const liveName = userObj?.global_name || userObj?.username || dc.global_name || dc.username || bio?.display_name || bio?.username || "Discord";
   
-  const customStatusText = lanyard?.activities?.find((a) => a.type === 4)?.state || s.discord_custom_status;
-  const customStatusEmoji = lanyard?.activities?.find((a) => a.type === 4)?.emoji?.name || s.discord_status_emoji;
+  const customStatusText = lanyard?.activities?.find((a) => a.type === 4)?.state || backendLive?.custom_status?.state || s.discord_custom_status;
+  const customStatusEmoji = lanyard?.activities?.find((a) => a.type === 4)?.emoji?.name || backendLive?.custom_status?.emoji || s.discord_status_emoji;
   
-  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || (s.discord_activity_name ? { name: s.discord_activity_name, details: s.discord_activity_details, type: 0 } : null);
+  const mainActivity = lanyard?.activities?.find((a) => a.type === 0 || a.type === 1 || a.type === 3) || (backendLive?.live && backendLive?.activity?.name ? backendLive.activity : null) || (s.discord_activity_name ? { name: s.discord_activity_name, details: s.discord_activity_details, type: 0 } : null);
   const spotify = lanyard?.spotify;
 
   const statusMap = {
@@ -3115,7 +3150,7 @@ function BioCard({ bio }) {
   const socialIconStyle = s.social_icon_style || "glass";
 
   const discord = bio.connections?.discord;
-  const showDiscordWidget = (s.discord_presence_enabled !== false || s.presence?.discord) && (discord || s.discord_snowflake_id || s.discord_custom_status || s.discord_presence_status || s.discord_activity_name);
+  const showDiscordWidget = (s.discord_presence_enabled !== false || s.presence?.discord) && (discord || s.discord_snowflake_id || s.discord_user_id || s.presence?.discord_user_id || s.discord_custom_status || s.discord_presence_status || s.discord_activity_name);
   const isPfpInvisible = s.pfp === "invisible" || s.hide_pfp === true;
   const pfp = isPfpInvisible ? null : ((s.presence?.use_discord_pfp && discord?.avatar) ? discord.avatar : (fileUrl(s.pfp) || `https://api.dicebear.com/7.x/bottts/svg?seed=${bio.username}`));
 
@@ -3274,6 +3309,10 @@ function BioCard({ bio }) {
     return list;
   }, [customSlides, s.projects, s.discord_guild, s.discord_server, s.promos]);
 
+  // Ids of slides that are actually part of the deck nav, so the rendered
+  // slides and the HUD dot list can never drift out of sync.
+  const deckSlideIds = useMemo(() => new Set(slideshowSlides.map((x) => x.id)), [slideshowSlides]);
+
   const scrollToSlide = (id) => {
     const target = id && document.getElementById(id);
     if (target) target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
@@ -3319,6 +3358,22 @@ function BioCard({ bio }) {
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, [layout, slideshowSlides]);
+
+  // Keyboard deck navigation (arrows / j / k / page keys)
+  useEffect(() => {
+    if (layout !== "slideshow") return;
+    const onKey = (e) => {
+      const tag = (e.target?.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) return;
+      if (["ArrowDown", "PageDown", "j"].includes(e.key)) {
+        scrollToSlide(slideshowSlides[Math.min(slideshowSlides.length - 1, activeSlide + 1)]?.id);
+      } else if (["ArrowUp", "PageUp", "k"].includes(e.key)) {
+        scrollToSlide(slideshowSlides[Math.max(0, activeSlide - 1)]?.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [layout, activeSlide, slideshowSlides]);
 
   return (
     <div className={`swat-bg min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16 relative overflow-x-hidden ${cursorClass}`} data-profile-outline={s.profile_outline_enabled === true ? "on" : "off"} data-profile-layout={layout} style={{ "--profile-slide-height": `${slideshowSlideHeight}vh` }}>
@@ -3382,6 +3437,7 @@ function BioCard({ bio }) {
       {/* Guns.lol / Feds Slideshow Floating HUD Overlays */}
       {layout === "slideshow" && s.slideshow_hud_enabled !== false && (
         <>
+          <HudDeckProgress activeSlide={activeSlide} total={slideshowSlides.length} accent={accent} />
           {s.slideshow_audio_enabled !== false && <HudTopLeftAudio bio={bio} accent={accent} />}
           {s.slideshow_stats_enabled !== false && <HudBottomLeftStats bio={bio} locationText={locationText} accent={accent} />}
           {s.slideshow_dots_enabled !== false && <HudMiddleRightDots
@@ -3481,7 +3537,25 @@ function BioCard({ bio }) {
             </div>
           </div>
 
-          {/* Slide 2: Projects & Code Showcase */}
+          {/* Custom deck slides (Discord embeds / project showcases) */}
+          {customSlides.map((cs, idx) => (
+            <DeckCustomSlide
+              key={cs.id || `deck-custom-${idx}`}
+              id={`slide-custom-${idx}`}
+              index={idx}
+              data={cs}
+              accent={accent}
+              minimal={layout === "minimal" || isCardInvisible}
+              font={s.font || "Outfit"}
+              cardMaterial={cardMaterial}
+              cardShape={cardShape}
+              cardFxClass={cardFxClass}
+              style={slideshowStyle(`slide-custom-${idx}`)}
+            />
+          ))}
+
+          {/* Projects & Code Showcase */}
+          {deckSlideIds.has("slide-1") && (
           <div id="slide-1" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-1")}>
               <div
                 className={`w-full max-w-xl transition-all duration-500 ease-out overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-5 sm:p-7" : "p-7 sm:p-9 rounded-2xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"}`}
@@ -3562,9 +3636,10 @@ function BioCard({ bio }) {
                 </div>}
               </div>
             </div>
+          )}
 
-          {/* Slide 3: Discord Server Widget */}
-          {((s.discord_guild?.name || s.discord_server?.name || s.discord_guild?.invite_url)) && (
+          {/* Discord Server Widget */}
+          {deckSlideIds.has("slide-2") && ((s.discord_guild?.name || s.discord_server?.name || s.discord_guild?.invite_url)) && (
             <div id="slide-2" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-2")}>
               <div
                 className={`w-full max-w-lg transition-transform duration-75 overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8 rounded-3xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"} ${cardFxClass}`}
@@ -3579,8 +3654,8 @@ function BioCard({ bio }) {
             </div>
           )}
 
-          {/* Slide 4: Promo Showcase & Media Banners */}
-          {(Array.isArray(s.promos) && s.promos.length > 0) && (
+          {/* Promo Showcase & Media Banners */}
+          {deckSlideIds.has("slide-3") && (Array.isArray(s.promos) && s.promos.length > 0) && (
             <div id="slide-3" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-3")}>
               <div
                 className={`w-full max-w-lg transition-transform duration-75 overflow-hidden text-left space-y-4 ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8 rounded-3xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"} ${cardFxClass}`}
