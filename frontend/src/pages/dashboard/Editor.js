@@ -1645,8 +1645,11 @@ export default function Editor({ initialTab = "profile" }) {
                   onChange={(v) => patchWidgets("discord_server", "style", v)}
                   options={[
                     { v: "discord", l: "Discord 1:1 (Authentic Dark)" },
-                    { v: "nobg", l: "No Background (Clean Minimal)" },
+                    { v: "square", l: "Square Modern Card" },
+                    { v: "minibanner", l: "Mini Banner (Faded Cover)" },
                     { v: "ghost", l: "Ghost Translucent (Frosted Glass)" },
+                    { v: "nobg", l: "No Background (Clean Minimal)" },
+                    { v: "aurora", l: "Aurora Glow" },
                   ]}
                 />
                 <div className="text-[11px] text-[#949ba4] leading-relaxed pt-1">
@@ -1723,9 +1726,46 @@ export default function Editor({ initialTab = "profile" }) {
                   checked={s.widgets?.account_stats?.enabled === true}
                   onChange={(v) => patchWidgets("account_stats", "enabled", v)}
                 />
+                <SelectRow
+                  label="Stats Layout Style"
+                  value={s.widgets?.account_stats?.style || "square"}
+                  onChange={(v) => patchWidgets("account_stats", "style", v)}
+                  options={[
+                    { v: "square", l: "Square Stat Tiles (Modern Grid)" },
+                    { v: "classic", l: "Classic Stats Card" },
+                    { v: "pill", l: "Minimal Stats Bar" },
+                  ]}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Stats Title / Label</Label>
+                  <Input
+                    value={s.widgets?.account_stats?.label ?? "Account Stats"}
+                    onChange={(e) => patchWidgets("account_stats", "label", e.target.value)}
+                    placeholder="e.g. Verified Stats"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                  />
+                </div>
               </div>
-              <div className="p-3.5 rounded-xl bg-[#080a10] border border-white/5 text-xs text-white/60 leading-relaxed">
-                Computes account longevity dynamically (e.g. "Active for 1 year 4 months · Oct 2024") and showcases total verified achievements.
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Show Profile Views Count"
+                  description="Show your dynamic profile view counter"
+                  checked={s.widgets?.account_stats?.show_views !== false}
+                  onChange={(v) => patchWidgets("account_stats", "show_views", v)}
+                />
+                <ToggleRow
+                  label="Show Badges Earned Count"
+                  description="Display number of badges unlocked on your profile"
+                  checked={s.widgets?.account_stats?.show_badges !== false}
+                  onChange={(v) => patchWidgets("account_stats", "show_badges", v)}
+                />
+                <ToggleRow
+                  label="Show Account Age & Join Date"
+                  description="Show how long you've been a member"
+                  checked={s.widgets?.account_stats?.show_age !== false}
+                  onChange={(v) => patchWidgets("account_stats", "show_age", v)}
+                />
               </div>
             </div>
           </Panel>

@@ -230,14 +230,150 @@ function DiscordGuildCardWidget({ guildConfig, inviteUrl, accent, theme = "disco
   const isCommunity = guild.features?.includes("COMMUNITY") || isVerified;
   const fullInviteLink = rawInvite.startsWith("http") ? rawInvite : (code ? `https://discord.gg/${code}` : "#");
 
-  const styleMode = guildConfig?.style || guildConfig?.theme || theme || "discord 1:1";
-  const isNoBg = styleMode === "no bg" || styleMode === "none";
-  const isGhost = styleMode === "ghost";
+  const rawStyle = style || guildConfig?.style || guildConfig?.theme || theme || "discord";
+  const styleMode = String(rawStyle).toLowerCase().replace(/[\s_-]+/g, "");
+
+  const handleCopy = () => {
+    if (!fullInviteLink || fullInviteLink === "#") return;
+    navigator.clipboard.writeText(fullInviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // 1. MINI BANNER STYLE (Sleek Compact Hero Banner)
+  if (styleMode === "minibanner" || styleMode === "mini") {
+    return (
+      <div
+        className="relative w-full h-24 rounded-2xl overflow-hidden border border-[#5865F2]/40 shadow-xl flex items-center justify-between p-3.5 group text-left"
+        style={{
+          background: bannerUrl ? `url(${bannerUrl}) center/cover no-repeat` : `linear-gradient(135deg, rgba(88,101,242,0.4), rgba(15,17,23,0.95))`,
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40 pointer-events-none" />
+
+        <div className="relative z-10 flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            {iconUrl ? (
+              <img src={iconUrl} alt="" className="w-12 h-12 rounded-xl border border-white/20 bg-[#141517] object-cover shadow-lg" />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-[#5865F2] flex items-center justify-center text-white shadow-lg">
+                <SiDiscord size={20} />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h4 className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+              <span>{name}</span>
+              {isVerified && <ShieldCheck size={13} className="text-[#5865F2] shrink-0" />}
+            </h4>
+            <div className="flex items-center gap-2 text-[10px] font-mono text-white/70 mt-0.5">
+              <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                {onlineCount != null ? Number(onlineCount).toLocaleString() : "Live"}
+              </span>
+              <span>•</span>
+              <span>{memberCount != null ? Number(memberCount).toLocaleString() : "Server"} Members</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 shrink-0 flex items-center gap-1.5">
+          <a
+            href={fullInviteLink}
+            target="_blank"
+            rel="noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all hover:scale-105"
+          >
+            <SiDiscord size={12} /> Join
+          </a>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="p-1.5 rounded-xl bg-black/60 hover:bg-black/90 border border-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+            title="Copy invite"
+          >
+            {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. SQUARE MODERN CARD STYLE (Clean Square Grid Box)
+  if (styleMode === "square" || styleMode === "compactsquare") {
+    return (
+      <div className="w-full rounded-2xl bg-[#0c0e18]/90 border border-[#5865F2]/40 backdrop-blur-xl p-4 shadow-xl text-left space-y-3 hover:border-[#5865F2]/70 transition-all">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative shrink-0">
+              {iconUrl ? (
+                <img src={iconUrl} alt="" className="w-12 h-12 rounded-2xl border border-white/15 bg-black/50 object-cover shadow-lg" />
+              ) : (
+                <div className="w-12 h-12 rounded-2xl bg-[#5865F2] flex items-center justify-center text-white shadow-lg">
+                  <SiDiscord size={22} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+                <span>{name}</span>
+                {isVerified && <ShieldCheck size={13} className="text-[#5865F2] shrink-0" />}
+              </h3>
+              <p className="text-[10px] text-white/50 truncate mt-0.5">{description || "Official Discord Community"}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all shrink-0 cursor-pointer"
+            title="Copy server link"
+          >
+            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+          </button>
+        </div>
+
+        {/* Square Stats Grid */}
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-xs font-bold text-emerald-400 flex items-center justify-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{onlineCount != null ? Number(onlineCount).toLocaleString() : "Active"}</span>
+            </div>
+            <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Online Now</div>
+          </div>
+          <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+              <Users size={12} className="text-[#5865F2]" />
+              <span>{memberCount != null ? Number(memberCount).toLocaleString() : "Community"}</span>
+            </div>
+            <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Total Members</div>
+          </div>
+        </div>
+
+        {/* Full-width Join button */}
+        <a
+          href={fullInviteLink}
+          target="_blank"
+          rel="noreferrer"
+          className="w-full py-2 px-4 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#5865F2]/25 transition-all hover:scale-[1.02] active:scale-95"
+        >
+          <SiDiscord size={14} /> Join Discord Server
+        </a>
+      </div>
+    );
+  }
+
+  // 3. GHOST / FROSTED & AURORA & NOBG STYLES
+  const isNoBg = styleMode === "nobg" || styleMode === "none" || styleMode === "transparent";
+  const isGhost = styleMode === "ghost" || styleMode === "frosted";
+  const isAurora = styleMode === "aurora";
 
   const containerStyle = isNoBg
     ? "bg-transparent border-0 shadow-none"
     : isGhost
-    ? "bg-white/[0.04] border border-white/15 backdrop-blur-xl shadow-2xl"
+    ? "bg-white/[0.05] border border-white/15 backdrop-blur-2xl shadow-2xl"
+    : isAurora
+    ? "bg-gradient-to-br from-[#5865F2]/20 via-[#a855f7]/15 to-[#ec4899]/10 border border-[#5865F2]/40 backdrop-blur-xl shadow-2xl"
     : "bg-[#1e1f22] border border-[#5865F2]/40 shadow-2xl";
 
   return (
@@ -309,12 +445,8 @@ function DiscordGuildCardWidget({ guildConfig, inviteUrl, accent, theme = "disco
               </a>
               <button
                 type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(fullInviteLink);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                onClick={handleCopy}
+                className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
                 title="Copy server invite"
               >
                 {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
@@ -2362,10 +2494,15 @@ function EnhancedClockWidget({ timezone = "UTC", format = "24h", label = "Local 
   );
 }
 
-function AccountStatsWidget({ bio, accent }) {
+function AccountStatsWidget({ bio, accent, config = {} }) {
   const createdAt = bio?.created_at;
   const views = bio?.views || 0;
   const badgesCount = (bio?.badges || []).length;
+  const showViews = config.show_views !== false;
+  const showBadges = config.show_badges !== false;
+  const showAge = config.show_age !== false;
+  const style = config.style || "square";
+  const customLabel = config.label || "Account Stats";
 
   const getAccountAge = (dateString) => {
     if (!dateString) return "Early Pioneer";
@@ -2379,27 +2516,122 @@ function AccountStatsWidget({ bio, accent }) {
 
       if (diffYears >= 1) {
         const remMonths = diffMonths % 12;
-        return `Active for ${diffYears}y ${remMonths > 0 ? `${remMonths}m` : ""}`;
+        return `${diffYears}y ${remMonths > 0 ? `${remMonths}m` : ""}`;
       }
-      if (diffMonths >= 1) return `Active for ${diffMonths} months`;
-      if (diffDays >= 1) return `Active for ${diffDays} days`;
-      return "Joined today";
+      if (diffMonths >= 1) return `${diffMonths}mo`;
+      if (diffDays >= 1) return `${diffDays}d`;
+      return "Today";
     } catch (e) {
-      return "Active Member";
+      return "Active";
     }
   };
 
   const formattedDate = createdAt ? new Date(createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : null;
 
+  // 1. SQUARE STAT TILES STYLE (Grid of sleek square tiles)
+  if (style === "square" || style === "square_cards") {
+    return (
+      <div className="w-full space-y-2.5 text-left">
+        {customLabel && (
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+              <ShieldCheck size={14} className="text-emerald-400" />
+              <span>{customLabel}</span>
+            </div>
+            {formattedDate && (
+              <span className="text-[10px] font-mono text-white/50">
+                Since {formattedDate}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {showViews && (
+            <div className="p-3 rounded-2xl bg-black/55 border border-sky-500/25 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-lg hover:border-sky-500/60 hover:scale-[1.02] transition-all group">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                <Eye size={15} />
+              </div>
+              <div className="text-sm font-black text-white tracking-wide font-mono">
+                {views.toLocaleString()}
+              </div>
+              <div className="text-[9px] font-semibold text-white/45 uppercase tracking-wider mt-0.5">
+                Profile Views
+              </div>
+            </div>
+          )}
+
+          {showBadges && (
+            <div className="p-3 rounded-2xl bg-black/55 border border-amber-500/25 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-lg hover:border-amber-500/60 hover:scale-[1.02] transition-all group">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                <Award size={15} />
+              </div>
+              <div className="text-sm font-black text-white tracking-wide font-mono">
+                {badgesCount}
+              </div>
+              <div className="text-[9px] font-semibold text-white/45 uppercase tracking-wider mt-0.5">
+                Badges Earned
+              </div>
+            </div>
+          )}
+
+          {showAge && (
+            <div className={`p-3 rounded-2xl bg-black/55 border border-emerald-500/25 backdrop-blur-xl flex flex-col items-center justify-center text-center shadow-lg hover:border-emerald-500/60 hover:scale-[1.02] transition-all group ${!showViews || !showBadges ? "" : "col-span-2 sm:col-span-1"}`}>
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm mb-1.5 group-hover:scale-110 transition-transform">
+                <ShieldCheck size={15} />
+              </div>
+              <div className="text-sm font-black text-white tracking-wide font-mono">
+                {getAccountAge(createdAt)}
+              </div>
+              <div className="text-[9px] font-semibold text-white/45 uppercase tracking-wider mt-0.5">
+                Account Age
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // 2. PILL / MINIMAL STYLE
+  if (style === "pill" || style === "minimal") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {showViews && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-sky-500/30 backdrop-blur-md text-xs font-bold text-white shadow-sm">
+            <Eye size={13} className="text-sky-400" />
+            <span>{views.toLocaleString()}</span>
+            <span className="text-[10px] text-white/40 font-normal">Views</span>
+          </div>
+        )}
+        {showBadges && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-amber-500/30 backdrop-blur-md text-xs font-bold text-white shadow-sm">
+            <Award size={13} className="text-amber-400" />
+            <span>{badgesCount}</span>
+            <span className="text-[10px] text-white/40 font-normal">Badges</span>
+          </div>
+        )}
+        {showAge && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 border border-emerald-500/30 backdrop-blur-md text-xs font-bold text-white shadow-sm">
+            <ShieldCheck size={13} className="text-emerald-400" />
+            <span>{getAccountAge(createdAt)}</span>
+            <span className="text-[10px] text-white/40 font-normal">Active</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. CLASSIC CARD STYLE
   return (
-    <div className="p-3.5 rounded-2xl bg-black/45 border border-white/10 backdrop-blur-xl space-y-2.5">
+    <div className="p-3.5 rounded-2xl bg-black/45 border border-white/10 backdrop-blur-xl space-y-2.5 text-left">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
             <ShieldCheck size={14} />
           </div>
           <div>
-            <div className="text-xs font-bold text-white">Account Stats</div>
+            <div className="text-xs font-bold text-white">{customLabel}</div>
             <div className="text-[10px] text-white/50">{formattedDate ? `Member since ${formattedDate}` : "Verified Member"}</div>
           </div>
         </div>
@@ -2409,20 +2641,24 @@ function AccountStatsWidget({ bio, accent }) {
       </div>
 
       <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 text-center">
-        <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
-          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
-            <Eye size={12} className="text-sky-400" />
-            <span>{views.toLocaleString()}</span>
+        {showViews && (
+          <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+              <Eye size={12} className="text-sky-400" />
+              <span>{views.toLocaleString()}</span>
+            </div>
+            <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Profile Views</div>
           </div>
-          <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Profile Views</div>
-        </div>
-        <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
-          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
-            <Award size={12} className="text-amber-400" />
-            <span>{badgesCount}</span>
+        )}
+        {showBadges && (
+          <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+            <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+              <Award size={12} className="text-amber-400" />
+              <span>{badgesCount}</span>
+            </div>
+            <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Badges Earned</div>
           </div>
-          <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Badges Earned</div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -2568,7 +2804,7 @@ function ProfileWidgets({ bio, accent }) {
 
       {/* Account Stats Widget */}
       {widgets.account_stats?.enabled && (
-        <AccountStatsWidget bio={bio} accent={accent} />
+        <AccountStatsWidget bio={bio} accent={accent} config={widgets.account_stats || {}} />
       )}
 
       {/* Legacy Spotify Custom Playlist/Song Embed */}
