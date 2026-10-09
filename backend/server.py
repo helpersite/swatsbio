@@ -86,12 +86,12 @@ if not JWT_SECRET:
     logger.warning("JWT_SECRET not set; generated a temporary secret for this process. Set JWT_SECRET in your environment for stable auth tokens.")
 JWT_ALGORITHM = "HS256"
 APP_NAME    = "swats-bio"
-USERNAME_PATTERN = re.compile(r"^[a-z0-9_#!-]{2,20}$")
+USERNAME_PATTERN = re.compile(r"^[a-z0-9_#!-]{1,20}$")
 
 def normalize_username(value: str) -> str:
     username = (value or "").strip().lower()
     if not USERNAME_PATTERN.fullmatch(username):
-        raise HTTPException(status_code=400, detail="Username must be 2-20 characters using letters, numbers, _, ! or #.")
+        raise HTTPException(status_code=400, detail="Username must be 1-20 characters using letters, numbers, _, ! or #.")
     return username
 
 DISCORD_CLIENT_ID     = get_env("DISCORD_CLIENT_ID", "") or get_env("DISCORD_APP_ID", "") or ""
@@ -3304,7 +3304,7 @@ async def discord_complete_registration(body: DiscordCompleteIn, response: Respo
         uname = normalize_username(body.username)
     else:
         uname = re.sub(r"[^a-z0-9_#!-]", "_", raw_uname.lower())[:20]
-        if len(uname) < 2:
+        if len(uname) < 1:
             uname = "operator"
 
     r_uname = await db.execute(text("SELECT id FROM users WHERE username = :u"), {"u": uname})
