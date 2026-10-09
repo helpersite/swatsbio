@@ -385,42 +385,47 @@ export function renderBioText(text) {
 
       case "sparkle": {
         const col = tok.color || "#F5C542";
-        const sparkleSpots = [
-          { top: "-10px", left: "-6px", size: 14, delay: "0s", dur: "1.3s" },
-          { top: "-8px", left: "26%", size: 11, delay: "0.4s", dur: "1.5s" },
-          { top: "-12px", right: "22%", size: 13, delay: "0.8s", dur: "1.2s" },
-          { top: "-8px", right: "-8px", size: 15, delay: "0.2s", dur: "1.4s" },
-          { bottom: "-8px", left: "12%", size: 10, delay: "0.6s", dur: "1.6s" },
-          { bottom: "-10px", right: "14%", size: 12, delay: "0.3s", dur: "1.3s" },
+        const positions = [
+          { cls: "-left-2 -top-1.5 w-6 h-6", delay: "0ms" },
+          { cls: "left-[14%] -top-2.5 w-4 h-4", delay: "150ms" },
+          { cls: "left-[32%] -top-3 w-5 h-5", delay: "320ms" },
+          { cls: "left-[50%] -top-2 w-4 h-4", delay: "480ms" },
+          { cls: "right-[26%] -top-3 w-5 h-5", delay: "200ms" },
+          { cls: "right-[10%] -top-2 w-4 h-4", delay: "600ms" },
+          { cls: "-right-2.5 -top-1 w-6 h-6", delay: "100ms" },
+          { cls: "left-[5%] -bottom-2 w-4 h-4", delay: "350ms" },
+          { cls: "left-[28%] -bottom-2.5 w-5 h-5", delay: "520ms" },
+          { cls: "right-[35%] -bottom-2 w-5 h-5", delay: "250ms" },
+          { cls: "right-[6%] -bottom-2 w-4 h-4", delay: "420ms" },
+          { cls: "-right-1 bottom-0 w-5 h-5", delay: "700ms" },
         ];
         return (
-          <span key={idx} className="relative inline-block px-2.5 py-1 align-middle">
-            {sparkleSpots.map((sp, sIdx) => (
-              <svg
-                key={sIdx}
-                viewBox="0 0 24 24"
-                fill={col}
-                className="absolute pointer-events-none animate-pulse"
+          <span key={idx} className="text-fx-sparkle relative inline-block px-3.5 py-1.5 align-middle">
+            {positions.map((pos, pIdx) => (
+              <span
+                key={pIdx}
+                aria-hidden="true"
+                className={`sparkle-drift pointer-events-none absolute ${pos.cls}`}
                 style={{
-                  top: sp.top,
-                  bottom: sp.bottom,
-                  left: sp.left,
-                  right: sp.right,
-                  width: `${sp.size}px`,
-                  height: `${sp.size}px`,
-                  animationDuration: sp.dur,
-                  animationDelay: sp.delay,
+                  backgroundColor: col,
+                  WebkitMaskImage: `url("${sparkleAsset}")`,
+                  maskImage: `url("${sparkleAsset}")`,
+                  WebkitMaskSize: "contain",
+                  maskSize: "contain",
+                  WebkitMaskPosition: "center",
+                  maskPosition: "center",
+                  WebkitMaskRepeat: "no-repeat",
+                  maskRepeat: "no-repeat",
+                  animationDelay: pos.delay,
                   filter: `drop-shadow(0 0 6px ${col}) drop-shadow(0 0 12px ${col})`,
                 }}
-              >
-                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
-              </svg>
+              />
             ))}
             <span
-              className="relative z-10 font-black inline-block"
+              className="relative z-10 font-bold inline-block"
               style={{
                 color: col,
-                textShadow: `0 0 10px ${col}, 0 0 20px ${col}bb, 0 0 35px ${col}66`,
+                textShadow: `0 0 8px ${col}, 0 0 18px ${col}aa, 0 0 28px ${col}55`,
               }}
             >
               {tok.v}
