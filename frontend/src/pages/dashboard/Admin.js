@@ -99,18 +99,20 @@ export function AdminUsers() {
       const res = await api.post(`/admin/impersonate/${u.id}`);
       if (res.data?.token) {
         // Save current admin credentials so admin can return seamlessly
-        const currentToken = localStorage.getItem("token") || "";
-        const currentUser = localStorage.getItem("user") || "";
+        const currentToken = localStorage.getItem("swats_token") || localStorage.getItem("token") || "";
+        const currentUser = localStorage.getItem("swats_user") || localStorage.getItem("user") || "";
         localStorage.setItem("admin_impersonator_token", currentToken);
         localStorage.setItem("admin_impersonator_user", currentUser);
         localStorage.setItem("admin_impersonating_target", JSON.stringify(u));
         
         // Update auth state with user's token
+        localStorage.setItem("swats_token", res.data.token);
         localStorage.setItem("token", res.data.token);
+        localStorage.setItem("swats_user", JSON.stringify(res.data.user));
         localStorage.setItem("user", JSON.stringify(res.data.user));
         
         toast.success(`Swapped into @${u.username}'s dashboard!`);
-        window.location.href = "/dashboard/profile";
+        window.location.href = "/dashboard";
       }
     } catch (err) {
       toast.error(err.response?.data?.detail || "Could not swap to user dashboard");

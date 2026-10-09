@@ -130,8 +130,12 @@ export default function Dashboard() {
     const adminToken = localStorage.getItem("admin_impersonator_token");
     const adminUser = localStorage.getItem("admin_impersonator_user");
     if (adminToken) {
+      localStorage.setItem("swats_token", adminToken);
       localStorage.setItem("token", adminToken);
-      if (adminUser) localStorage.setItem("user", adminUser);
+      if (adminUser) {
+        localStorage.setItem("swats_user", adminUser);
+        localStorage.setItem("user", adminUser);
+      }
       localStorage.removeItem("admin_impersonator_token");
       localStorage.removeItem("admin_impersonator_user");
       localStorage.removeItem("admin_impersonating_target");
