@@ -313,17 +313,11 @@ export function renderBioText(text) {
             key={idx}
             className="font-bold inline-block text-white relative px-0.5"
             style={{
-              textShadow: "0 0 10px rgba(255,255,255,0.4)",
-              filter: "contrast(130%)",
+              textShadow: "0 0 5px rgba(255,255,255,0.16), 0 0 14px rgba(91,141,184,0.12)",
+              letterSpacing: "0.01em",
             }}
           >
-            <span className="relative z-10">{tok.v}</span>
-            <span
-              className="absolute inset-0 pointer-events-none opacity-40 mix-blend-overlay"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-              }}
-            />
+            {tok.v}
           </span>
         );
 

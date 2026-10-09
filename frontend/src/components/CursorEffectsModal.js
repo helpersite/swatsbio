@@ -2,16 +2,16 @@ import React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { MousePointer2, Check, X, Sliders, Crosshair, Sparkles } from "lucide-react";
+import { MousePointer2, Check, X, Sliders, Sparkles } from "lucide-react";
 import CustomColorPicker from "@/components/ColorPicker";
 
 export const CURSOR_EFFECTS_LIST = [
-  { id: "none", name: "Default Pointer", desc: "Standard operating system cursor" },
-  { id: "trail", name: "Particle Trail", desc: "Smooth glowing stardust trail following pointer movements" },
-  { id: "sparkles", name: "Click Sparkles", desc: "Bursting luminous stars when clicking and hovering buttons" },
-  { id: "crosshair", name: "Tactical Crosshair", desc: "Tactical cyber gaming reticle target pointer" },
-  { id: "neon_aura", name: "Neon Halo", desc: "Glowing ambient orb centered directly beneath cursor" },
-  { id: "glow_dot", name: "Precision Dot", desc: "Minimalist glowing precision target dot" },
+  { id: "none", name: "Default Pointer", desc: "Keep your regular system cursor" },
+  { id: "trail", name: "Particle Trail", desc: "A light, short trail follows the pointer" },
+  { id: "sparkles", name: "Click Sparkles", desc: "Small stars on movement and click" },
+  { id: "crosshair", name: "Tactical Crosshair", desc: "Reticle cursor with a matching native pointer" },
+  { id: "neon_aura", name: "Neon Halo", desc: "Soft glow around the actual pointer" },
+  { id: "glow_dot", name: "Precision Dot", desc: "Small colored point at the pointer" },
 ];
 
 export function CursorEffectsModal({
@@ -32,7 +32,7 @@ export function CursorEffectsModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[560px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
+      <DialogContent className="w-[560px] max-w-[calc(100vw-2rem)] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#090b10]">
           <div className="flex items-center gap-2.5">
@@ -44,7 +44,7 @@ export function CursorEffectsModal({
                 Cursor Effects Studio
               </DialogTitle>
               <div className="text-[11px] text-[#E5E7EB]/50">
-                Custom cursor trail particles, crosshairs, and interactive hover halos
+                Cursor appearance and subtle pointer-following effects
               </div>
             </div>
           </div>
@@ -58,13 +58,14 @@ export function CursorEffectsModal({
 
         {/* Modal Body */}
         <div className="p-4 flex-1 overflow-y-auto space-y-4">
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {CURSOR_EFFECTS_LIST.map((c) => {
               const isSelected = currentCursorFx === c.id;
               return (
                 <button
                   key={c.id}
                   type="button"
+                  aria-pressed={isSelected}
                   onClick={() => handleSelect(c.id)}
                   className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden flex flex-col justify-between group cursor-pointer ${
                     isSelected
@@ -90,10 +91,10 @@ export function CursorEffectsModal({
               </span>
               <span className="text-[10px] text-white/40 font-mono">Move mouse / click here</span>
             </div>
-            <div className="h-24 rounded-lg bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center p-3 relative">
-              <MousePointer2 size={20} className="text-[#5B8DB8] animate-bounce mb-1" />
+            <div className="h-24 rounded-lg bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center p-3 relative pointer-events-none">
+              <MousePointer2 size={20} className="text-[#5B8DB8] mb-1" />
               <div className="text-xs font-semibold text-white">Hover and click around this area</div>
-              <div className="text-[10px] text-white/40">Real-time particle bursts, trail stars & glowing halospan</div>
+              <div className="text-[10px] text-white/40">Move and click here to test. Your actual pointer style changes too.</div>
             </div>
           </div>
 
@@ -104,7 +105,7 @@ export function CursorEffectsModal({
                 <span>Cursor FX Parameters</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-[#E5E7EB]/70">Particle Aura Color:</span>
+                <span className="text-xs text-[#E5E7EB]/70">Cursor / effect color:</span>
                 <div className="w-36">
                   <CustomColorPicker
                     value={cursorColor}

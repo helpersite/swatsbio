@@ -35,8 +35,9 @@ const SIDEBAR_CATEGORIES = [
     group: "Main",
     icon: Palette,
     items: [
-      { id: "profile", label: "Profile", icon: Palette },
-      { id: "layout", label: "Layout", icon: Layers },
+      { id: "profile", label: "Profile & Effects", icon: Palette },
+      { id: "layout", label: "View Type & Layout", icon: Layers },
+      { id: "discord", label: "Discord Presence", icon: MessageSquare },
       { id: "badges", label: "Badges", icon: Award },
       { id: "links", label: "Links", icon: Link2 },
     ],
@@ -168,6 +169,8 @@ export default function Dashboard() {
         return <Editor initialTab="profile" />;
       case "layout":
         return <Editor initialTab="layout" />;
+      case "discord":
+        return <Editor initialTab="discord" />;
       case "badges":
         return <BadgesSection />;
       case "links":

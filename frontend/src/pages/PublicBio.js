@@ -2906,13 +2906,14 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
     dc.status ||
     dc.presence?.status ||
     "online";
+  const displayStatus = s.discord_presence_status || liveStatus;
   const userObj = lanyard?.discord_user;
   const liveAvatar = s.discord_avatar_override
     ? fileUrl(s.discord_avatar_override)
     : userObj?.avatar
     ? `https://cdn.discordapp.com/avatars/${dc.id || userObj.id}/${userObj.avatar}.${userObj.avatar.startsWith("a_") ? "gif" : "png"}?size=128`
-    : dc.avatar;
-  const liveName = userObj?.global_name || userObj?.username || dc.global_name || dc.username || bio?.display_name || bio?.username || "Discord";
+    : dc.avatar || (dc.id && dc.avatar_hash ? `https://cdn.discordapp.com/avatars/${dc.id}/${dc.avatar_hash}.png?size=128` : null);
+  const liveName = s.discord_custom_name || userObj?.global_name || userObj?.username || dc.global_name || dc.username || bio?.display_name || bio?.username || "Discord";
   
   const customStatusText = lanyard?.activities?.find((a) => a.type === 4)?.state || backendLive?.custom_status?.state || s.discord_custom_status;
   const customStatusEmoji = lanyard?.activities?.find((a) => a.type === 4)?.emoji?.name || backendLive?.custom_status?.emoji || s.discord_status_emoji;
@@ -2929,23 +2930,30 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
   };
   const visual = statusMap[liveStatus] || statusMap.online;
 
-  const isNoBg = style === "nobg" || s.discord_style === "nobg";
-  const isGhost = style === "ghost" || s.discord_style === "ghost";
+  const cardStyle = s.discord_style || style;
+  const isNoBg = cardStyle === "nobg";
+  const isGhost = cardStyle === "ghost";
+  const discordProfileStyle = cardStyle === "discord";
+  const visibleActivity = s.presence?.show_activities === false ? null : (spotify || mainActivity);
+  const discordBanner = s.discord_larp_banner || dc.banner;
 
   return (
     <div
       onClick={onClick}
-      className={`mt-4 flex items-center gap-3 rounded-2xl p-3 transition-all ${onClick ? "cursor-pointer hover:scale-[1.01]" : ""} ${
+      className={`mt-4 overflow-hidden rounded-xl transition-all ${onClick ? "cursor-pointer hover:brightness-110" : ""} ${
         isNoBg
-          ? "bg-transparent border border-white/10"
+          ? "border border-white/10 bg-transparent"
           : isGhost
-          ? "bg-white/[0.04] backdrop-blur-2xl border border-white/15 shadow-xl hover:bg-white/[0.07]"
-          : "bg-[#232428] border border-[#1e1f22] text-[#dbdee1] shadow-2xl hover:bg-[#2b2d31]"
+          ? "border border-white/15 bg-white/[0.04] shadow-xl backdrop-blur-2xl hover:bg-white/[0.07]"
+          : "border border-[#3f4147] bg-[#232428] text-[#dbdee1] shadow-xl hover:bg-[#2b2d31]"
       }`}
     >
+      {discordProfileStyle && <div className="h-12 bg-cover bg-center" style={{ backgroundImage: discordBanner ? `url(${discordBanner})` : "linear-gradient(120deg, #5865f2 0%, #353a8a 48%, #252641 100%)" }} />}
+      <div className={`${discordProfileStyle ? "px-3 pb-3" : "p-3"} ${discordProfileStyle ? "-mt-5" : ""}`}>
+      <div className="flex items-center gap-3">
       <div className="relative shrink-0">
         {liveAvatar ? (
-          <img src={liveAvatar} alt="" className="w-10 h-10 rounded-full border border-white/10 object-cover" />
+          <img src={liveAvatar} alt="" className={`rounded-full border-4 object-cover ${discordProfileStyle ? "h-12 w-12 border-[#232428]" : "w-10 h-10 border-white/10"}`} />
         ) : (
           <span className="w-10 h-10 rounded-full bg-[#5865F2]/30 flex items-center justify-center border border-white/10"><SiDiscord color="#5865F2" size={18} /></span>
         )}
@@ -2967,6 +2975,7 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
           )}
         </div>
         <div className="text-xs text-white font-bold truncate">{liveName}</div>
+        {discordProfileStyle && <div className="text-[10px] text-[#b5bac1] truncate">@{userObj?.username || dc.username || "discord-user"}</div>}
         {spotify ? (
           <div className="text-[10px] text-emerald-400 truncate mt-0.5 font-mono flex items-center gap-1">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -2981,9 +2990,13 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style
 
       {showBadge && (
         <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full border shrink-0 font-mono uppercase" style={{ background: visual.bg, borderColor: visual.border, color: visual.color }}>
-          {visual.label}
+          {displayStatus}
         </span>
       )}
+      </div>
+      {discordProfileStyle && customStatusText && <div className="mt-2 rounded-lg bg-[#1e1f22] px-2.5 py-2 text-[11px] text-[#dbdee1]">{customStatusEmoji && <span className="mr-1">{customStatusEmoji}</span>}{customStatusText}</div>}
+      {discordProfileStyle && visibleActivity && <div className="mt-2 rounded-lg bg-[#1e1f22] p-2.5 text-[11px] text-white/80">{spotify ? <><strong>Listening to Spotify</strong><div className="truncate">{renderBioText(spotify.song)} · {renderBioText(spotify.artist)}</div></> : <><strong>{mainActivity?.type === 1 ? "Streaming" : mainActivity?.type === 3 ? "Watching" : "Playing"} {mainActivity?.name}</strong>{mainActivity?.details && <div className="truncate text-white/55">{mainActivity.details}</div>}</>}</div>}
+      </div>
     </div>
   );
 }
@@ -3182,7 +3195,7 @@ function BioCard({ bio }) {
   const socialIconStyle = s.social_icon_style || "glass";
 
   const discord = bio.connections?.discord;
-  const showDiscordWidget = (s.discord_presence_enabled !== false || s.presence?.discord) && (discord || s.discord_snowflake_id || s.discord_user_id || s.presence?.discord_user_id || s.discord_custom_status || s.discord_presence_status || s.discord_activity_name);
+  const showDiscordWidget = s.discord_presence_enabled !== false && s.presence?.discord !== false && Boolean(discord || s.discord_snowflake_id || s.discord_user_id || s.presence?.discord_user_id || s.discord_custom_status || s.discord_presence_status || s.discord_activity_name);
   const isPfpInvisible = s.pfp === "invisible" || s.hide_pfp === true;
   const pfp = isPfpInvisible ? null : ((s.presence?.use_discord_pfp && discord?.avatar) ? discord.avatar : (fileUrl(s.pfp) || `https://api.dicebear.com/7.x/bottts/svg?seed=${bio.username}`));
 
@@ -3431,7 +3444,7 @@ function BioCard({ bio }) {
   return (
     <div className={`swat-bg min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16 relative overflow-x-hidden ${cursorClass}`} data-profile-outline={s.profile_outline_enabled === true ? "on" : "off"} data-profile-layout={layout} style={{ "--profile-slide-height": `${slideshowSlideHeight}vh` }}>
       {/* Subtle organic noise overlay to remove AI sterile feel */}
-      <div className="noise-overlay pointer-events-none fixed inset-0 z-1 opacity-25" />
+      {s.textured_background === true && <div className="noise-overlay pointer-events-none fixed inset-0 z-1 opacity-[0.06]" aria-hidden="true" />}
 
       {/* Background Media Cross-Fading (up to 3 backgrounds shuffle/cycle) */}
       {showWallpaper && (
@@ -3482,10 +3495,10 @@ function BioCard({ bio }) {
       )}
 
       {/* Dynamic Animated Background Effect */}
-      <BackgroundEffect effect={s.bg_effect} />
+      <BackgroundEffect effect={s.bg_effect} config={s.bg_effect_config || {}} className="fixed inset-0 z-[1] pointer-events-none" />
 
-      {/* Interactive Cursor Effects Renderer (Trail, Sparkles, Reticle, Halo, Dot) */}
-      <CursorEffectsRenderer effect={s.cursor_fx} color={s.cursor_fx_color || accent} size={s.cursor_fx_size || 18} />
+      {/* Interactive cursor overlay and native pointer skin */}
+      <CursorEffectsRenderer effect={s.cursor_fx} color={s.cursor_fx_color || accent} size={s.cursor_fx_size || 18} cursorImage={fileUrl(s.cursor)} />
 
       {/* Guns.lol / Feds Slideshow Floating HUD Overlays */}
       {layout === "slideshow" && s.slideshow_hud_enabled !== false && typeof document !== "undefined" && createPortal(

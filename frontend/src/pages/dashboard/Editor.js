@@ -45,6 +45,11 @@ export const CARD_LAYOUTS = [
   { v: "split_left", l: "2-Column Split", desc: "Profile identity on left, links on right" },
   { v: "floating_glass", l: "Floating Glass", desc: "Decoupled floating frosted glass tiles" },
   { v: "grid_tiles", l: "2×2 Grid Tiles", desc: "Square interactive icon & link tiles" },
+  { v: "split_reverse", l: "Reverse Split", desc: "Links first, profile identity alongside" },
+  { v: "sidebar_dock", l: "Sidebar Dock", desc: "Docked profile with compact link column" },
+  { v: "compact", l: "Compact Stack", desc: "Tight, compact identity and link stack" },
+  { v: "profile_header", l: "Profile Header", desc: "Wide header with an editorial profile card" },
+  { v: "showcase_grid", l: "Showcase Grid", desc: "Wide grid focused on projects and links" },
 ];
 
 export const CARD_SHAPES = [
@@ -267,6 +272,48 @@ export function ColorRow({ label, value, onChange }) {
   );
 }
 
+function DiscordProfilePreview({ user, settings }) {
+  const discord = user?.connections?.discord || {};
+  const status = settings.discord_presence_status || "online";
+  const statusColor = { online: "#23a55a", idle: "#f0b232", dnd: "#f23f43", offline: "#80848e" }[status] || "#23a55a";
+  const avatar = settings.discord_avatar_override
+    ? fileUrl(settings.discord_avatar_override)
+    : discord.avatar || (discord.id && discord.avatar_hash ? `https://cdn.discordapp.com/avatars/${discord.id}/${discord.avatar_hash}.png?size=128` : null);
+  const displayName = settings.discord_custom_name || discord.global_name || discord.username || user?.display_name || user?.username || "Your Discord name";
+  const username = discord.username ? `@${discord.username}` : "@discord-user";
+  const viewStyle = settings.discord_style || "discord";
+  const banner = settings.discord_larp_banner;
+  const activity = settings.discord_activity_name;
+
+  return (
+    <div className={`mx-auto w-full max-w-[380px] overflow-hidden rounded-xl border text-[#dbdee1] shadow-xl ${viewStyle === "ghost" ? "border-white/15 bg-white/[0.04] backdrop-blur-xl" : viewStyle === "nobg" ? "border-white/10 bg-transparent" : "border-[#3f4147] bg-[#232428]"}`} data-testid="discord-profile-preview">
+      {viewStyle === "discord" && <div className="h-20 bg-cover bg-center" style={{ backgroundImage: banner ? `url(${banner})` : "linear-gradient(120deg, #5865f2 0%, #353a8a 48%, #252641 100%)" }} />}
+      <div className="px-4 pb-4">
+        <div className={`${viewStyle === "discord" ? "-mt-9" : "mt-3"} mb-3 flex items-end justify-between`}>
+          <div className="relative rounded-full border-[5px] border-[#232428] bg-[#36373d]">
+            {avatar ? <img src={avatar} alt="Discord avatar preview" className="h-[76px] w-[76px] rounded-full object-cover" /> : <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full text-3xl font-bold text-white">{displayName.slice(0, 1).toUpperCase()}</div>}
+            <span className="absolute bottom-0 right-0 h-5 w-5 rounded-full border-[4px] border-[#232428]" style={{ background: statusColor }} />
+          </div>
+          <span className="mb-1 rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-semibold capitalize text-white/75">{status === "dnd" ? "Do Not Disturb" : status}</span>
+        </div>
+        <div className="text-base font-bold text-white">{displayName}</div>
+        <div className="text-xs text-[#b5bac1]">{username}</div>
+        {viewStyle === "discord" && <>
+          <div className="my-3 border-t border-white/10" />
+          <div className="text-[10px] font-bold uppercase tracking-wide text-[#b5bac1]">About me</div>
+          <div className="mt-1 text-xs text-[#dbdee1]">{settings.discord_custom_status || "Set a custom status to show what you’re up to."}</div>
+        </>}
+        {viewStyle === "discord" && <div className="mt-3 rounded-lg bg-[#1e1f22] p-3">
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[#b5bac1]">{activity ? "Playing a game" : "Activity"}</div>
+          <div className="text-xs font-semibold text-white">{activity || "No activity yet"}</div>
+          {settings.discord_activity_details && <div className="mt-0.5 text-[11px] text-[#b5bac1]">{settings.discord_activity_details}</div>}
+        </div>}
+        {!discord.id && <div className="mt-3 text-center text-[10px] text-amber-200/70">Preview uses your saved overrides. Connect Discord for your real avatar and live presence.</div>}
+      </div>
+    </div>
+  );
+}
+
 function RealLayoutPreview({ layout, isSelected, pfpUrl }) {
   return (
     <div className="w-full h-24 rounded-xl bg-[#050609] border border-white/10 relative overflow-hidden flex flex-col justify-between p-2">
@@ -340,6 +387,7 @@ function RealLayoutPreview({ layout, isSelected, pfpUrl }) {
 export default function Editor({ initialTab = "profile" }) {
   const { user, setUser } = useAuth();
   const [editorCategory, setEditorCategory] = useState(initialTab || "profile");
+  const editorTabsRef = useRef(null);
   const [s, setS] = useState(user?.settings || {});
   const [displayName, setDisplayName] = useState(user?.display_name || "");
   const [username, setUsername] = useState(user?.username || "");
@@ -552,7 +600,7 @@ export default function Editor({ initialTab = "profile" }) {
       />
 
       {/* Subtabs Bar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2">
+      <div ref={editorTabsRef} className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-2">
         <button
           type="button"
           onClick={() => setEditorCategory("profile")}
@@ -567,6 +615,7 @@ export default function Editor({ initialTab = "profile" }) {
         <button
           type="button"
           onClick={() => setEditorCategory("layout")}
+          aria-pressed={editorCategory === "layout"}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             editorCategory === "layout"
               ? "bg-[#5B8DB8] text-white shadow-md shadow-[#5B8DB8]/20"
@@ -589,6 +638,7 @@ export default function Editor({ initialTab = "profile" }) {
         <button
           type="button"
           onClick={() => setEditorCategory("discord")}
+          aria-pressed={editorCategory === "discord"}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
             editorCategory === "discord"
               ? "bg-[#5865F2] text-white shadow-md shadow-[#5865F2]/20"
@@ -1004,14 +1054,28 @@ export default function Editor({ initialTab = "profile" }) {
       {/* SUBTAB 2: LAYOUT & POSITIONING                                            */}
       {/* ========================================================================= */}
       {editorCategory === "layout" && (
-        <div className="space-y-6">
+        <div className="space-y-6" data-testid="layout-editor">
           {/* Layout Selector Panel */}
-          <Panel title="Profile Card Layout Selection">
+          <Panel title="Profile View Type & Layout">
             <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-3 rounded-xl border border-[#5B8DB8]/25 bg-[#5B8DB8]/[0.07] p-3">
+                <div>
+                  <Label className="text-white text-xs font-bold block">View type</Label>
+                  <span className="text-[10px] text-white/50">Choose how visitors see your profile. Preview and save when ready.</span>
+                </div>
+                <Select value={activeLayout} onValueChange={(value) => patch("card_layout", value)}>
+                  <SelectTrigger aria-label="Profile view type" className="w-56 bg-[#080a10] border-white/10 text-white text-xs h-9">
+                    <SelectValue placeholder="Choose a profile view" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0c0e15] border-white/10 text-white text-xs">
+                    {CARD_LAYOUTS.map((layout) => <SelectItem key={layout.v} value={layout.v}>{layout.l}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center justify-between mb-3">
-                <Label className="text-[#E5E7EB]/70 text-xs font-semibold">Active Layout</Label>
-                <span className="text-xs text-[#5B8DB8] font-bold font-mono">
-                  {CARD_LAYOUTS.find((cl) => cl.v === activeLayout)?.l || "Classic"}
+                <Label className="text-[#E5E7EB]/70 text-xs font-semibold">All layouts</Label>
+                <span className="text-xs text-[#5B8DB8] font-bold font-mono" aria-live="polite">
+                  {CARD_LAYOUTS.find((cl) => cl.v === activeLayout)?.l || "Classic"} selected
                 </span>
               </div>
 
@@ -1527,7 +1591,7 @@ export default function Editor({ initialTab = "profile" }) {
       {/* SUBTAB 4: DISCORD LIVE PRESENCE                                           */}
       {/* ========================================================================= */}
       {editorCategory === "discord" && (
-        <div className="space-y-6">
+        <div className="space-y-6" data-testid="discord-editor">
           <Panel title="Discord Live Presence (Real Status & Rich Activity)">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
@@ -1586,8 +1650,48 @@ export default function Editor({ initialTab = "profile" }) {
                     Header banner displayed inside the interactive Discord presence modal.
                   </div>
                 </div>
+                <SelectRow
+                  label="Presence card style"
+                  value={s.discord_style || "discord"}
+                  onChange={(value) => patch("discord_style", value)}
+                  options={[
+                    { v: "discord", l: "Discord Profile Card" },
+                    { v: "ghost", l: "Glass / Ghost" },
+                    { v: "nobg", l: "Minimal / No Fill" },
+                  ]}
+                />
+                <SelectRow
+                  label="Preview status"
+                  value={s.discord_presence_status || "online"}
+                  onChange={(value) => patch("discord_presence_status", value)}
+                  options={[
+                    { v: "online", l: "Online" },
+                    { v: "idle", l: "Idle" },
+                    { v: "dnd", l: "Do Not Disturb" },
+                    { v: "offline", l: "Offline" },
+                  ]}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Display name override</Label>
+                  <Input value={s.discord_custom_name || ""} onChange={(e) => patch("discord_custom_name", e.target.value)} placeholder="Use linked Discord name" className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom status</Label>
+                  <Input value={s.discord_custom_status || ""} onChange={(e) => patch("discord_custom_status", e.target.value)} placeholder="What are you up to?" className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Activity / game name</Label>
+                  <Input value={s.discord_activity_name || ""} onChange={(e) => patch("discord_activity_name", e.target.value)} placeholder="Game or activity" className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Activity details</Label>
+                  <Input value={s.discord_activity_details || ""} onChange={(e) => patch("discord_activity_details", e.target.value)} placeholder="Optional activity details" className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl" />
+                </div>
               </div>
             </div>
+          </Panel>
+          <Panel title="Live preview · Discord profile card">
+            <DiscordProfilePreview user={user} settings={s} />
           </Panel>
         </div>
       )}
@@ -2105,6 +2209,16 @@ export default function Editor({ initialTab = "profile" }) {
           </Panel>
         </div>
       )}
+
+      <div className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-2xl border border-white/10 bg-[#0b0d12]/95 p-2 shadow-2xl backdrop-blur-xl sm:bottom-6 sm:right-6">
+        <span className="hidden text-[10px] text-white/50 sm:block">Unsaved changes apply to preview</span>
+        <a href={`/${encodeURIComponent(username)}`} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/15 px-3 text-[11px] font-semibold text-white/80 hover:bg-white/10">
+          <Eye size={13} /> Preview
+        </a>
+        <Button type="button" onClick={save} disabled={saving} className="h-8 rounded-xl bg-[#5B8DB8] px-3 text-[11px] font-bold text-white hover:bg-[#4A6B8A]">
+          <Save size={13} className="mr-1" /> {saving ? "Saving…" : "Save"}
+        </Button>
+      </div>
 
       {/* Media Asset Modal */}
       <MediaAssetModal

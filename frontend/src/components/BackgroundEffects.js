@@ -314,13 +314,43 @@ export function ShimmerEffect({ speed = 1 }) {
 // ──────────────────────────────────────────────
 // 5. FILM GRAIN (Authentic textured cinema film noise)
 // ──────────────────────────────────────────────
-export function GrainEffect({ opacity = 0.08 }) {
+export function GrainEffect({ opacity = 0.025 }) {
+  const textureRef = useRef(null);
+
+  useEffect(() => {
+    const tile = document.createElement("canvas");
+    tile.width = 128;
+    tile.height = 128;
+    const ctx = tile.getContext("2d");
+    if (!ctx) return;
+
+    const refresh = () => {
+      const image = ctx.createImageData(tile.width, tile.height);
+      for (let i = 0; i < image.data.length; i += 4) {
+        const shade = Math.random() < 0.5 ? 0 : 255;
+        image.data[i] = shade;
+        image.data[i + 1] = shade;
+        image.data[i + 2] = shade;
+        image.data[i + 3] = 255;
+      }
+      ctx.putImageData(image, 0, 0);
+      if (textureRef.current) textureRef.current.style.backgroundImage = `url(${tile.toDataURL("image/png")})`;
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 140);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <div
-      className="absolute inset-0 pointer-events-none z-[1] mix-blend-overlay"
+      ref={textureRef}
+      aria-hidden="true"
+      className="absolute inset-0 pointer-events-none z-[1]"
       style={{
-        opacity: Math.max(0.04, Math.min(0.22, opacity)),
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        opacity: Math.max(0, Math.min(0.06, Number(opacity) || 0)) * 0.35,
+        backgroundRepeat: "repeat",
+        backgroundSize: "128px 128px",
+        mixBlendMode: "soft-light",
       }}
     />
   );
@@ -362,7 +392,7 @@ export const BACKGROUND_EFFECTS_LIST = [
   { id: "vhs_tape", name: "VHS Tape", description: "Retro CRT scanlines & tracking glitch" },
 ];
 
-export function BackgroundEffect({ effect, config = {} }) {
+export function BackgroundEffect({ effect, config = {}, className = "" }) {
   if (!effect || effect === "none" || effect === "blood" || effect === "dripping_blood" || effect === "blood_drip") return null;
 
   const resolved =
@@ -371,29 +401,54 @@ export function BackgroundEffect({ effect, config = {} }) {
     effect === "static" || effect === "static_grain" ? "grain" :
     effect;
 
+  let rendered = null;
   switch (resolved) {
     case "snow_fall":
-      return <SnowFallEffect speed={config.speed || 1} density={config.density || 1.3} />;
+      rendered = <SnowFallEffect speed={config.speed || 1} density={config.density || 1.3} />;
+      break;
     case "rain":
-      return <RainEffect speed={config.speed || 1} density={config.density || 1.2} />;
+      rendered = <RainEffect speed={config.speed || 1} density={config.density || 1.2} />;
+      break;
     case "shimmer":
-      return <ShimmerEffect speed={config.speed || 1} />;
+      rendered = <ShimmerEffect speed={config.speed || 1} />;
+      break;
     case "grain":
-      return <GrainEffect opacity={config.opacity || 0.08} />;
+      rendered = <GrainEffect opacity={config.opacity ?? 0.025} />;
+      break;
     case "vhs_tape":
-      return <VHSTapeEffect />;
+      rendered = <VHSTapeEffect />;
+      break;
     default:
       return null;
   }
+  return className ? <div className={className}>{rendered}</div> : rendered;
 }
 
 // ──────────────────────────────────────────────
 // INTERACTIVE CURSOR EFFECTS RENDERER (Fixed global overlay)
 // ──────────────────────────────────────────────
-export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) {
+export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18, cursorImage }) {
   const canvasRef = useRef(null);
   const mouseRef = useRef({ x: -1000, y: -1000, isDown: false });
   const particlesRef = useRef([]);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || (!cursorImage && (!effect || effect === "none"))) return;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M5 3v23l6-6 4 9 4-2-4-9h9L5 3Z" fill="#111827" stroke="${color}" stroke-width="2" stroke-linejoin="round"/><circle cx="25" cy="7" r="2" fill="${color}"/></svg>`;
+    const cursorUrl = cursorImage || `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    const hotspot = cursorImage ? "0 0" : "5 3";
+    const style = document.createElement("style");
+    style.dataset.swatsCursor = "true";
+    style.textContent = `body[data-swats-cursor] *, body[data-swats-cursor] { cursor: url("${cursorUrl.replace(/"/g, "%22")}") ${hotspot}, auto !important; } body[data-swats-cursor] button, body[data-swats-cursor] a, body[data-swats-cursor] [role="button"] { cursor: url("${cursorUrl.replace(/"/g, "%22")}") ${hotspot}, pointer !important; }`;
+    document.head.appendChild(style);
+    const previousCursor = document.body.dataset.swatsCursor;
+    document.body.dataset.swatsCursor = "true";
+    return () => {
+      style.remove();
+      if (previousCursor === undefined) delete document.body.dataset.swatsCursor;
+      else document.body.dataset.swatsCursor = previousCursor;
+    };
+  }, [effect, color, cursorImage]);
 
   useEffect(() => {
     if (!effect || effect === "none") return;
@@ -572,6 +627,7 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
   return (
     <canvas
       ref={canvasRef}
+      aria-hidden="true"
       className="fixed inset-0 pointer-events-none z-[9999] w-full h-full"
       style={{ touchAction: "none" }}
     />

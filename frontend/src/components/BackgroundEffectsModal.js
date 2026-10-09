@@ -14,7 +14,7 @@ export function BackgroundEffectsModal({
   if (!open) return null;
 
   const currentBg = settings?.bg_effect || "none";
-  const bgConfig = settings?.bg_effect_config || { speed: 1, density: 1, opacity: 0.08 };
+  const bgConfig = settings?.bg_effect_config || { speed: 1, density: 1, opacity: 0.025 };
 
   const handleSelectBg = (bgId) => {
     patch("bg_effect", bgId);
@@ -39,7 +39,7 @@ export function BackgroundEffectsModal({
                 Background Ambient Effects
               </DialogTitle>
               <div className="text-[11px] text-[#E5E7EB]/50">
-                Micro snow fall, rain streaks, fluid gradient waves, film grain, shimmer & VHS
+                Light-touch motion and texture—preview each effect before saving
               </div>
             </div>
           </div>
@@ -69,9 +69,9 @@ export function BackgroundEffectsModal({
                   }`}
                 >
                   {/* Mini Preview Box */}
-                  <div className="relative w-full h-18 rounded-lg bg-[#040508] border border-white/10 overflow-hidden shrink-0">
+                  <div className="relative w-full h-[72px] rounded-lg bg-[#040508] border border-white/10 overflow-hidden shrink-0">
                     {eff.id !== "none" ? (
-                      <BackgroundEffect effect={eff.id} config={bgConfig} />
+                      <BackgroundEffect effect={eff.id} config={bgConfig} className="absolute inset-0 pointer-events-none" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[10px] text-white/40">
                         Solid Clean
@@ -145,16 +145,16 @@ export function BackgroundEffectsModal({
                 {currentBg === "grain" && (
                   <div className="col-span-2">
                     <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
-                      <span>Film Grain Intensity</span>
+                      <span>Subtle Texture</span>
                       <span className="font-mono text-[#5B8DB8] text-[11px]">
-                        {Math.round((bgConfig.opacity || 0.08) * 100)}%
+                        {Math.round((bgConfig.opacity ?? 0.025) * 100)}%
                       </span>
                     </div>
                     <Slider
-                      value={[bgConfig.opacity || 0.08]}
-                      min={0.03}
-                      max={0.20}
-                      step={0.01}
+                      value={[bgConfig.opacity ?? 0.025]}
+                      min={0}
+                      max={0.12}
+                      step={0.005}
                       onValueChange={(v) => handleConfigChange("opacity", v[0])}
                     />
                   </div>
