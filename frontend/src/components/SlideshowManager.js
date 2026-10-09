@@ -39,6 +39,7 @@ export function SlideshowManager({
   const slides = slideshowConfig?.slides || [];
   const [modalOpen, setModalOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [heading, setHeading] = useState("");
 
   // Form State for Adding / Editing a Slide
   const [slideType, setSlideType] = useState("project"); // "discord" | "project"
@@ -85,9 +86,10 @@ export function SlideshowManager({
     }
   };
 
-  const openAddSlideModal = () => {
+  const openAddSlideModal = (type = "project") => {
     setEditingIndex(null);
-    setSlideType("project");
+    setSlideType(type);
+    setHeading("");
     setProjectLayout("one_sided");
     setProjectSubtype("game_cheat");
     setProjTitle("Valorant Precision Triggerbot");
@@ -108,6 +110,7 @@ export function SlideshowManager({
     if (!s) return;
     setEditingIndex(index);
     setSlideType(s.type || "project");
+    setHeading(s.heading || "");
     if (s.type === "discord") {
       setDcServerName(s.serverName || "");
       setDcInviteUrl(s.inviteUrl || "");
@@ -151,6 +154,7 @@ export function SlideshowManager({
       }
       slideData = {
         type: "discord",
+        heading: heading.trim(),
         serverName: dcServerName.trim(),
         inviteUrl: dcInviteUrl.trim(),
         icon: dcIcon,
@@ -168,6 +172,7 @@ export function SlideshowManager({
       }
       slideData = {
         type: "project",
+        heading: heading.trim(),
         layout: projectLayout,
         subtype: projectSubtype,
         title: projTitle.trim(),
@@ -250,13 +255,22 @@ export function SlideshowManager({
             Add interactive Discord embeds, software/cheat showcase cards, and store decks
           </div>
         </div>
-        <Button
-          type="button"
-          onClick={openAddSlideModal}
-          className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-4 h-8 rounded-xl shadow-[0_0_12px_rgba(91,141,184,0.35)] gap-1.5 cursor-pointer"
-        >
-          <Plus size={14} /> Add Slide
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => openAddSlideModal("discord")}
+            className="h-8 px-3 rounded-xl bg-[#5865F2]/15 hover:bg-[#5865F2]/25 border border-[#5865F2]/40 text-[#8b95ff] text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <SiDiscord size={13} /> Discord
+          </button>
+          <button
+            type="button"
+            onClick={() => openAddSlideModal("project")}
+            className="h-8 px-3 rounded-xl bg-[#5B8DB8]/15 hover:bg-[#5B8DB8]/25 border border-[#5B8DB8]/40 text-[#8fc0e8] text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+          >
+            <Plus size={13} /> Project
+          </button>
+        </div>
       </div>
 
       {/* Slide List */}
@@ -267,14 +281,24 @@ export function SlideshowManager({
           <div className="text-[11px] text-[#E5E7EB]/50 max-w-sm mx-auto mb-3">
             Press &ldquo;Add Slide&rdquo; to build your first Discord server widget or product showcase slide.
           </div>
-          <Button
-            type="button"
-            size="sm"
-            onClick={openAddSlideModal}
-            className="bg-white/10 hover:bg-white/20 text-white text-xs rounded-xl cursor-pointer"
-          >
-            + Create First Slide
-          </Button>
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => openAddSlideModal("discord")}
+              className="bg-[#5865F2]/20 hover:bg-[#5865F2]/30 text-white text-xs rounded-xl cursor-pointer border border-[#5865F2]/40"
+            >
+              <SiDiscord size={13} className="mr-1" /> Discord Embed
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => openAddSlideModal("project")}
+              className="bg-white/10 hover:bg-white/20 text-white text-xs rounded-xl cursor-pointer"
+            >
+              <Plus size={13} className="mr-1" /> Project Card
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -290,20 +314,20 @@ export function SlideshowManager({
                 <div className="min-w-0">
                   <div className="text-xs font-bold text-white flex items-center gap-2 truncate">
                     {s.type === "discord" ? (
-                      <>
-                        <SiDiscord className="text-[#5865F2] shrink-0" size={14} />
-                        <span>Discord Embed: {s.serverName || "Server"}</span>
-                      </>
+                      <SiDiscord className="text-[#5865F2] shrink-0" size={14} />
                     ) : (
-                      <>
-                        <Gamepad2 className="text-[#5B8DB8] shrink-0" size={14} />
-                        <span>Project ({s.subtype || "game_cheat"}): {s.title || "Project"}</span>
-                      </>
+                      <Gamepad2 className="text-[#5B8DB8] shrink-0" size={14} />
                     )}
+                    <span className="truncate">
+                      {s.heading || (s.type === "discord" ? (s.serverName || "Discord Server") : (s.title || "Project"))}
+                    </span>
+                    <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-md border border-white/10 text-[#E5E7EB]/50 shrink-0">
+                      {s.type === "discord" ? "Discord" : (PROJECT_TYPES.find((p) => p.id === s.subtype)?.name || "Project")}
+                    </span>
                   </div>
                   <div className="text-[10px] text-[#E5E7EB]/50 truncate">
                     {s.type === "discord"
-                      ? `${s.members || "1,000"} Members · ${s.online || "250"} Online`
+                      ? `${s.serverName || "Server"} · ${s.members || "1,000"} members · ${s.online || "250"} online`
                       : `${s.layout === "two_sided" ? "Two-Sided Split" : "One-Sided Centered"} · ${s.price || "Free / Premium"}`}
                   </div>
                 </div>
@@ -413,6 +437,19 @@ export function SlideshowManager({
               </button>
             </div>
 
+            {/* Slide heading (card title) */}
+            <div className="space-y-1">
+              <Label className="text-[11px] text-[#E5E7EB]/70">
+                Slide Heading <span className="text-[#E5E7EB]/40">— optional title shown above the card</span>
+              </Label>
+              <Input
+                value={heading}
+                onChange={(e) => setHeading(e.target.value)}
+                placeholder={slideType === "discord" ? "e.g. Join the community" : "e.g. Featured drop"}
+                className="bg-[#080a10] border-white/10 text-xs text-white"
+              />
+            </div>
+
             {/* If DISCORD EMBED */}
             {slideType === "discord" && (
               <div className="space-y-4">
@@ -455,6 +492,55 @@ export function SlideshowManager({
                       placeholder="e.g. 540"
                       className="bg-[#080a10] border-white/10 text-xs text-white"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Icon URL (optional)</Label>
+                    <Input
+                      value={dcIcon}
+                      onChange={(e) => setDcIcon(e.target.value)}
+                      placeholder="https://.../icon.png"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Banner URL (optional)</Label>
+                    <Input
+                      value={dcBanner}
+                      onChange={(e) => setDcBanner(e.target.value)}
+                      placeholder="https://.../banner.png"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Button Label</Label>
+                    <Input
+                      value={dcButtonText}
+                      onChange={(e) => setDcButtonText(e.target.value)}
+                      placeholder="Join Server"
+                      className="bg-[#080a10] border-white/10 text-xs text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Card Theme</Label>
+                    <Select value={dcTheme} onValueChange={setDcTheme}>
+                      <SelectTrigger className="bg-[#080a10] border-white/10 text-xs text-white h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0c0e15] border-white/10 text-white">
+                        <SelectItem value="nitro_glass">Nitro Glass</SelectItem>
+                        <SelectItem value="ghost">Ghost / Frosted</SelectItem>
+                        <SelectItem value="aurora">Aurora Gradient</SelectItem>
+                        <SelectItem value="discord">Classic Discord</SelectItem>
+                        <SelectItem value="minibanner">Mini Banner</SelectItem>
+                        <SelectItem value="square">Square Card</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -530,6 +616,30 @@ export function SlideshowManager({
                   </div>
                 </div>
 
+                {/* Layout */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Slide Layout</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: "one_sided", label: "One-Sided Centered" },
+                      { id: "two_sided", label: "Two-Sided Split" },
+                    ].map((L) => (
+                      <button
+                        key={L.id}
+                        type="button"
+                        onClick={() => setProjectLayout(L.id)}
+                        className={`p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          projectLayout === L.id
+                            ? "bg-[#5B8DB8]/20 border-[#5B8DB8] text-white"
+                            : "bg-[#080a10] border-white/10 text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {L.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Primary Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1 sm:col-span-2">
@@ -552,6 +662,21 @@ export function SlideshowManager({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Status / Badge</Label>
+                    <Input value={projStatus} onChange={(e) => setProjStatus(e.target.value)} placeholder="Undetected" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Game / Platform</Label>
+                    <Input value={projGame} onChange={(e) => setProjGame(e.target.value)} placeholder="Apex Legends" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Language / Stack</Label>
+                    <Input value={projLanguage} onChange={(e) => setProjLanguage(e.target.value)} placeholder="C++ / Kernel" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <Label className="text-[11px] text-[#E5E7EB]/70">Description & Feature List</Label>
                   <Textarea
@@ -561,6 +686,39 @@ export function SlideshowManager({
                     rows={3}
                     className="bg-[#080a10] border-white/10 text-xs text-white resize-none"
                   />
+                </div>
+
+                {/* Gallery Images */}
+                <div className="space-y-2 p-3.5 rounded-2xl bg-[#080a10] border border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <ImageIcon size={13} className="text-[#5B8DB8]" /> Gallery Images <span className="text-[#E5E7EB]/40">({projImages.length})</span>
+                    </div>
+                    <label className="text-[11px] font-bold text-[#5B8DB8] hover:underline flex items-center gap-1 cursor-pointer">
+                      <Upload size={12} /> Upload
+                      <input type="file" accept="image/*" multiple className="hidden" onChange={handleUploadImage} />
+                    </label>
+                  </div>
+                  {projImages.length === 0 ? (
+                    <div className="text-[10px] text-[#E5E7EB]/45 py-3 text-center border border-dashed border-white/10 rounded-xl">
+                      No images yet — the first image becomes the cover.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {projImages.map((img, i) => (
+                        <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden border border-white/10 group">
+                          <img src={fileUrl(img)} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setProjImages(projImages.filter((_, j) => j !== i))}
+                            className="absolute top-0.5 right-0.5 w-5 h-5 rounded-md bg-black/70 text-red-300 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer"
+                          >
+                            <X size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Categorized Selectable Tags */}
@@ -618,6 +776,49 @@ export function SlideshowManager({
                     />
                   </div>
                 </div>
+
+                {/* Secondary Button */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Secondary Button Label</Label>
+                    <Input value={projSecondaryButtonText} onChange={(e) => setProjSecondaryButtonText(e.target.value)} placeholder="Join Discord" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-[#E5E7EB]/70">Secondary URL</Label>
+                    <Input value={projSecondaryButtonUrl} onChange={(e) => setProjSecondaryButtonUrl(e.target.value)} placeholder="https://discord.gg/..." className="bg-[#080a10] border-white/10 text-xs text-white" />
+                  </div>
+                </div>
+
+                {/* Two-Sided Secondary Offer */}
+                {projectLayout === "two_sided" && (
+                  <div className="space-y-3 p-3.5 rounded-2xl bg-[#0a0d14] border border-[#5B8DB8]/25">
+                    <div className="text-[11px] font-bold text-[#5B8DB8] uppercase tracking-wider">Two-Sided: Bundle Offer (right panel)</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Offer Title</Label>
+                        <Input value={proj2Title} onChange={(e) => setProj2Title(e.target.value)} placeholder="Rust Radar" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Offer Price</Label>
+                        <Input value={proj2Price} onChange={(e) => setProj2Price(e.target.value)} placeholder="$9.99" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-[#E5E7EB]/70">Offer Description</Label>
+                      <Textarea value={proj2Description} onChange={(e) => setProj2Description(e.target.value)} rows={2} placeholder="What is included in this offer?" className="bg-[#080a10] border-white/10 text-xs text-white resize-none" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Offer Game</Label>
+                        <Input value={proj2Game} onChange={(e) => setProj2Game(e.target.value)} placeholder="Rust" className="bg-[#080a10] border-white/10 text-xs text-white" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] text-[#E5E7EB]/70">Offer URL</Label>
+                        <Input value={proj2ButtonUrl} onChange={(e) => setProj2ButtonUrl(e.target.value)} placeholder="https://..." className="bg-[#080a10] border-white/10 text-xs text-white" />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

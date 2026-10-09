@@ -13,7 +13,7 @@ import { fileUrl } from "@/lib/auth";
 // rendered, which is why the deck looked broken after adding slides.
 // ---------------------------------------------------------------------------
 
-export const SUBTYPE_META = {
+const SUBTYPE_META = {
   game_cheat: { label: "Game Cheat / Mod Menu", icon: Gamepad2, tint: "#f97316" },
   store: { label: "Digital Store", icon: ShoppingCart, tint: "#22c55e" },
   accounts: { label: "Accounts & Alts", icon: Key, tint: "#eab308" },
@@ -67,7 +67,7 @@ export function TiltCard({ children, className = "", style, maxTilt = 8, glare =
       ref={ref}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
-      className={`deck-tilt ${glare ? "deck-tilt-glare" : ""} ${className}`}
+      className={`deck-tilt relative ${glare ? "deck-tilt-glare" : ""} ${className}`}
       style={{ ...style, transformStyle: "preserve-3d" }}
     >
       {children}
@@ -92,6 +92,13 @@ export function DeckCustomSlide({
       className="deck-slide min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10 px-1"
       style={{ ...style, fontFamily: font }}
     >
+      {data?.heading && (
+        <div className="mb-4 text-center">
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/50 border border-white/12 text-[11px] font-bold uppercase tracking-[0.18em] text-white/85 backdrop-blur-md">
+            {data.heading}
+          </span>
+        </div>
+      )}
       <TiltCard
         className={`deck-slide-card w-full anim-card-slide_up ${twoSided ? "max-w-3xl" : "max-w-lg"}`}
         style={{

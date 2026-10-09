@@ -20,7 +20,6 @@ import { toast } from "sonner";
 import * as Icons from "lucide-react";
 import { Eye, EyeOff, X, Plus, Trophy, Lock, Pencil, Upload, Link2, TrendingUp, Sparkles, Loader2, ExternalLink, Award, ShieldCheck, Shield, Check, Copy, Search, Users, Trash2, HelpCircle, Activity, Rocket, Palette, Sun, Disc3, ArrowUp, ArrowDown, ShieldAlert, Move, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import CustomColorPicker from "@/components/ColorPicker";
-import { VisualDashboardEditor } from "@/components/VisualDashboardEditor";
 
 async function uploadFile(file) {
   const fd = new FormData();
@@ -85,8 +84,6 @@ export function SettingsSection() {
     toast.success("Settings and theme preferences saved.");
   };
 
-  const [showVisualEditor, setShowVisualEditor] = useState(false);
-
   return (
     <div>
       <Header title="Dashboard Settings" subtitle="Configure your account preferences, profile details, and dashboard visual themes." />
@@ -97,7 +94,6 @@ export function SettingsSection() {
             <TabsTrigger value="account" data-testid="settings-tab-account">Account info</TabsTrigger>
             <TabsTrigger value="locker" data-testid="settings-tab-locker">Password locker</TabsTrigger>
             <TabsTrigger value="stats" data-testid="settings-tab-stats">View stats</TabsTrigger>
-            <TabsTrigger value="warning" className="text-amber-400 font-bold border-amber-500/30">⚠️ WARNING: Experimental Studio</TabsTrigger>
           </TabsList>
 
           <TabsContent value="themes" className="mt-4">
@@ -163,48 +159,9 @@ export function SettingsSection() {
             <MyStatsSection embed />
           </TabsContent>
 
-          {/* WARNING & EXPERIMENTAL TESTING AREA */}
-          <TabsContent value="warning" className="mt-4">
-            <div className="p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 via-[#0a0c10] to-[#06080b] shadow-2xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-                  <ShieldAlert size={22} className="animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="font-display font-bold text-white text-base">⚠️ EXPERIMENTAL TESTING ZONE</h3>
-                  <p className="text-xs text-[#E5E7EB]/60">Advanced visual sandbox and interactive freeform drag-and-drop live linker studio.</p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 text-xs space-y-2 text-[#E5E7EB]/80 leading-relaxed">
-                <div>• <b>Live Drag Canvas:</b> Freely reposition and scale any profile element with pixel/grid precision.</div>
-                <div>• <b>Right-Click Menus:</b> Contextual layer actions, center alignment, and quick styling controls.</div>
-                <div>• <b>Slide Deck Manager:</b> Add multiple slides with customizable media, project, and link layouts.</div>
-                <div>• <b>Kinetic Animation Studio:</b> Apply 15+ real-time animations to any element.</div>
-              </div>
-
-              <div className="pt-2">
-                <Button
-                  onClick={() => setShowVisualEditor(true)}
-                  className="w-full sm:w-auto rounded-2xl bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs px-6 py-5 gap-2 shadow-xl shadow-amber-500/20"
-                >
-                  <Move size={16} /> Launch Interactive Drag & Drop Dashboard Editor (Testing Mode)
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
 
-      <VisualDashboardEditor
-        open={showVisualEditor}
-        onClose={() => setShowVisualEditor(false)}
-        user={user}
-        onSaveSettings={async (newSettings) => {
-          const { data } = await api.put("/profile", { settings: newSettings });
-          setUser(data);
-        }}
-      />
     </div>
   );
 }

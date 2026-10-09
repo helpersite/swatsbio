@@ -1232,6 +1232,24 @@ export default function Editor({ initialTab = "profile" }) {
             </Panel>
           )}
 
+          {/* Deck HUD & Overlay Widgets */}
+          {(activeLayout === "slideshow" || s.slideshow_enabled) && (
+            <Panel title="Deck HUD & Overlay Widgets">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <ToggleRow label="Show Deck HUD Overlay" description="Master switch for every floating deck overlay" checked={s.slideshow_hud_enabled !== false} onChange={(v) => patch("slideshow_hud_enabled", v)} />
+                <ToggleRow label="Top-Left Audio Pill" description="Now-playing pill with full elapsed / total time" checked={s.slideshow_audio_enabled !== false} onChange={(v) => patch("slideshow_audio_enabled", v)} />
+                <ToggleRow label="Bottom-Left Stats" description="Views & location indicator" checked={s.slideshow_stats_enabled !== false} onChange={(v) => patch("slideshow_stats_enabled", v)} />
+                <ToggleRow label="Right-Side Slide Dots" description="Jump-to-slide indicator (stays pinned while scrolling)" checked={s.slideshow_dots_enabled !== false} onChange={(v) => patch("slideshow_dots_enabled", v)} />
+                <ToggleRow label="Scroll Hint" description="Bottom-center prompt on the first slide" checked={s.slideshow_scroll_hint_enabled !== false} onChange={(v) => patch("slideshow_scroll_hint_enabled", v)} />
+                <ToggleRow label="Smooth Scroll Lag" description="HUD gently trails the scroll instead of snapping" checked={s.slideshow_smooth_scroll !== false} onChange={(v) => patch("slideshow_smooth_scroll", v)} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                <SelectRow label="Slide Transition" value={s.slideshow_transition || "fade"} onChange={(v) => patch("slideshow_transition", v)} options={[{ v: "fade", l: "Fade" }, { v: "slide", l: "None (snap)" }]} />
+                <SliderRow label="Slide Height" value={s.slideshow_slide_height || 85} min={65} max={110} suffix="vh" onChange={(v) => patch("slideshow_slide_height", v)} />
+              </div>
+            </Panel>
+          )}
+
           {/* Global Visual Parameters */}
           <Panel title="Global Surface Parameters (Alpha, Colors & Sizes)">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

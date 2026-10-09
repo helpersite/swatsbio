@@ -13,13 +13,20 @@ import { injectCustomFonts } from "@/lib/fonts";
 import { BackgroundEffect, CursorEffectsRenderer } from "@/components/BackgroundEffects";
 import { AvatarDecoration } from "@/components/AvatarDecorations";
 import { MediaDisplay } from "@/components/MediaDisplay";
-import { DeckCustomSlide } from "@/components/DeckSlides";
+import { DeckCustomSlide, TiltCard } from "@/components/DeckSlides";
 import { getDiscordBadges, DISCORD_BADGES_CATALOG, DiscordBadgeIcon } from "@/lib/discordBadges";
 import * as Icons from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // GUNS.LOL / FEDS STYLE SLIDESHOW HUD & SHOWCASE SECTIONS
 // ---------------------------------------------------------------------------
+
+const fmtTime = (sec) => {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
 
 function HudTopLeftAudio({ bio, accent }) {
   const s = bio?.settings || {};
@@ -28,6 +35,7 @@ function HudTopLeftAudio({ bio, accent }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [time, setTime] = useState({ cur: 0, dur: 0 });
   const audioRef = useRef(null);
 
   const track = tracks[currentIdx] || null;
@@ -43,6 +51,12 @@ function HudTopLeftAudio({ bio, accent }) {
       aud.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
 
+    const syncTime = () => setTime({ cur: aud.currentTime || 0, dur: aud.duration || 0 });
+    aud.addEventListener("timeupdate", syncTime);
+    aud.addEventListener("loadedmetadata", syncTime);
+    aud.addEventListener("durationchange", syncTime);
+    syncTime();
+
     aud.onended = () => {
       if (tracks.length > 1) {
         setCurrentIdx((i) => (i + 1) % tracks.length);
@@ -52,6 +66,9 @@ function HudTopLeftAudio({ bio, accent }) {
     };
 
     return () => {
+      aud.removeEventListener("timeupdate", syncTime);
+      aud.removeEventListener("loadedmetadata", syncTime);
+      aud.removeEventListener("durationchange", syncTime);
       aud.pause();
       aud.src = "";
     };
@@ -86,13 +103,28 @@ function HudTopLeftAudio({ bio, accent }) {
         {isPlaying ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
       </button>
 
-      <div className="flex flex-col max-w-[130px] sm:max-w-[170px] overflow-hidden text-left">
+      <div className="flex flex-col w-[160px] sm:w-[200px] overflow-hidden text-left">
         <span className="text-[11px] font-bold text-white truncate leading-tight">
           {stripEffectSyntax(track.name || "Audio Track")}
         </span>
-        <span className="text-[9px] text-[#E5E7EB]/60 truncate leading-tight">
-          {stripEffectSyntax(track.artist || bio.display_name || bio.username)}
-        </span>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[9px] text-[#E5E7EB]/60 truncate leading-tight flex-1 min-w-0">
+            {stripEffectSyntax(track.artist || bio.display_name || bio.username)}
+          </span>
+          <span className="text-[9px] font-mono tabular-nums text-white/75 shrink-0 leading-tight">
+            {fmtTime(time.cur)}<span className="text-white/30"> / </span>{fmtTime(time.dur)}
+          </span>
+        </div>
+        <div className="mt-1 h-[3px] w-full rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${time.dur ? Math.min(100, (time.cur / time.dur) * 100) : 0}%`,
+              background: accent,
+              transition: "width 250ms linear",
+            }}
+          />
+        </div>
       </div>
 
       {/* Animated Equalizer Wave Bars */}
@@ -3281,6 +3313,7 @@ function BioCard({ bio }) {
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [scrolledDown, setScrolledDown] = useState(false);
+  const hudRef = useRef(null);
 
   const customSlides = Array.isArray(s.slideshow?.slides) ? s.slideshow.slides : [];
 
@@ -3375,6 +3408,26 @@ function BioCard({ bio }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [layout, activeSlide, slideshowSlides]);
 
+  // Smooth "trailing" motion for the deck HUD: the overlay eases toward the
+  // real scroll position instead of snapping, so it feels like it lags behind a
+  // little as you scroll. Applied directly to the DOM (no per-frame re-render).
+  useEffect(() => {
+    if (layout !== "slideshow" || s.slideshow_hud_enabled === false || s.slideshow_smooth_scroll === false) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    let smooth = window.scrollY;
+    const loop = () => {
+      const y = window.scrollY;
+      smooth += (y - smooth) * 0.16;
+      const lag = Math.max(-16, Math.min(16, (smooth - y) * 0.9));
+      if (hudRef.current) hudRef.current.style.transform = `translate3d(0, ${lag.toFixed(2)}px, 0)`;
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [layout, s.slideshow_hud_enabled, s.slideshow_smooth_scroll]);
+
   return (
     <div className={`swat-bg min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16 relative overflow-x-hidden ${cursorClass}`} data-profile-outline={s.profile_outline_enabled === true ? "on" : "off"} data-profile-layout={layout} style={{ "--profile-slide-height": `${slideshowSlideHeight}vh` }}>
       {/* Subtle organic noise overlay to remove AI sterile feel */}
@@ -3435,8 +3488,8 @@ function BioCard({ bio }) {
       <CursorEffectsRenderer effect={s.cursor_fx} color={s.cursor_fx_color || accent} size={s.cursor_fx_size || 18} />
 
       {/* Guns.lol / Feds Slideshow Floating HUD Overlays */}
-      {layout === "slideshow" && s.slideshow_hud_enabled !== false && (
-        <>
+      {layout === "slideshow" && s.slideshow_hud_enabled !== false && typeof document !== "undefined" && createPortal(
+        <div ref={hudRef} className="fixed inset-0 z-40 pointer-events-none">
           <HudDeckProgress activeSlide={activeSlide} total={slideshowSlides.length} accent={accent} />
           {s.slideshow_audio_enabled !== false && <HudTopLeftAudio bio={bio} accent={accent} />}
           {s.slideshow_stats_enabled !== false && <HudBottomLeftStats bio={bio} locationText={locationText} accent={accent} />}
@@ -3456,7 +3509,8 @@ function BioCard({ bio }) {
             }}
             accent={accent}
           />}
-        </>
+        </div>,
+        document.body
       )}
 
       {/* LAYOUT: SLIDESHOW DECK (FULL-PAGE SECTIONS PER SLIDE) */}
@@ -3557,8 +3611,8 @@ function BioCard({ bio }) {
           {/* Projects & Code Showcase */}
           {deckSlideIds.has("slide-1") && (
           <div id="slide-1" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-1")}>
-              <div
-                className={`w-full max-w-xl transition-all duration-500 ease-out overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-5 sm:p-7" : "p-7 sm:p-9 rounded-2xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"}`}
+              <TiltCard
+                className={`deck-slide-card w-full max-w-xl anim-card-slide_up transition-all duration-500 ease-out overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-5 sm:p-7" : "p-7 sm:p-9 rounded-2xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"}`}
                 style={{
                   ...(layout === "minimal" || isCardInvisible ? { background: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", border: showCardBorder && cardBorder ? `1px solid ${cardBorder}` : "none", boxShadow: "none" } : cardMaterial),
                   ...(layout === "minimal" || isCardInvisible ? {} : cardShape),
@@ -3634,15 +3688,15 @@ function BioCard({ bio }) {
                   <p className="text-sm font-semibold text-white">Your portfolio starts here</p>
                   <p className="mt-1 text-xs text-white/55">Projects you add will appear in this space.</p>
                 </div>}
-              </div>
+              </TiltCard>
             </div>
           )}
 
           {/* Discord Server Widget */}
           {deckSlideIds.has("slide-2") && ((s.discord_guild?.name || s.discord_server?.name || s.discord_guild?.invite_url)) && (
             <div id="slide-2" className="min-h-[85vh] sm:min-h-screen w-full flex flex-col items-center justify-center py-10" style={slideshowStyle("slide-2")}>
-              <div
-                className={`w-full max-w-lg transition-transform duration-75 overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8 rounded-3xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"} ${cardFxClass}`}
+              <TiltCard
+                className={`deck-slide-card w-full max-w-lg anim-card-slide_up transition-transform duration-75 overflow-hidden text-left ${layout === "minimal" || isCardInvisible ? "bg-transparent border-0 shadow-none p-4" : "p-6 sm:p-8 rounded-3xl swat-glass border border-white/15 shadow-2xl backdrop-blur-2xl"} ${cardFxClass}`}
                 style={{
                   ...(layout === "minimal" || isCardInvisible ? { background: "transparent", backdropFilter: "none", WebkitBackdropFilter: "none", border: showCardBorder && cardBorder ? `1px solid ${cardBorder}` : "none", boxShadow: "none" } : cardMaterial),
                   ...(layout === "minimal" || isCardInvisible ? {} : cardShape),
@@ -3650,7 +3704,7 @@ function BioCard({ bio }) {
                 }}
               >
                 <DiscordGuildCardWidget guildConfig={s.discord_guild || s.discord_server} accent={accent} />
-              </div>
+              </TiltCard>
             </div>
           )}
 
