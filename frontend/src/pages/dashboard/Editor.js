@@ -28,7 +28,6 @@ import { AvatarEffectsModal } from "@/components/AvatarEffectsModal";
 import { BackgroundEffectsModal } from "@/components/BackgroundEffectsModal";
 import { BannerEffectsModal } from "@/components/BannerEffectsModal";
 import { CursorEffectsModal } from "@/components/CursorEffectsModal";
-import { EffectsStudioV2 } from "@/components/EffectsStudioV2";
 import { NameEffectsModal } from "@/components/NameEffectsModal";
 import { BioEffectsModal } from "@/components/BioEffectsModal";
 import { LocationEffectsModal } from "@/components/LocationEffectsModal";
@@ -353,7 +352,6 @@ export default function Editor({ initialTab = "profile" }) {
   const [bgModalOpen, setBgModalOpen] = useState(false);
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [cursorModalOpen, setCursorModalOpen] = useState(false);
-  const [fxStudioOpen, setFxStudioOpen] = useState(false);
   const [nameModalOpen, setNameModalOpen] = useState(false);
   const [bioModalOpen, setBioModalOpen] = useState(false);
   const [locationModalOpen, setLocationModalOpen] = useState(false);
@@ -825,14 +823,6 @@ export default function Editor({ initialTab = "profile" }) {
               <div className="text-[10px] font-bold uppercase tracking-wider text-[#5B8DB8]">
                 Visual & Ambient Effects Studios
               </div>
-              <Button
-                type="button"
-                onClick={() => setFxStudioOpen(true)}
-                data-testid="open-effects-studio"
-                className="w-full bg-gradient-to-r from-[#5B8DB8] to-[#7c3aed] hover:from-[#4A6B8A] hover:to-[#6d28d9] text-white h-10 rounded-xl text-xs font-bold gap-2 shadow-[0_0_18px_rgba(91,141,184,0.35)] cursor-pointer"
-              >
-                <Sparkles size={15} /> Open Effects Studio — Text · Cursor · Background · Profile
-              </Button>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <Button
                   type="button"
@@ -2174,17 +2164,6 @@ export default function Editor({ initialTab = "profile" }) {
         onClose={() => setCursorModalOpen(false)}
         settings={s}
         patch={patch}
-      />
-
-      {/* Unified Effects Studio (new engine) */}
-      <EffectsStudioV2
-        open={fxStudioOpen}
-        onClose={() => setFxStudioOpen(false)}
-        settings={s}
-        patch={patch}
-        username={username}
-        displayName={displayName}
-        accent={s.accent_color || "#5B8DB8"}
       />
 
       {/* Name Effects Modal */}
