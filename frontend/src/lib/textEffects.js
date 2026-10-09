@@ -386,21 +386,17 @@ export function renderBioText(text) {
       case "sparkle": {
         const col = tok.color || "#F5C542";
         const positions = [
-          { cls: "-left-2 -top-1.5 w-6 h-6", delay: "0ms" },
-          { cls: "left-[14%] -top-2.5 w-4 h-4", delay: "150ms" },
-          { cls: "left-[32%] -top-3 w-5 h-5", delay: "320ms" },
-          { cls: "left-[50%] -top-2 w-4 h-4", delay: "480ms" },
-          { cls: "right-[26%] -top-3 w-5 h-5", delay: "200ms" },
-          { cls: "right-[10%] -top-2 w-4 h-4", delay: "600ms" },
-          { cls: "-right-2.5 -top-1 w-6 h-6", delay: "100ms" },
-          { cls: "left-[5%] -bottom-2 w-4 h-4", delay: "350ms" },
-          { cls: "left-[28%] -bottom-2.5 w-5 h-5", delay: "520ms" },
-          { cls: "right-[35%] -bottom-2 w-5 h-5", delay: "250ms" },
-          { cls: "right-[6%] -bottom-2 w-4 h-4", delay: "420ms" },
-          { cls: "-right-1 bottom-0 w-5 h-5", delay: "700ms" },
+          { cls: "-left-1 top-0 h-5 w-5", delay: "0ms" },
+          { cls: "left-[16%] -top-1 h-3 w-3", delay: "170ms" },
+          { cls: "left-[43%] -top-2 h-4 w-4", delay: "340ms" },
+          { cls: "right-[18%] -top-1 h-3 w-3", delay: "510ms" },
+          { cls: "-right-1 top-1 h-5 w-5", delay: "680ms" },
+          { cls: "left-[8%] bottom-0 h-3 w-3", delay: "850ms" },
+          { cls: "right-[38%] -bottom-1 h-4 w-4", delay: "1020ms" },
+          { cls: "right-[7%] bottom-0 h-3 w-3", delay: "1190ms" },
         ];
         return (
-          <span key={idx} className="text-fx-sparkle relative inline-block px-3.5 py-1.5 align-middle">
+          <span key={idx} className="text-fx-sparkle relative inline-block px-3 py-1 align-middle">
             {positions.map((pos, pIdx) => (
               <span
                 key={pIdx}
@@ -417,7 +413,7 @@ export function renderBioText(text) {
                   WebkitMaskRepeat: "no-repeat",
                   maskRepeat: "no-repeat",
                   animationDelay: pos.delay,
-                  filter: `drop-shadow(0 0 6px ${col}) drop-shadow(0 0 12px ${col})`,
+                  filter: `drop-shadow(0 0 6px ${col})`,
                 }}
               />
             ))}
@@ -425,7 +421,7 @@ export function renderBioText(text) {
               className="relative z-10 font-bold inline-block"
               style={{
                 color: col,
-                textShadow: `0 0 8px ${col}, 0 0 18px ${col}aa, 0 0 28px ${col}55`,
+                textShadow: `0 0 8px ${col}99`,
               }}
             >
               {tok.v}

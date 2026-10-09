@@ -797,24 +797,31 @@ export default function Editor({ initialTab = "profile" }) {
           </Panel>
 
           {/* Profile Identity Text Inputs with Integrated [ ✨ FX ] Trigger */}
-          <Panel title="Profile Identity & Typography">
+          <Panel title="Profile Identity & Details">
             <div className="space-y-4">
-              {/* Display Name Input with FX Trigger */}
+              {/* Display Name Input with Direct FX Trigger */}
               <div className="space-y-1.5 relative">
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs text-[#E5E7EB]/70 font-semibold">Display Name</Label>
-                  <span className="text-[11px] font-mono text-[#5B8DB8]">Text FX</span>
+                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Display Name</Label>
+                  <div className="flex items-center gap-2">
+                    {s.name_effect && s.name_effect !== "none" && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] border border-[#5B8DB8]/30 font-bold capitalize">
+                        FX: {s.name_effect}
+                      </span>
+                    )}
+                    <span className="text-[11px] font-mono text-[#5B8DB8]">Identity</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setActiveFxTarget(activeFxTarget === "name" ? null : "name")}
                     className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-                      activeFxTarget === "name"
+                      activeFxTarget === "name" || (s.name_effect && s.name_effect !== "none")
                         ? "bg-[#5B8DB8] text-white border-[#5B8DB8] shadow-[0_0_12px_rgba(91,141,184,0.4)]"
                         : "bg-[#080a10] border-white/15 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 hover:border-[#5B8DB8]/50"
                     }`}
-                    title="Choose Animated Text Effect"
+                    title="Choose Animated Text Effect for Display Name"
                   >
                     <Sparkles size={13} />
                     <span>FX</span>
@@ -822,7 +829,7 @@ export default function Editor({ initialTab = "profile" }) {
                   <Input
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your Name"
+                    placeholder="Your Display Name"
                     className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8] flex-1"
                   />
                 </div>
@@ -831,7 +838,7 @@ export default function Editor({ initialTab = "profile" }) {
                 {activeFxTarget === "name" && (
                   <div className="p-3 rounded-2xl bg-[#0c0e18] border border-[#5B8DB8]/50 shadow-2xl space-y-2 z-20">
                     <div className="flex items-center justify-between text-xs font-bold text-white pb-1 border-b border-white/10">
-                      <span>Select Name Effect</span>
+                      <span>Select Name Effect (Instantly Applied)</span>
                       <button onClick={() => setActiveFxTarget(null)} className="text-white/50 hover:text-white"><X size={12} /></button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -839,10 +846,16 @@ export default function Editor({ initialTab = "profile" }) {
                         <button
                           key={ue.id}
                           type="button"
-                          onClick={() => applyEffectToTarget(ue, "name")}
-                          className="p-2 rounded-xl bg-[#080a10] hover:bg-[#5B8DB8]/20 border border-white/10 hover:border-[#5B8DB8] text-left text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-2"
+                          onClick={() => {
+                            patch("name_effect", ue.id);
+                            applyEffectToTarget(ue, "name");
+                          }}
+                          className={`p-2 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                            s.name_effect === ue.id
+                              ? "bg-[#5B8DB8] text-white border-[#5B8DB8]"
+                              : "bg-[#080a10] hover:bg-[#5B8DB8]/20 border-white/10 hover:border-[#5B8DB8] text-white"
+                          }`}
                         >
-                          <span className="font-display text-sm">{renderBioText(ue.wrap("S", s.accent_color || "#5B8DB8"))}</span>
                           <span className="text-[11px] truncate">{ue.name}</span>
                         </button>
                       ))}
@@ -851,18 +864,25 @@ export default function Editor({ initialTab = "profile" }) {
                 )}
               </div>
 
-              {/* Bio Description Input with FX Trigger */}
+              {/* Bio Description Input with Direct FX Trigger */}
               <div className="space-y-1.5 relative">
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs text-[#E5E7EB]/70 font-semibold">Bio Description</Label>
-                  <span className="text-[11px] font-mono text-[#E5E7EB]/40">Markdown formatting enabled</span>
+                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Bio</Label>
+                  <div className="flex items-center gap-2">
+                    {s.bio_effect && s.bio_effect !== "none" && (
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] border border-[#5B8DB8]/30 font-bold capitalize">
+                        FX: {s.bio_effect}
+                      </span>
+                    )}
+                    <span className="text-[11px] font-mono text-[#E5E7EB]/40">Markdown formatting</span>
+                  </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <button
                     type="button"
                     onClick={() => setActiveFxTarget(activeFxTarget === "bio" ? null : "bio")}
                     className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 mt-0.5 ${
-                      activeFxTarget === "bio"
+                      activeFxTarget === "bio" || (s.bio_effect && s.bio_effect !== "none")
                         ? "bg-[#5B8DB8] text-white border-[#5B8DB8] shadow-[0_0_12px_rgba(91,141,184,0.4)]"
                         : "bg-[#080a10] border-white/15 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 hover:border-[#5B8DB8]/50"
                     }`}
@@ -875,7 +895,7 @@ export default function Editor({ initialTab = "profile" }) {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={3}
-                    placeholder="Tell visitors about yourself, discord servers, or creative projects..."
+                    placeholder="Tell visitors about yourself..."
                     className="bg-[#080a10] border-white/10 text-white text-xs rounded-xl focus:border-[#5B8DB8] flex-1 resize-none"
                   />
                 </div>
@@ -884,7 +904,7 @@ export default function Editor({ initialTab = "profile" }) {
                 {activeFxTarget === "bio" && (
                   <div className="p-3 rounded-2xl bg-[#0c0e18] border border-[#5B8DB8]/50 shadow-2xl space-y-2 z-20">
                     <div className="flex items-center justify-between text-xs font-bold text-white pb-1 border-b border-white/10">
-                      <span>Select Bio Effect</span>
+                      <span>Select Bio Effect (Instantly Applied)</span>
                       <button onClick={() => setActiveFxTarget(null)} className="text-white/50 hover:text-white"><X size={12} /></button>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
@@ -892,10 +912,16 @@ export default function Editor({ initialTab = "profile" }) {
                         <button
                           key={ue.id}
                           type="button"
-                          onClick={() => applyEffectToTarget(ue, "bio")}
-                          className="p-2 rounded-xl bg-[#080a10] hover:bg-[#5B8DB8]/20 border border-white/10 hover:border-[#5B8DB8] text-left text-xs font-bold text-white transition-all cursor-pointer flex items-center gap-2"
+                          onClick={() => {
+                            patch("bio_effect", ue.id);
+                            applyEffectToTarget(ue, "bio");
+                          }}
+                          className={`p-2 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+                            s.bio_effect === ue.id
+                              ? "bg-[#5B8DB8] text-white border-[#5B8DB8]"
+                              : "bg-[#080a10] hover:bg-[#5B8DB8]/20 border-white/10 hover:border-[#5B8DB8] text-white"
+                          }`}
                         >
-                          <span className="font-display text-sm">{renderBioText(ue.wrap("S", s.accent_color || "#5B8DB8"))}</span>
                           <span className="text-[11px] truncate">{ue.name}</span>
                         </button>
                       ))}
@@ -904,69 +930,46 @@ export default function Editor({ initialTab = "profile" }) {
                 )}
               </div>
 
-              {/* Live Preview of Styled Name & Bio */}
-              <div className="p-4 rounded-2xl bg-[#05060a] border border-[#5B8DB8]/30 text-center relative overflow-hidden shadow-2xl">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#5B8DB8] flex items-center gap-1.5">
-                    <Sparkles size={12} /> Live Profile & Typography Preview
-                  </span>
-                  <span className="text-[10px] text-white/40 font-mono">Real-time update</span>
+              {/* Occupation */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Occupation</Label>
+                  <span className="text-[11px] font-mono text-white/40">Role or Profession</span>
                 </div>
+                <Input
+                  value={s.occupation || ""}
+                  onChange={(e) => patch("occupation", e.target.value)}
+                  placeholder="e.g. Software Engineer / Visual Artist / Cyber Security"
+                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                />
+              </div>
 
-                {/* Simulated Profile Card Centerpiece */}
-                <div className="max-w-md mx-auto rounded-2xl bg-[#0c0e18]/90 border border-white/10 p-5 backdrop-blur-xl relative overflow-hidden shadow-xl">
-                  {/* Subtle Top Ambient Glow */}
-                  <div
-                    className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-24 rounded-full filter blur-2xl opacity-35 pointer-events-none"
-                    style={{ backgroundColor: s.accent_color || "#5B8DB8" }}
-                  />
-
-                  {/* Avatar */}
-                  <div className="relative mx-auto w-16 h-16 rounded-full overflow-hidden border-2 border-white/20 bg-black/60 shadow-lg mb-2.5 flex items-center justify-center">
-                    {pfpSrc ? (
-                      <img src={pfpSrc} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      <User size={28} className="text-white/40" />
-                    )}
-                  </div>
-
-                  {/* Display Name with Active FX */}
-                  <div className="font-display text-xl font-black text-white min-h-[32px] flex items-center justify-center tracking-wide">
-                    {renderBioText(displayName || username || "swats")}
-                  </div>
-
-                  {/* Badges Mockup Row if user has badges */}
-                  {Array.isArray(user?.settings?.badges_shown) && user.settings.badges_shown.length > 0 && (
-                    <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
-                      {user.settings.badges_shown.slice(0, 6).map((bId) => {
-                        const bDef = BADGE_DEFS.find((d) => d.id === bId);
-                        const Ic = bDef?.icon ? (Icons[bDef.icon] || Icons.Award) : Icons.Award;
-                        const col = bDef?.color || "#5B8DB8";
-                        return (
-                          <div
-                            key={bId}
-                            className="w-6 h-6 rounded-md flex items-center justify-center text-xs"
-                            style={{ background: `${col}25`, border: `1px solid ${col}66`, color: col }}
-                            title={bDef?.name || bId}
-                          >
-                            <Ic size={12} />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* Bio Description with Active FX */}
-                  {description ? (
-                    <div className="text-xs text-white/80 mt-2.5 max-w-sm mx-auto leading-relaxed border-t border-white/5 pt-2">
-                      {renderBioText(description)}
-                    </div>
-                  ) : (
-                    <div className="text-[11px] text-white/30 italic mt-2">
-                      No bio description added yet.
-                    </div>
-                  )}
+              {/* Location */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Location</Label>
+                  <span className="text-[11px] font-mono text-white/40">Country or City</span>
                 </div>
+                <Input
+                  value={s.location || ""}
+                  onChange={(e) => patch("location", e.target.value)}
+                  placeholder="e.g. Tokyo, Japan / Los Angeles / London"
+                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                />
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Tags</Label>
+                  <span className="text-[11px] font-mono text-white/40">Comma-separated badges</span>
+                </div>
+                <Input
+                  value={s.tags || ""}
+                  onChange={(e) => patch("tags", e.target.value)}
+                  placeholder="e.g. Developer, Designer, Anime, Crypto"
+                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                />
               </div>
             </div>
           </Panel>

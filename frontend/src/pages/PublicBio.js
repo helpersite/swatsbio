@@ -917,131 +917,16 @@ function EnterScreen({ bio, username, onUnlock }) {
             {error && <div className="text-red-400 text-xs mt-4 font-semibold animate-pulse">{error}</div>}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3">
-            {entryStyle === "minimal" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="inline-flex items-center justify-center gap-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-xl px-6 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-black/60 hover:scale-105 shadow-2xl group"
-                style={{ boxShadow: `0 0 24px ${accent}25`, borderColor: `${accent}55` }}
-              >
-                <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: accent, boxShadow: `0 0 8px ${accent}` }} />
-                <span>{entryButtonText}</span>
-              </button>
-            )}
-
-            {entryStyle === "glass" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="w-full max-w-xs p-5 rounded-3xl swat-glass border border-white/20 shadow-2xl backdrop-blur-2xl text-center transition-all duration-200 hover:scale-105 group"
-                style={{ boxShadow: `0 15px 35px rgba(0,0,0,0.5), 0 0 30px ${accent}25` }}
-              >
-                <div className="w-10 h-10 rounded-2xl mx-auto mb-2 flex items-center justify-center bg-white/10 text-white border border-white/20 group-hover:scale-110 transition-transform">
-                  <Sparkles size={18} style={{ color: accent }} />
-                </div>
-                <div className="text-sm font-bold text-white mb-0.5">{entryButtonText}</div>
-                <div className="text-[10px] text-[#E5E7EB]/55">Click or press any key to enter</div>
-              </button>
-            )}
-
-            {entryStyle === "cyber" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="relative px-7 py-3.5 rounded-xl border bg-black/80 font-mono text-xs uppercase tracking-widest text-white transition-all duration-200 hover:scale-105 shadow-2xl group"
-                style={{ borderColor: accent, boxShadow: `0 0 25px ${accent}44, inset 0 0 12px ${accent}22` }}
-              >
-                <span className="absolute -top-1 -left-1 w-2.5 h-2.5 border-t-2 border-l-2" style={{ borderColor: accent }} />
-                <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 border-b-2 border-r-2" style={{ borderColor: accent }} />
-                <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: accent }} />
-                  {entryButtonText}
-                </span>
-              </button>
-            )}
-
-            {entryStyle === "hologram" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="w-32 h-32 rounded-full flex flex-col items-center justify-center text-center p-3 border-2 transition-all duration-300 hover:scale-110 relative group"
-                style={{
-                  background: `radial-gradient(circle, ${accent}33 0%, rgba(10,12,16,0.9) 70%)`,
-                  borderColor: accent,
-                  boxShadow: `0 0 35px ${accent}66`,
-                }}
-              >
-                <span className="absolute inset-0 rounded-full border border-white/30 animate-ping opacity-25" style={{ borderColor: accent }} />
-                <Sparkles size={20} style={{ color: accent }} className="animate-pulse mb-1" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider leading-tight">{entryButtonText}</span>
-              </button>
-            )}
-
-            {entryStyle === "terminal" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="w-full max-w-xs p-4 rounded-xl bg-black border border-emerald-500/50 text-left font-mono text-xs text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-all hover:border-emerald-400 hover:scale-105"
-              >
-                <div className="flex items-center gap-1.5 pb-2 mb-2 border-b border-emerald-500/20 text-[10px] text-emerald-500/60">
-                  <span className="w-2 h-2 rounded-full bg-red-500/60" />
-                  <span className="w-2 h-2 rounded-full bg-yellow-500/60" />
-                  <span className="w-2 h-2 rounded-full bg-emerald-500/60" />
-                  <span className="ml-1 text-emerald-400 font-bold">bash - profile.sh</span>
-                </div>
-                <div className="text-emerald-300">$ ./unlock --target @{username}</div>
-                <div className="mt-1 flex items-center gap-1 font-bold text-white">
-                  <span>&gt; {entryButtonText}</span>
-                  <span className="w-2 h-3.5 bg-emerald-400 animate-pulse inline-block" />
-                </div>
-              </button>
-            )}
-
-            {entryStyle === "fingerprint" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-black/60 border border-white/15 backdrop-blur-2xl transition-all duration-300 hover:scale-105 group"
-                style={{ boxShadow: `0 0 35px ${accent}33` }}
-              >
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-300 group-hover:scale-110 relative"
-                  style={{ background: `${accent}15`, borderColor: `${accent}55`, color: accent, boxShadow: `0 0 20px ${accent}44` }}
-                >
-                  <Fingerprint size={32} className="animate-pulse" />
-                  <span className="absolute inset-0 rounded-2xl border border-white/20 animate-ping opacity-25" style={{ borderColor: accent }} />
-                </div>
-                <div className="text-xs font-bold tracking-wider uppercase text-white">{entryButtonText}</div>
-                <div className="text-[10px] text-[#E5E7EB]/50 font-mono">Biometric ID Scan Required</div>
-              </button>
-            )}
-
-            {entryStyle === "gate" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="w-full max-w-xs p-5 rounded-2xl bg-black/80 border border-amber-500/40 text-center font-mono transition-all hover:scale-105 shadow-[0_0_35px_rgba(245,158,11,0.2)]"
-              >
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider mb-2">
-                  <ShieldAlert size={12} /> Restricted Perimeter
-                </div>
-                <div className="text-sm font-bold text-white mb-1">{entryButtonText}</div>
-                <div className="text-[10px] text-amber-400/70">Press to authenticate gate clearance</div>
-              </button>
-            )}
-
-            {entryStyle === "glitch" && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); submit(); }}
-                className="px-8 py-4 rounded-xl bg-black border-2 border-cyan-400 text-cyan-300 font-mono font-bold text-xs uppercase tracking-widest shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all hover:scale-105 hover:bg-cyan-950/40"
-              >
-                <span className="inline-block animate-pulse mr-2">⚡</span>
-                {entryButtonText}
-                <span className="inline-block animate-pulse ml-2">⚡</span>
-              </button>
-            )}
+          <div className="flex flex-col items-center justify-center">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); submit(); }}
+              className="inline-flex items-center justify-center gap-2.5 rounded-full border border-white/15 bg-black/65 backdrop-blur-xl px-7 py-3 text-sm font-semibold text-white/90 hover:text-white transition-all duration-200 hover:scale-105 shadow-2xl group cursor-pointer"
+              style={{ boxShadow: `0 0 20px ${accent}25`, borderColor: `${accent}40` }}
+            >
+              <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: accent, boxShadow: `0 0 8px ${accent}` }} />
+              <span className="tracking-wide">{entryButtonText}</span>
+            </button>
           </div>
         )}
       </div>
@@ -3504,7 +3389,26 @@ function BioCard({ bio }) {
               <h1 className={`profile-title-3d text-2xl sm:text-3xl font-black mt-3.5 ${titleAlignClass}`} style={titleVisual}>{renderBioText(bio.display_name || bio.username)}</h1>
               <div className="text-xs font-semibold mt-1 tracking-wider uppercase" style={{ color: accent }}>@{bio.username}</div>
               <BadgesRow badges={bio.badges} accent={accent} align="center" bio={bio} />
-              {locationText && <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/80"><MapPin size={11} style={{ color: accent }} /> {locationText}</div>}
+              {/* Occupation, Location & Tags Strip */}
+              {(s.occupation || s.location || s.tags) && (
+                <div className="mt-2.5 flex items-center justify-center gap-1.5 flex-wrap text-[11px] text-white/80">
+                  {s.occupation && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 font-medium">
+                      <span className="text-[#5B8DB8]">💼</span> {s.occupation}
+                    </span>
+                  )}
+                  {s.location && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 font-medium">
+                      <MapPin size={11} style={{ color: accent }} /> {s.location}
+                    </span>
+                  )}
+                  {s.tags && typeof s.tags === "string" && s.tags.split(",").filter(Boolean).map((t, tIdx) => (
+                    <span key={tIdx} className="px-2 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] text-white/70 font-mono">
+                      #{t.trim()}
+                    </span>
+                  ))}
+                </div>
+              )}
               {bio.description && <div className="text-sm mt-4 leading-relaxed font-normal" style={{ color: descColor }}>{renderBioText(bio.description)}</div>}
               <SocialIconsRow links={socialLinks} accent={accent} align="center" onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
 
