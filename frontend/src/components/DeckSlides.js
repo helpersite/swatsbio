@@ -40,7 +40,6 @@ const digits = (v) => {
  */
 export function TiltCard({ children, className = "", style, maxTilt = 8, glare = true }) {
   const ref = useRef(null);
-  const raf = useRef(0);
 
   const handleMove = (e) => {
     const el = ref.current;
@@ -48,24 +47,20 @@ export function TiltCard({ children, className = "", style, maxTilt = 8, glare =
     const rect = el.getBoundingClientRect();
     const px = (e.clientX - rect.left) / Math.max(1, rect.width);
     const py = (e.clientY - rect.top) / Math.max(1, rect.height);
-    cancelAnimationFrame(raf.current);
-    raf.current = requestAnimationFrame(() => {
-      const rx = (0.5 - py) * maxTilt * 2;
-      const ry = (px - 0.5) * maxTilt * 2;
-      el.style.transform = `perspective(1100px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(0)`;
-      el.style.setProperty("--deck-gx", `${(px * 100).toFixed(1)}%`);
-      el.style.setProperty("--deck-gy", `${(py * 100).toFixed(1)}%`);
-    });
+    // mousemove already fires at ~60Hz, so write the transform directly instead
+    // of waiting on requestAnimationFrame (which is paused in background tabs).
+    const rx = (0.5 - py) * maxTilt * 2;
+    const ry = (px - 0.5) * maxTilt * 2;
+    el.style.transform = `perspective(1100px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(0)`;
+    el.style.setProperty("--deck-gx", `${(px * 100).toFixed(1)}%`);
+    el.style.setProperty("--deck-gy", `${(py * 100).toFixed(1)}%`);
   };
 
   const handleLeave = () => {
     const el = ref.current;
     if (!el) return;
-    cancelAnimationFrame(raf.current);
     el.style.transform = "perspective(1100px) rotateX(0deg) rotateY(0deg)";
   };
-
-  useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
   return (
     <div
