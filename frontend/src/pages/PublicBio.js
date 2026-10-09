@@ -5,7 +5,7 @@ import { useParams, Link } from "react-router-dom";
 import { api, fileUrl } from "@/lib/auth";
 import { renderBioText, stripEffectSyntax } from "@/lib/textEffects";
 import { BADGE_DEFS } from "@/pages/dashboard/badges";
-import { Eye, Code2, ChevronDown, Layers, Terminal, FolderGit2, Compass, MessageSquare, EyeOff, Loader2, Volume2, VolumeX, Volume1, Music, Lock, BadgeCheck, Play, Pause, SkipBack, SkipForward, Disc3, FileText, Radio, Disc, Music2, Sliders, Activity, Copy, Check, ExternalLink, Gamepad2, Headphones, Sparkles, X, ChevronRight, Users, ShieldCheck, Square, MapPin, Fingerprint, ShieldAlert } from "lucide-react";
+import { Eye, Code2, ChevronDown, Layers, Terminal, FolderGit2, Compass, MessageSquare, EyeOff, Loader2, Volume2, VolumeX, Volume1, Music, Lock, BadgeCheck, Play, Pause, SkipBack, SkipForward, Disc3, FileText, Radio, Disc, Music2, Sliders, Activity, Copy, Check, ExternalLink, Gamepad2, Headphones, Sparkles, X, ChevronRight, Users, ShieldCheck, Square, MapPin, Fingerprint, ShieldAlert, Award } from "lucide-react";
 import { SiDiscord, SiSpotify, SiTiktok, SiYoutube, SiTwitch, SiKick, SiInstagram, SiX, SiGithub, SiSteam, SiRoblox, SiTelegram } from "react-icons/si";
 import { brandIcon, BRAND_COLORS } from "@/lib/brandIcons";
 import { DETAIL_KEYS } from "@/lib/linkConfig";
@@ -342,17 +342,63 @@ export default function PublicBio() {
   const [bio, setBio] = useState(null);
   const [err, setErr] = useState(false);
   const [entered, setEntered] = useState(false);
+  
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const previewTemplateId = searchParams?.get("preview_template");
+  const [templateInfo, setTemplateInfo] = useState(null);
 
   useEffect(() => {
-    if (!username) return;
-    setErr(false);
-    api.get(`/u/${encodeURIComponent(username)}`)
-      .then(({ data }) => { 
-        setBio(data); 
-        if (!data.locked && !data.settings?.enter_screen?.enabled) setEntered(true); 
+    if (!previewTemplateId) return;
+    api.get(`/templates/${previewTemplateId}`)
+      .then(({ data }) => {
+        setTemplateInfo(data);
+        setEntered(true);
       })
-      .catch(() => setErr(true));
-  }, [username]);
+      .catch((e) => console.error("Could not load template preview:", e));
+  }, [previewTemplateId]);
+
+  useEffect(() => {
+    if (!username && !previewTemplateId) return;
+    if (username && username !== "preview") {
+      setErr(false);
+      api.get(`/u/${encodeURIComponent(username)}`)
+        .then(({ data }) => { 
+          setBio(data); 
+          if (!data.locked && !data.settings?.enter_screen?.enabled) setEntered(true); 
+        })
+        .catch(() => {
+          if (!previewTemplateId) setErr(true);
+        });
+    } else if (previewTemplateId) {
+      setErr(false);
+    }
+  }, [username, previewTemplateId]);
+
+  const effectiveBio = useMemo(() => {
+    if (!templateInfo) return bio;
+    const tSettings = templateInfo.settings || templateInfo.data || {};
+    const base = bio || {
+      username: templateInfo.author_username || templateInfo.owner_username || "swats",
+      display_name: templateInfo.author_name || templateInfo.display_name || templateInfo.name || "Swats User",
+      description: templateInfo.description || "Previewing community template",
+      links: Array.isArray(templateInfo.links) && templateInfo.links.length > 0 ? templateInfo.links : [
+        { id: "1", title: "Discord Server", url: "https://discord.gg", icon: "discord" },
+        { id: "2", title: "Spotify Playlist", url: "https://spotify.com", icon: "spotify" },
+        { id: "3", title: "GitHub Repo", url: "https://github.com", icon: "github" },
+      ],
+      connections: {},
+      socials: [],
+      badges: ["verified", "og"],
+      settings: {},
+    };
+    return {
+      ...base,
+      settings: {
+        ...(base.settings || {}),
+        ...tSettings,
+      }
+    };
+  }, [bio, templateInfo]);
 
   // Tab Title & Custom Favicon Effects
   useEffect(() => {
@@ -497,23 +543,33 @@ export default function PublicBio() {
         if (link) link.href = originalFavicon;
       }
     };
-  }, [bio]);
+  }, [effectiveBio]);
 
   const onUnlock = (data) => { setBio(data); setEntered(true); };
 
-  if (err) return (
+  if (err && !effectiveBio) return (
     <div className="swat-bg min-h-screen flex flex-col items-center justify-center text-center px-6">
       <div className="font-display text-6xl font-extrabold text-[#5B8DB8]">404</div>
       <p className="text-[#E5E7EB]/60 mt-3">@{username} hasn't been deployed yet.</p>
       <Link to="/s/home" className="mt-6 text-[#5B8DB8] underline">back home</Link>
     </div>
   );
-  if (!bio) return <div className="swat-bg min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#5B8DB8]" /></div>;
+  if (!effectiveBio) return <div className="swat-bg min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#5B8DB8]" /></div>;
 
-  const es = bio.settings?.enter_screen || {};
-  if (!entered && (bio.locked || es.enabled)) return <EnterScreen bio={bio} username={username} onUnlock={onUnlock} />;
+  const es = effectiveBio.settings?.enter_screen || {};
+  if (!entered && (effectiveBio.locked || es.enabled)) return <EnterScreen bio={effectiveBio} username={username} onUnlock={onUnlock} />;
 
-  return <BioCard key={bio.username} bio={bio} />;
+  return (
+    <>
+      <BioCard key={effectiveBio.username} bio={effectiveBio} />
+      {templateInfo && (
+        <div className="fixed bottom-4 left-4 z-[99999] flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#0c0e18]/90 backdrop-blur-md border border-[#5B8DB8]/40 text-white shadow-2xl text-xs font-semibold animate-in fade-in duration-300">
+          <Sparkles size={14} className="text-[#5B8DB8] animate-pulse" />
+          <span>Previewing template: <span className="text-[#5B8DB8] font-bold">{templateInfo.name || "Custom Theme"}</span> by <span className="text-white/80">@{templateInfo.owner_username || templateInfo.author_username || "swats"}</span></span>
+        </div>
+      )}
+    </>
+  );
 }
 
 function EnterScreen({ bio, username, onUnlock }) {
@@ -1647,7 +1703,10 @@ function getAvatarShape(style) {
   }
 }
 
-function getCardShape(shape) {
+function getCardShape(shape, radius = null) {
+  if (radius !== undefined && radius !== null && radius !== "") {
+    return { borderRadius: typeof radius === "number" ? `${radius}px` : radius };
+  }
   switch (shape) {
     case "sharp": return { borderRadius: "0px" };
     case "squircle": return { borderRadius: "36px" };
@@ -1665,11 +1724,11 @@ function getCardShape(shape) {
 }
 
 function getCardMaterial(style, alpha = 0.75, blur = 12, accent = "#5B8DB8", customBg = null, customBorder = null, glowColor = null, glowIntensity = 1, borderEnabled = true) {
-  const normalizedStyle = (style || "glass").toLowerCase();
+  const normalizedStyle = (style || "classic").toLowerCase();
   const numAlpha = typeof alpha === "number" ? alpha : parseFloat(alpha) || 0;
 
-  // If card alpha is 0 or background is set to transparent/none or style is none, render 100% invisible card
-  if (numAlpha === 0 || normalizedStyle === "none" || customBg === "transparent" || customBg === "rgba(0,0,0,0)" || customBg === "none") {
+  // If card alpha is 0 or background is set to transparent/none or style is none/transparent, render invisible card
+  if (numAlpha === 0 || normalizedStyle === "none" || normalizedStyle === "transparent" || customBg === "transparent" || customBg === "rgba(0,0,0,0)" || customBg === "none") {
     return {
       background: "transparent",
       backgroundColor: "transparent",
@@ -1680,7 +1739,7 @@ function getCardMaterial(style, alpha = 0.75, blur = 12, accent = "#5B8DB8", cus
     };
   }
 
-  const bg = customBg || `rgba(32,35,41,${numAlpha})`;
+  const bg = customBg || `rgba(20,24,33,${numAlpha})`;
   const baseBorder = borderEnabled ? (customBorder ? `1px solid ${customBorder}` : `1px solid ${accent}33`) : "none";
   const activeGlow = glowColor || accent;
   const intensity = typeof glowIntensity === "number" ? glowIntensity : 1;
@@ -1688,23 +1747,58 @@ function getCardMaterial(style, alpha = 0.75, blur = 12, accent = "#5B8DB8", cus
   const glowSpread = Math.round(20 * Math.max(0.5, intensity));
 
   switch (normalizedStyle) {
+    case "classic":
     case "solid":
       return {
-        background: customBg || "#0c0e12",
+        background: customBg || `rgba(18,21,28,${Math.max(0.7, numAlpha)})`,
+        backdropFilter: `blur(${blur}px)`,
+        WebkitBackdropFilter: `blur(${blur}px)`,
         border: baseBorder,
         boxShadow: glowColor && intensity > 0
           ? `0 25px 50px rgba(0,0,0,0.6), 0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
           : "0 25px 50px rgba(0,0,0,0.6)",
       };
+    case "frosted_square":
+      return {
+        background: customBg || `rgba(255,255,255,${Math.min(0.12, numAlpha * 0.15)})`,
+        backdropFilter: `blur(${Math.max(24, blur * 2)}px)`,
+        WebkitBackdropFilter: `blur(${Math.max(24, blur * 2)}px)`,
+        border: borderEnabled ? (customBorder ? `1px solid ${customBorder}` : "1px solid rgba(255,255,255,0.18)") : "none",
+        boxShadow: glowColor && intensity > 0
+          ? `0 25px 50px rgba(0,0,0,0.5), 0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
+          : "0 25px 50px rgba(0,0,0,0.5)",
+      };
+    case "frosted_soft":
+    case "frosted":
+      return {
+        background: customBg || `rgba(255,255,255,${Math.min(0.09, numAlpha * 0.12)})`,
+        backdropFilter: `blur(${Math.max(20, blur * 1.8)}px)`,
+        WebkitBackdropFilter: `blur(${Math.max(20, blur * 1.8)}px)`,
+        border: borderEnabled ? (customBorder ? `1px solid ${customBorder}` : "1px solid rgba(255,255,255,0.14)") : "none",
+        boxShadow: glowColor && intensity > 0
+          ? `0 20px 40px rgba(0,0,0,0.45), 0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
+          : "0 20px 40px rgba(0,0,0,0.45)",
+      };
+    case "outlined":
     case "outline":
       return {
-        background: customBg ? `${customBg}66` : `rgba(8,9,11,${numAlpha * 0.4})`,
+        background: customBg ? `${customBg}66` : `rgba(10,12,16,${numAlpha * 0.25})`,
         backdropFilter: `blur(${blur}px)`,
         WebkitBackdropFilter: `blur(${blur}px)`,
-        border: borderEnabled ? (customBorder ? `1.5px solid ${customBorder}` : `1.5px solid ${accent}77`) : "none",
+        border: borderEnabled ? (customBorder ? `1.5px solid ${customBorder}` : `1.5px solid ${accent}`) : `1.5px solid ${accent}77`,
         boxShadow: glowColor && intensity > 0
           ? `0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
           : undefined,
+      };
+    case "aurora":
+      return {
+        background: customBg || `linear-gradient(135deg, rgba(56,69,255,${Math.min(0.2, numAlpha * 0.25)}), rgba(168,85,247,${Math.min(0.2, numAlpha * 0.25)}), rgba(236,72,153,${Math.min(0.15, numAlpha * 0.2)}))`,
+        backdropFilter: `blur(${Math.max(16, blur)}px)`,
+        WebkitBackdropFilter: `blur(${Math.max(16, blur)}px)`,
+        border: borderEnabled ? (customBorder ? `1px solid ${customBorder}` : `1px solid rgba(255,255,255,0.2)`) : "none",
+        boxShadow: glowColor && intensity > 0
+          ? `0 25px 50px rgba(0,0,0,0.5), 0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
+          : "0 25px 50px rgba(0,0,0,0.5)",
       };
     case "cyber":
       return {
@@ -1719,18 +1813,8 @@ function getCardMaterial(style, alpha = 0.75, blur = 12, accent = "#5B8DB8", cus
         background: customBg || `rgba(12,14,18,${numAlpha})`,
         backdropFilter: `blur(${blur}px)`,
         WebkitBackdropFilter: `blur(${blur}px)`,
-        border: borderEnabled ? (customBorder ? `1.5px solid ${customBorder}` : `1.5px solid ${accent}`) : "none",
+        border: borderEnabled ? (customBorder ? `1px solid ${customBorder}` : `1.5px solid ${accent}`) : "none",
         boxShadow: `0 0 ${Math.max(25, glowSpread * 1.4)}px ${activeGlow}${glowHexAlpha}, inset 0 0 15px ${accent}25`,
-      };
-    case "frosted":
-      return {
-        background: customBg || "rgba(255,255,255,0.06)",
-        backdropFilter: `blur(${Math.max(20, blur * 2)}px)`,
-        WebkitBackdropFilter: `blur(${Math.max(20, blur * 2)}px)`,
-        border: customBorder ? `1px solid ${customBorder}` : "1px solid rgba(255,255,255,0.18)",
-        boxShadow: glowColor && intensity > 0
-          ? `0 25px 50px rgba(0,0,0,0.5), 0 0 ${glowSpread}px ${activeGlow}${glowHexAlpha}`
-          : "0 25px 50px rgba(0,0,0,0.5)",
       };
     case "glass":
     default:
@@ -2862,7 +2946,7 @@ function BioCard({ bio }) {
   const cardBorder = s.card_border_color;
   const avatarShape = getAvatarShape(s.avatar_style || s.pfp_shape || s.avatar_shape || "circle");
   const spotifyFormat = s.spotify_presence_format || s.spotify_presence_style || s.presence?.spotify_format || "card";
-  const cardShape = getCardShape(s.card_shape);
+  const cardShape = getCardShape(s.card_shape, s.card_radius);
   const numCardAlpha = s.card_alpha !== undefined && s.card_alpha !== null
     ? (typeof s.card_alpha === "number" ? s.card_alpha : parseFloat(s.card_alpha))
     : (s.card_opacity !== undefined ? Number(s.card_opacity) / 100 : 0.75);

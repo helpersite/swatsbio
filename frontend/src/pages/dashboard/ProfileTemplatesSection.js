@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth, api } from "@/lib/auth";
+import { useAuth, api, fileUrl } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -298,31 +298,47 @@ export default function ProfileTemplatesSection() {
             const canManage = isAdmin || t.owner_id === user?.id;
             const s = t.settings || {};
             const accent = t.accent || "#5B8DB8";
+            const bgUrl = s.banner ? fileUrl(s.banner) : (s.backgrounds?.[0] ? fileUrl(s.backgrounds[0]) : (s.profile_embed_image ? fileUrl(s.profile_embed_image) : null));
+            const pfpUrl = s.pfp ? fileUrl(s.pfp) : (user?.pfp ? fileUrl(user.pfp) : null);
+
+            const handleOpenRealPreview = () => {
+              const previewUrl = `/p/${user?.username || "preview"}?preview_template=${t.id}`;
+              window.open(previewUrl, "_blank");
+            };
 
             return (
               <div
                 key={t.id}
                 className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/60 overflow-hidden flex flex-col justify-between group transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
               >
-                {/* Top Interactive Mini Preview Box */}
-                <div className="relative h-44 bg-[#050608] border-b border-white/10 overflow-hidden p-3 flex flex-col justify-between select-none">
-                  {/* Background Effect Canvas inside mini preview */}
+                {/* Top Card Preview: ONLY uploaded background with centered PFP */}
+                <div className="relative h-44 bg-[#050608] border-b border-white/10 overflow-hidden flex items-center justify-center select-none group">
+                  {/* Uploaded Background Image */}
+                  {bgUrl ? (
+                    <img
+                      src={bgUrl}
+                      alt={t.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0 w-full h-full bg-gradient-to-br from-[#0c0e18] via-[#121624] to-[#08090d]"
+                    />
+                  )}
+
+                  {/* Background Effect Canvas inside preview if active */}
                   {s.bg_effect && s.bg_effect !== "none" && (
                     <BackgroundEffect effect={s.bg_effect} config={s.bg_effect_config || { speed: 0.8 }} />
                   )}
 
-                  {/* Ambient Glow */}
-                  <div
-                    className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full filter blur-3xl opacity-30 pointer-events-none"
-                    style={{ backgroundColor: accent }}
-                  />
+                  {/* Dark backdrop overlay for contrast */}
+                  <div className="absolute inset-0 bg-black/30 pointer-events-none" />
 
-                  {/* Top Bar: Category Pill & Live Preview Icon Button */}
-                  <div className="relative z-10 flex items-center justify-between">
+                  {/* Top Bar: Category Pill & Real Preview / Manage Controls */}
+                  <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between">
                     <span
-                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm backdrop-blur-md"
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-md backdrop-blur-md bg-black/60"
                       style={{
-                        backgroundColor: `${accent}25`,
                         borderColor: `${accent}60`,
                         color: accent,
                       }}
@@ -334,8 +350,8 @@ export default function ProfileTemplatesSection() {
                       {canManage && (
                         <button
                           type="button"
-                          onClick={() => handleOpenEdit(t)}
-                          className="w-7 h-7 rounded-lg bg-black/60 hover:bg-[#5B8DB8] text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                          onClick={(e) => { e.stopPropagation(); handleOpenEdit(t); }}
+                          className="w-7 h-7 rounded-lg bg-black/70 hover:bg-[#5B8DB8] text-white flex items-center justify-center text-xs transition-colors cursor-pointer border border-white/10"
                           title="Edit"
                         >
                           <Edit3 size={12} />
@@ -344,50 +360,45 @@ export default function ProfileTemplatesSection() {
                       {canManage && (
                         <button
                           type="button"
-                          onClick={() => handleDeleteTemplate(t.id, t.name)}
-                          className="w-7 h-7 rounded-lg bg-black/60 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(t.id, t.name); }}
+                          className="w-7 h-7 rounded-lg bg-black/70 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors cursor-pointer border border-white/10"
                           title="Delete"
                         >
                           <Trash2 size={12} />
                         </button>
                       )}
 
-                      {/* Top Right Live Preview Modal Trigger Icon */}
+                      {/* Top Right Real Live Preview Open Button */}
                       <button
                         type="button"
-                        onClick={() => setPreviewTemplate(t)}
-                        className="w-7 h-7 rounded-lg bg-black/70 hover:bg-[#5B8DB8] text-white/90 hover:text-white flex items-center justify-center border border-white/15 transition-all shadow-md group-hover:scale-105 cursor-pointer"
-                        title="Open Interactive Live Preview"
+                        onClick={(e) => { e.stopPropagation(); handleOpenRealPreview(); }}
+                        className="w-7 h-7 rounded-lg bg-black/80 hover:bg-[#5B8DB8] text-white flex items-center justify-center border border-white/20 transition-all shadow-md group-hover:scale-105 cursor-pointer"
+                        title="Open Real Live Template Page"
                       >
-                        <Eye size={13} className="group-hover:text-white" />
+                        <ExternalLink size={12} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Mini Mockup Bio Card */}
+                  {/* Centered PFP in Middle */}
                   <div
-                    className="relative z-10 mx-auto w-full max-w-[210px] p-2.5 rounded-xl border border-white/15 backdrop-blur-md bg-black/60 shadow-xl flex flex-col items-center text-center space-y-1"
-                    style={{ borderColor: `${accent}40` }}
+                    className="relative z-10 w-16 h-16 rounded-full border-2 p-0.5 shadow-2xl overflow-hidden bg-black/70 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                    style={{ borderColor: accent }}
                   >
-                    <div
-                      className="w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold shadow-md"
-                      style={{ borderColor: accent, backgroundColor: `${accent}30`, color: "#fff" }}
-                    >
-                      {t.name.charAt(0)}
-                    </div>
-                    <div className="text-xs font-black text-white truncate max-w-[170px]">
-                      {renderBioText(t.name)}
-                    </div>
-                    <div className="w-full flex justify-center gap-1">
-                      <span className="w-12 h-1.5 rounded-full bg-white/20" />
-                      <span className="w-6 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
-                    </div>
-                  </div>
-
-                  {/* Bottom info strip in banner */}
-                  <div className="relative z-10 flex items-center justify-between text-[10px] text-white/60 font-mono">
-                    <span>{s.layout || "classic"}</span>
-                    <span>{t.author}</span>
+                    {pfpUrl ? (
+                      <img
+                        src={pfpUrl}
+                        alt={t.name}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <div
+                        className="w-full h-full rounded-full flex items-center justify-center font-black text-base text-white"
+                        style={{ backgroundColor: `${accent}40` }}
+                      >
+                        {t.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -408,10 +419,10 @@ export default function ProfileTemplatesSection() {
                   {/* Specs Pill List */}
                   <div className="flex flex-wrap gap-1.5">
                     <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                      {s.layout || "classic"}
+                      {s.card_style || s.layout || "classic"}
                     </span>
                     <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                      {s.bg_effect || "none"}
+                      {s.bg_effect || "no effect"}
                     </span>
                   </div>
 
@@ -420,10 +431,10 @@ export default function ProfileTemplatesSection() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setPreviewTemplate(t)}
+                      onClick={handleOpenRealPreview}
                       className="flex-1 border-white/15 hover:bg-white/10 text-white/90 hover:text-white text-xs h-8 rounded-xl gap-1.5 cursor-pointer"
                     >
-                      <Eye size={13} /> Live Preview
+                      <ExternalLink size={12} /> Live Preview
                     </Button>
                     <Button
                       type="button"

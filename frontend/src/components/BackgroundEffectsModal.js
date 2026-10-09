@@ -39,7 +39,7 @@ export function BackgroundEffectsModal({
                 Background Ambient Effects
               </DialogTitle>
               <div className="text-[11px] text-[#E5E7EB]/50">
-                Interactive weather, fluid gradient waves, film grain, dripping blood & shimmer
+                Micro snow fall, rain streaks, fluid gradient waves, film grain, shimmer & VHS
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@ export function BackgroundEffectsModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(currentBg === "rain" || currentBg === "snow_fall" || currentBg === "blood_dripping" || currentBg === "shimmer" || currentBg === "gradient_wave") && (
+                {(currentBg === "rain" || currentBg === "snow_fall" || currentBg === "shimmer" || currentBg === "gradient_wave") && (
                   <div>
                     <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
                       <span>Speed / Flow Velocity</span>
@@ -126,7 +126,7 @@ export function BackgroundEffectsModal({
                   </div>
                 )}
 
-                {(currentBg === "rain" || currentBg === "snow_fall" || currentBg === "blood_dripping") && (
+                {(currentBg === "rain" || currentBg === "snow_fall") && (
                   <div>
                     <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
                       <span>Particle Density</span>

@@ -1130,7 +1130,22 @@ async def list_shared_templates(limit: int = Query(100, ge=1, le=200), viewer: O
     """
     rows = await db.execute(text(query_str), params)
     return [_shared_template_snapshot(row) for row in rows.fetchall()]
-
+@api.get("/templates/{template_id}")
+async def get_shared_template(template_id: str, db: AsyncSession = Depends(get_db)):
+    row = await db.execute(text("""
+        SELECT t.id, t.owner_id, u.username AS owner_username, u.avatar AS owner_avatar, t.name, t.display_name,
+               t.description, t.settings, t.links, t.downloads, t.created_at,
+               t.visibility, t.target_role
+        FROM shared_profile_templates t
+        JOIN users u ON u.id = t.owner_id
+        WHERE t.id = :id
+    """), {"id": template_id})
+    t = row.fetchone()
+    if not t:
+        raise HTTPException(status_code=404, detail="Template not found")
+    snap = _shared_template_snapshot(t)
+    snap["owner_avatar"] = t._mapping.get("owner_avatar")
+    return snap
 
 @api.get("/template-roles")
 async def list_template_roles(user: dict = Depends(get_current_user), db: AsyncSession = Depends(get_db)):

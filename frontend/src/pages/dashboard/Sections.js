@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as RTooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import * as Icons from "lucide-react";
-import { Eye, EyeOff, X, Plus, Trophy, Lock, Pencil, Upload, Link2, TrendingUp, Sparkles, Loader2, ExternalLink, Award, ShieldCheck, Shield, Check, Copy, Search, Users, Trash2, HelpCircle, Activity, Rocket, Palette, Sun, Disc3, ArrowUp, ArrowDown, ShieldAlert, Move, ChevronUp, ChevronDown } from "lucide-react";
+import { Eye, EyeOff, X, Plus, Trophy, Lock, Pencil, Upload, Link2, TrendingUp, Sparkles, Loader2, ExternalLink, Award, ShieldCheck, Shield, Check, Copy, Search, Users, Trash2, HelpCircle, Activity, Rocket, Palette, Sun, Disc3, ArrowUp, ArrowDown, ShieldAlert, Move, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
 import CustomColorPicker from "@/components/ColorPicker";
 import { VisualDashboardEditor } from "@/components/VisualDashboardEditor";
 
@@ -477,6 +477,42 @@ export function LinksSection() {
     }
   };
 
+  const [draggedIdx, setDraggedIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
+  const handleDragStart = (e, index) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === index) return;
+    setDragOverIdx(index);
+  };
+
+  const handleDrop = async (e, targetIdx) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const newLinks = [...links];
+    const [draggedItem] = newLinks.splice(draggedIdx, 1);
+    newLinks.splice(targetIdx, 0, draggedItem);
+    setLinks(newLinks);
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+    try {
+      const { data } = await api.put("/links/reorder", { link_ids: newLinks.map((x) => x.id) });
+      if (Array.isArray(data)) setLinks(data);
+      toast.success("Link order updated!");
+    } catch {
+      toast.error("Failed to save link order");
+    }
+  };
+
   const counts = useMemo(() => {
     return {
       all: links.length,
@@ -503,7 +539,7 @@ export function LinksSection() {
 
   return (
     <div className="space-y-6">
-      <Header title="Links & Social Cards" subtitle="Create and customize social buttons, link cards, and custom media embeds." action={
+      <Header title="Links & Social Cards" subtitle="Create, customize, and drag-and-drop links into your preferred profile display order." action={
         <div className="flex items-center gap-2">
           <Button
             type="button"
@@ -597,7 +633,7 @@ export function LinksSection() {
       <div className="swat-glass rounded-3xl p-4 border border-[#4A6B8A]/25">
         <div className="text-xs font-bold uppercase tracking-wider text-[#E5E7EB]/80 mb-2.5 flex items-center justify-between">
           <span className="flex items-center gap-1.5"><Sparkles size={13} className="text-[#5B8DB8]" /> 1-Click Platform Presets</span>
-          <span className="text-[11px] text-[#5B8DB8] font-mono">{links.length} Active Links</span>
+          <span className="text-[11px] text-[#5B8DB8] font-mono">{links.length} Active Links (Drag to Reorder)</span>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {["discord", "spotify", "twitter", "instagram", "youtube", "tiktok", "twitch", "kick", "github", "steam", "soundcloud", "roblox"].map((plat) => {
@@ -669,15 +705,32 @@ export function LinksSection() {
           const iconGlow = l.config?.custom_icon_glow || (l.config?.glow ? (l.config?.glow_color || iconColor) : null);
           const glowSize = l.config?.glow_size ?? 12;
           const noIconBg = l.config?.no_icon_bg || l.config?.no_bg;
+          const isDragging = draggedIdx === index;
+          const isDragOver = dragOverIdx === index;
 
           return (
             <div
               key={l.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={() => { setDraggedIdx(null); setDragOverIdx(null); }}
               data-testid={`link-item-${l.id}`}
-              className={`swat-glass rounded-2xl p-3.5 flex items-center gap-3 border border-[#4A6B8A]/25 hover:border-[#5B8DB8]/50 transition-all ${
-                l.hidden ? "opacity-50 grayscale" : ""
-              }`}
+              className={`swat-glass rounded-2xl p-3.5 flex items-center gap-3 border transition-all select-none cursor-move ${
+                isDragging ? "opacity-30 border-dashed border-[#5B8DB8]" :
+                isDragOver ? "border-[#5B8DB8] ring-2 ring-[#5B8DB8]/40 bg-[#5B8DB8]/10" :
+                "border-[#4A6B8A]/25 hover:border-[#5B8DB8]/50"
+              } ${l.hidden ? "opacity-50 grayscale" : ""}`}
             >
+              {/* Drag Handle & Position Badge */}
+              <div className="flex items-center gap-1.5 shrink-0 text-white/30">
+                <GripVertical size={14} className="hover:text-white/70" />
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-white/50 font-bold">
+                  #{index + 1}
+                </span>
+              </div>
+
               {/* Reorder Buttons */}
               <div className="flex flex-col gap-0.5 shrink-0">
                 <button
@@ -1082,22 +1135,40 @@ function LinkEditor({ link, onClose, onSaved }) {
 /* ---------------- Badges & Custom Badges ---------------- */
 export function BadgesSection() {
   const { user, setUser } = useAuth();
-  const owned = user.badges || [];
-  const [shown, setShown] = useState(Array.isArray(user.settings?.badges_shown) ? user.settings.badges_shown : []);
-  const [badgeLayout, setBadgeLayout] = useState(user.settings?.badge_layout || "classic");
-  const [badgesPosition, setBadgesPosition] = useState(user.settings?.badges_position || "below_name");
-  const [customBadges, setCustomBadges] = useState(Array.isArray(user.settings?.custom_badges) ? user.settings.custom_badges : []);
+  const owned = user?.badges || [];
+  const [shown, setShown] = useState(Array.isArray(user?.settings?.badges_shown) ? user.settings.badges_shown : []);
+  const [badgeLayout, setBadgeLayout] = useState(user?.settings?.badge_layout || "classic");
+  const [badgesPosition, setBadgesPosition] = useState(user?.settings?.badges_position || "below_name");
+  const [customBadges, setCustomBadges] = useState(Array.isArray(user?.settings?.custom_badges) ? user.settings.custom_badges : []);
   const [badgeStyle, setBadgeStyle] = useState({
     size: 28,
     shape: "circle",
     background: true,
     outline: true,
     glow: true,
-    ...(user.settings?.badge_style || {}),
+    ...(user?.settings?.badge_style || {}),
   });
   const [saving, setSaving] = useState(false);
   const [checkingBooster, setCheckingBooster] = useState(false);
-  const canCreateCustomBadge = user.role === "admin";
+  const canCreateCustomBadge = user?.role === "admin";
+
+  useEffect(() => {
+    if (user?.settings) {
+      if (Array.isArray(user.settings.badges_shown)) setShown(user.settings.badges_shown);
+      if (user.settings.badge_layout) setBadgeLayout(user.settings.badge_layout);
+      if (user.settings.badges_position) setBadgesPosition(user.settings.badges_position);
+      if (Array.isArray(user.settings.custom_badges)) setCustomBadges(user.settings.custom_badges);
+      if (user.settings.badge_style) setBadgeStyle((prev) => ({ ...prev, ...user.settings.badge_style }));
+    }
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="py-16 text-center text-white/50 text-xs">
+        <Loader2 size={18} className="animate-spin inline-block mr-2 text-[#5B8DB8]" /> Loading badges...
+      </div>
+    );
+  }
 
   // Custom Badge Creator State
   const [createModal, setCreateModal] = useState(false);

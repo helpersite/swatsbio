@@ -4,13 +4,13 @@ import sparkleAsset from "../../sparkle_black.gif";
 
 const COLOR_MAP = {
   red: "#ef4444",
-  blue: "#5B8DB8",
+  blue: "#3b82f6",
   cyan: "#06b6d4",
   purple: "#a855f7",
   pink: "#ec4899",
   grey: "#9ca3af",
   gray: "#9ca3af",
-  white: "#E5E7EB",
+  white: "#ffffff",
   orange: "#f97316",
   yellow: "#eab308",
   green: "#22c55e",
@@ -24,12 +24,24 @@ const COLOR_MAP = {
   amber: "#f59e0b",
   sky: "#38bdf8",
   indigo: "#6366f1",
+  crimson: "#dc2626",
+  magenta: "#d946ef",
+  lime: "#84cc16",
+  ruby: "#e11d48",
+  sapphire: "#2563eb",
+  aqua: "#06b6d4",
+  coral: "#fb7185",
+  neon: "#00f2fe",
+  lavender: "#c084fc",
+  fuchsia: "#e879f9",
+  mint: "#6ee7b7",
+  ice: "#bae6fd",
 };
 
 export const USERNAME_EFFECTS_LIST = [
   { id: "none", name: "No Effect", desc: "Clean default typography styling", wrap: (t) => t },
   { id: "glow", name: "Glow", desc: "Refined luminous backlight glow with customizable accent color", wrap: (t, color = "#5B8DB8") => `:glow#${color.replace(/^#/, "")}:${t}:glow:` },
-  { id: "sparkle", name: "Sparkle", desc: "Animated golden sparkle particles around your name", wrap: (t, color = "#F5C542") => `:sparkle#${color.replace(/^#/, "")}:${t}:sparkle:` },
+  { id: "sparkle", name: "Sparkle", desc: "Intense multi-color animated star sparkles around your name", wrap: (t, color = "#F5C542") => `:sparkle#${color.replace(/^#/, "")}:${t}:sparkle:` },
   { id: "stack", name: "3D Stack", desc: "Layered 3D depth multi-chroma chromatic text stack", wrap: (t, color = "#5B8DB8") => `:stack#${color.replace(/^#/, "")}:${t}:stack:` },
   { id: "typewriter", name: "Typewriter", desc: "Live animated character-by-character typewriter effect", wrap: (t) => `:typewriter:${t}:` },
   { id: "grain", name: "Film Grain", desc: "Cinematic textured noise grain typography", wrap: (t) => `:grain:${t}:` },
@@ -152,13 +164,11 @@ export function stripEffectSyntax(text) {
 }
 
 function resolveColor(hexMatch, colorMatch, defaultHex) {
-  if (hexMatch) return `#${hexMatch}`;
-  if (colorMatch) {
-    const lower = colorMatch.toLowerCase();
-    if (lower.startsWith("#")) return lower;
-    if (COLOR_MAP[lower]) return COLOR_MAP[lower];
-    if (/^[0-9a-f]{3,8}$/i.test(lower)) return `#${lower}`;
-  }
+  const candidate = (hexMatch || colorMatch || "").replace(/^#/, "").trim();
+  if (!candidate) return defaultHex;
+  const lower = candidate.toLowerCase();
+  if (COLOR_MAP[lower]) return COLOR_MAP[lower];
+  if (/^[0-9a-fA-F]{3,8}$/.test(candidate)) return `#${candidate}`;
   return defaultHex;
 }
 
@@ -180,11 +190,11 @@ export function renderBioText(text) {
     { re: /^:rgbglow:([^:\n]+)(?::(?:rgbglow|[a-zA-Z0-9_#-]+))?:/i, type: "rgbglow" },
     { re: /^:flicker:([^:\n]+)(?::(?:flicker|[a-zA-Z0-9_#-]+))?:/i, type: "flicker" },
     { re: /^:bats:([^:\n]+)(?::(?:bats|[a-zA-Z0-9_#-]+))?:/i, type: "bats" },
-    { re: /^:sparkle(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "sparkle" },
-    { re: /^:stack(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "stack" },
+    { re: /^:sparkle(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "sparkle" },
+    { re: /^:stack(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "stack" },
     { re: /^:grain:([^:\n]+)(?::(?:grain|[a-zA-Z0-9_#-]+))?:/i, type: "grain" },
-    { re: /^:outline(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "outline" },
-    { re: /^:highlight(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "highlight" },
+    { re: /^:outline(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "outline" },
+    { re: /^:highlight(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "highlight" },
     { re: /^:fire:([^:\n]+)(?::(?:fire|[a-zA-Z0-9_#-]+))?:/i, type: "fire" },
     { re: /^:matrix:([^:\n]+)(?::(?:matrix|[a-zA-Z0-9_#-]+))?:/i, type: "plain" },
     { re: /^:glitch:([^:\n]+)(?::(?:glitch|[a-zA-Z0-9_#-]+))?:/i, type: "glitch" },
@@ -195,8 +205,8 @@ export function renderBioText(text) {
     { re: /^:stars:([^:\n]+)(?::(?:stars|[a-zA-Z0-9_#-]+))?:/i, type: "stars" },
     { re: /^:ghost:([^:\n]+)(?::(?:ghost|[a-zA-Z0-9_#-]+))?:/i, type: "ghost" },
     { re: /^:typewriter:([^:\n]+)(?::(?:typewriter|[a-zA-Z0-9_#-]+))?:/i, type: "typewriter" },
-    { re: /^:neon(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "neon" },
-    { re: /^:glow(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "glow" },
+    { re: /^:neon(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "neon" },
+    { re: /^:glow(?:[#-]([a-zA-Z0-9_#]+))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "glow" },
     { re: /^:blur:([^:\n]+)(?::(?:blur|[a-zA-Z0-9_#-]+))?:/i, type: "blur" },
     { re: /^\*\*([\s\S]*?)\*\*/, type: "bold" },
     { re: /^--([\s\S]*?)--/, type: "cut" },
@@ -373,41 +383,51 @@ export function renderBioText(text) {
           </span>
         );
 
-      case "sparkle":
+      case "sparkle": {
+        const col = tok.color || "#F5C542";
+        const sparkleSpots = [
+          { top: "-10px", left: "-6px", size: 14, delay: "0s", dur: "1.3s" },
+          { top: "-8px", left: "26%", size: 11, delay: "0.4s", dur: "1.5s" },
+          { top: "-12px", right: "22%", size: 13, delay: "0.8s", dur: "1.2s" },
+          { top: "-8px", right: "-8px", size: 15, delay: "0.2s", dur: "1.4s" },
+          { bottom: "-8px", left: "12%", size: 10, delay: "0.6s", dur: "1.6s" },
+          { bottom: "-10px", right: "14%", size: 12, delay: "0.3s", dur: "1.3s" },
+        ];
         return (
-          <span key={idx} className="text-fx-sparkle relative inline-block px-3 py-2 align-middle">
-            {[
-              "-left-1 top-0 h-5 w-5",
-              "left-[16%] -top-1 h-3 w-3",
-              "left-[43%] -top-2 h-4 w-4",
-              "right-[18%] -top-1 h-3 w-3",
-              "-right-1 top-1 h-5 w-5",
-              "left-[8%] bottom-0 h-3 w-3",
-              "right-[38%] -bottom-1 h-4 w-4",
-              "right-[7%] bottom-0 h-3 w-3",
-            ].map((position, sparkleIndex) => (
-              <span
-                key={position}
-                aria-hidden="true"
-                className={`sparkle-drift pointer-events-none absolute ${position}`}
+          <span key={idx} className="relative inline-block px-2.5 py-1 align-middle">
+            {sparkleSpots.map((sp, sIdx) => (
+              <svg
+                key={sIdx}
+                viewBox="0 0 24 24"
+                fill={col}
+                className="absolute pointer-events-none animate-pulse"
                 style={{
-                  backgroundColor: tok.color,
-                  WebkitMaskImage: `url("${sparkleAsset}")`,
-                  maskImage: `url("${sparkleAsset}")`,
-                  WebkitMaskSize: "contain",
-                  maskSize: "contain",
-                  WebkitMaskPosition: "center",
-                  maskPosition: "center",
-                  WebkitMaskRepeat: "no-repeat",
-                  maskRepeat: "no-repeat",
-                  animationDelay: `${sparkleIndex * 170}ms`,
-                  filter: `drop-shadow(0 0 5px ${tok.color})`,
+                  top: sp.top,
+                  bottom: sp.bottom,
+                  left: sp.left,
+                  right: sp.right,
+                  width: `${sp.size}px`,
+                  height: `${sp.size}px`,
+                  animationDuration: sp.dur,
+                  animationDelay: sp.delay,
+                  filter: `drop-shadow(0 0 6px ${col}) drop-shadow(0 0 12px ${col})`,
                 }}
-              />
+              >
+                <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+              </svg>
             ))}
-            <span className="relative z-10 font-semibold" style={{ color: tok.color, textShadow: `0 0 10px ${tok.color}99` }}>{tok.v}</span>
+            <span
+              className="relative z-10 font-black inline-block"
+              style={{
+                color: col,
+                textShadow: `0 0 10px ${col}, 0 0 20px ${col}bb, 0 0 35px ${col}66`,
+              }}
+            >
+              {tok.v}
+            </span>
           </span>
         );
+      }
 
       case "outline": {
         const color = tok.color || "#5B8DB8";

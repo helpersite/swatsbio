@@ -52,12 +52,22 @@ export const CARD_SHAPES = [
 ];
 
 export const CARD_STYLES = [
-  { v: "solid", l: "Stealth Solid (Opaque)" },
-  { v: "glass", l: "Frosted Glass" },
-  { v: "outline", l: "Wireframe Outline" },
+  { v: "classic", l: "Classic Noir" },
+  { v: "frosted_square", l: "Frosted Square (Glass)" },
+  { v: "frosted_soft", l: "Frosted Soft (Silk Blur)" },
+  { v: "outlined", l: "Outlined (Wireframe)" },
+  { v: "aurora", l: "Aurora (Chromatic Glow)" },
+  { v: "transparent", l: "Transparent (0% Background)" },
+  { v: "solid", l: "Stealth Solid" },
   { v: "neon", l: "Neon Edge Glow" },
-  { v: "cyber", l: "Precision Overlay" },
-  { v: "none", l: "Invisible (0% Background)" },
+];
+
+export const CARD_RADIUS_OPTIONS = [
+  { v: "0", l: "0px (Sharp Square)" },
+  { v: "8", l: "8px (Subtle Rounded)" },
+  { v: "16", l: "16px (Standard Rounded)" },
+  { v: "24", l: "24px (Soft Curved)" },
+  { v: "32", l: "32px (Full Pill Curve)" },
 ];
 
 export const CARD_WIDTHS = [
@@ -893,18 +903,68 @@ export default function Editor({ initialTab = "profile" }) {
               </div>
 
               {/* Live Preview of Styled Name & Bio */}
-              <div className="p-3.5 rounded-xl bg-[#07090e] border border-white/10 text-center">
-                <div className="text-[10px] uppercase font-bold tracking-widest text-[#5B8DB8] mb-1">
-                  Live Typography Preview
+              <div className="p-4 rounded-2xl bg-[#05060a] border border-[#5B8DB8]/30 text-center relative overflow-hidden shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#5B8DB8] flex items-center gap-1.5">
+                    <Sparkles size={12} /> Live Profile & Typography Preview
+                  </span>
+                  <span className="text-[10px] text-white/40 font-mono">Real-time update</span>
                 </div>
-                <div className="font-display text-xl font-black text-white min-h-[30px] flex items-center justify-center">
-                  {renderBioText(displayName || username || "swats")}
-                </div>
-                {description && (
-                  <div className="text-xs text-white/70 mt-1 max-w-lg mx-auto">
-                    {renderBioText(description)}
+
+                {/* Simulated Profile Card Centerpiece */}
+                <div className="max-w-md mx-auto rounded-2xl bg-[#0c0e18]/90 border border-white/10 p-5 backdrop-blur-xl relative overflow-hidden shadow-xl">
+                  {/* Subtle Top Ambient Glow */}
+                  <div
+                    className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-24 rounded-full filter blur-2xl opacity-35 pointer-events-none"
+                    style={{ backgroundColor: s.accent_color || "#5B8DB8" }}
+                  />
+
+                  {/* Avatar */}
+                  <div className="relative mx-auto w-16 h-16 rounded-full overflow-hidden border-2 border-white/20 bg-black/60 shadow-lg mb-2.5 flex items-center justify-center">
+                    {pfpSrc ? (
+                      <img src={pfpSrc} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={28} className="text-white/40" />
+                    )}
                   </div>
-                )}
+
+                  {/* Display Name with Active FX */}
+                  <div className="font-display text-xl font-black text-white min-h-[32px] flex items-center justify-center tracking-wide">
+                    {renderBioText(displayName || username || "swats")}
+                  </div>
+
+                  {/* Badges Mockup Row if user has badges */}
+                  {Array.isArray(user?.settings?.badges_shown) && user.settings.badges_shown.length > 0 && (
+                    <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
+                      {user.settings.badges_shown.slice(0, 6).map((bId) => {
+                        const bDef = BADGE_DEFS.find((d) => d.id === bId);
+                        const Ic = bDef?.icon ? (Icons[bDef.icon] || Icons.Award) : Icons.Award;
+                        const col = bDef?.color || "#5B8DB8";
+                        return (
+                          <div
+                            key={bId}
+                            className="w-6 h-6 rounded-md flex items-center justify-center text-xs"
+                            style={{ background: `${col}25`, border: `1px solid ${col}66`, color: col }}
+                            title={bDef?.name || bId}
+                          >
+                            <Ic size={12} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Bio Description with Active FX */}
+                  {description ? (
+                    <div className="text-xs text-white/80 mt-2.5 max-w-sm mx-auto leading-relaxed border-t border-white/5 pt-2">
+                      {renderBioText(description)}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-white/30 italic mt-2">
+                      No bio description added yet.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Panel>
@@ -1092,6 +1152,41 @@ export default function Editor({ initialTab = "profile" }) {
                     { v: "bottom_card", l: "Bottom of Card" },
                     { v: "none", l: "Hidden" },
                   ]}
+                />
+              </div>
+
+              {/* Profile Card Style & Corner Radius */}
+              <div className="p-4 rounded-xl bg-[#080a10] border border-white/5 space-y-3">
+                <div className="text-xs font-bold text-white flex items-center gap-1.5 pb-1 border-b border-white/5">
+                  <Palette size={13} className="text-[#5B8DB8]" /> Profile Card Style & Radius
+                </div>
+                <SelectRow
+                  label="Card Style Preset"
+                  value={s.card_style || "classic"}
+                  onChange={(v) => patch("card_style", v)}
+                  options={CARD_STYLES}
+                />
+                <SelectRow
+                  label="Corner Radius"
+                  value={s.card_radius !== undefined ? String(s.card_radius) : "16"}
+                  onChange={(v) => patch("card_radius", v)}
+                  options={CARD_RADIUS_OPTIONS}
+                />
+                <SliderRow
+                  label="Card Opacity"
+                  value={s.card_opacity !== undefined ? Number(s.card_opacity) : 75}
+                  min={0}
+                  max={100}
+                  suffix="%"
+                  onChange={(v) => patch("card_opacity", v)}
+                />
+                <SliderRow
+                  label="Card Backdrop Blur"
+                  value={s.bg_blur !== undefined ? Number(s.bg_blur) : 12}
+                  min={0}
+                  max={40}
+                  suffix="px"
+                  onChange={(v) => patch("bg_blur", v)}
                 />
               </div>
             </div>

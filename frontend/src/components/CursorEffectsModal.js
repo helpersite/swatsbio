@@ -82,6 +82,21 @@ export function CursorEffectsModal({
             })}
           </div>
 
+          {/* Interactive Live Cursor Preview Area */}
+          <div className="p-4 rounded-xl border border-dashed border-[#5B8DB8]/40 bg-[#06080d] text-center space-y-2 relative overflow-hidden group select-none">
+            <div className="flex items-center justify-between text-xs text-white/70">
+              <span className="font-bold flex items-center gap-1.5 text-[#5B8DB8]">
+                <Sparkles size={13} /> Live Interactive Test Box
+              </span>
+              <span className="text-[10px] text-white/40 font-mono">Move mouse / click here</span>
+            </div>
+            <div className="h-24 rounded-lg bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center p-3 relative">
+              <MousePointer2 size={20} className="text-[#5B8DB8] animate-bounce mb-1" />
+              <div className="text-xs font-semibold text-white">Hover and click around this area</div>
+              <div className="text-[10px] text-white/40">Real-time particle bursts, trail stars & glowing halospan</div>
+            </div>
+          </div>
+
           {currentCursorFx !== "none" && (
             <div className="p-3.5 rounded-xl border border-white/10 bg-[#080a10] space-y-3">
               <div className="text-xs font-bold text-white flex items-center gap-1.5">

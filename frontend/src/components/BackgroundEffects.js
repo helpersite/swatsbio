@@ -9,7 +9,7 @@ function getCanvasDims(canvas) {
 }
 
 // ──────────────────────────────────────────────
-// 1. SNOW FALL (Stacks at bottom, slowly melts, moves when mouse is close)
+// 1. SNOW FALL (Micro-sized flakes that stack and melt at bottom, reacts to mouse)
 // ──────────────────────────────────────────────
 export function SnowFallEffect({ speed = 1, density = 1 }) {
   const canvasRef = useRef(null);
@@ -43,55 +43,56 @@ export function SnowFallEffect({ speed = 1, density = 1 }) {
     };
     window.addEventListener("resize", onResize);
 
-    const count = Math.min(100, Math.max(35, Math.floor((width / 18) * density)));
+    // Micro snow flakes (delicate fine snow particles)
+    const count = Math.min(220, Math.max(70, Math.floor((width / 8) * density)));
     const flakes = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
       vx: 0,
-      vy: (0.7 + Math.random() * 1.5) * speed,
-      r: 1.2 + Math.random() * 2.2,
-      opacity: 0.35 + Math.random() * 0.55,
-      drift: -0.3 + Math.random() * 0.6,
+      vy: (0.6 + Math.random() * 1.4) * speed,
+      r: 0.45 + Math.random() * 0.95, // WAY smaller micro-sized snow crystals
+      opacity: 0.4 + Math.random() * 0.55,
+      drift: -0.25 + Math.random() * 0.5,
     }));
 
-    // Snow pile segments at the bottom of the screen
-    const pileCols = Math.max(30, Math.floor(width / 14));
+    // Dense accumulation stack columns across screen width
+    const pileCols = Math.max(60, Math.floor(width / 6));
     const snowPile = Array(pileCols).fill(0);
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
       // Draw accumulated snow stack at the bottom
-      ctx.fillStyle = "rgba(235, 245, 255, 0.55)";
+      ctx.fillStyle = "rgba(240, 248, 255, 0.65)";
       ctx.beginPath();
       ctx.moveTo(0, height);
       const colWidth = width / (pileCols - 1);
       for (let c = 0; c < pileCols; c++) {
-        const pileH = Math.min(36, snowPile[c] * 0.4);
+        const pileH = Math.min(28, snowPile[c] * 0.35);
         ctx.lineTo(c * colWidth, height - pileH);
       }
       ctx.lineTo(width, height);
       ctx.closePath();
       ctx.fill();
 
-      // Slowly melt accumulated snow so it dissipates naturally
+      // Gentle natural melting
       for (let c = 0; c < pileCols; c++) {
-        if (snowPile[c] > 0) snowPile[c] = Math.max(0, snowPile[c] - 0.015);
+        if (snowPile[c] > 0) snowPile[c] = Math.max(0, snowPile[c] - 0.008);
       }
 
-      // Render falling flakes
+      // Render falling micro flakes
       for (let i = 0; i < flakes.length; i++) {
         const f = flakes[i];
 
-        // Mouse repulsion physics
+        // Cursor repulsion physics
         if (mouse.active) {
           const dx = f.x - mouse.x;
           const dy = f.y - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const repRadius = 90;
+          const repRadius = 85;
 
           if (dist < repRadius && dist > 0) {
-            const force = ((repRadius - dist) / repRadius) * 2.2;
+            const force = ((repRadius - dist) / repRadius) * 2.0;
             const angle = Math.atan2(dy, dx);
             f.vx += Math.cos(angle) * force;
             f.vy += Math.sin(angle) * force;
@@ -99,22 +100,24 @@ export function SnowFallEffect({ speed = 1, density = 1 }) {
         }
 
         f.vx *= 0.92;
-        f.vy = f.vy * 0.94 + 0.06 * (0.7 * speed);
+        f.vy = f.vy * 0.94 + 0.06 * (0.6 * speed);
 
         f.x += f.vx + f.drift;
         f.y += f.vy;
 
-        // Check if flake landed on bottom stack
-        if (f.y >= height - 4) {
+        // Flake touches bottom and stacks
+        if (f.y >= height - 2) {
           const colIdx = Math.min(pileCols - 1, Math.max(0, Math.floor((f.x / width) * pileCols)));
-          if (snowPile[colIdx] < 60) {
-            snowPile[colIdx] += 1.2;
+          if (snowPile[colIdx] < 50) {
+            snowPile[colIdx] += 0.45;
+            if (colIdx > 0) snowPile[colIdx - 1] += 0.15;
+            if (colIdx < pileCols - 1) snowPile[colIdx + 1] += 0.15;
           }
-          // Reset flake to top
-          f.y = -6;
+          // Recycle flake to top
+          f.y = -4;
           f.x = Math.random() * width;
           f.vx = 0;
-          f.vy = (0.7 + Math.random() * 1.5) * speed;
+          f.vy = (0.6 + Math.random() * 1.4) * speed;
         }
 
         if (f.x < 0) f.x = width;
@@ -122,11 +125,8 @@ export function SnowFallEffect({ speed = 1, density = 1 }) {
 
         ctx.beginPath();
         ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(240, 248, 255, ${f.opacity})`;
-        ctx.shadowColor = "rgba(255,255,255,0.4)";
-        ctx.shadowBlur = 4;
+        ctx.fillStyle = `rgba(250, 252, 255, ${f.opacity})`;
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
 
       animId = requestAnimationFrame(render);
@@ -141,7 +141,7 @@ export function SnowFallEffect({ speed = 1, density = 1 }) {
     };
   }, [speed, density]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1] bg-transparent" />;
 }
 
 // ──────────────────────────────────────────────
@@ -244,137 +244,7 @@ export function RainEffect({ speed = 1, density = 1 }) {
 }
 
 // ──────────────────────────────────────────────
-// 3. BLOOD DRIPPING (Actual realistic blood dripping down screen)
-// ──────────────────────────────────────────────
-export function BloodDrippingEffect({ speed = 1, density = 1 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const dims = getCanvasDims(canvas);
-    let width = (canvas.width = dims.width);
-    let height = (canvas.height = dims.height);
-
-    const onResize = () => {
-      const d = getCanvasDims(canvas);
-      width = canvas.width = d.width;
-      height = canvas.height = d.height;
-    };
-    window.addEventListener("resize", onResize);
-
-    // Drips hanging and trickling down
-    const dripCount = Math.min(32, Math.max(12, Math.floor((width / 45) * density)));
-    const drips = Array.from({ length: dripCount }, (_, ind) => ({
-      x: (ind / dripCount) * width + Math.random() * 20 - 10,
-      y: 0,
-      length: 0,
-      maxLength: 60 + Math.random() * (height * 0.75),
-      speed: (0.4 + Math.random() * 0.8) * speed,
-      width: 2.5 + Math.random() * 3.5,
-      headRadius: 3 + Math.random() * 3,
-      opacity: 0.85 + Math.random() * 0.15,
-      fallingDrop: null, // detached droplet running down
-    }));
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Top bloody border puddle / drip bar
-      ctx.fillStyle = "#80050e";
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(width, 0);
-      ctx.lineTo(width, 6);
-      ctx.lineTo(0, 6);
-      ctx.closePath();
-      ctx.fill();
-
-      for (let i = 0; i < drips.length; i++) {
-        const d = drips[i];
-
-        if (d.length < d.maxLength) {
-          d.length += d.speed;
-        } else if (!d.fallingDrop && Math.random() < 0.02) {
-          // Spawn detached blood drop falling to bottom
-          d.fallingDrop = {
-            x: d.x,
-            y: d.length,
-            vy: 2.5 * speed,
-            r: d.headRadius * 0.9,
-          };
-        }
-
-        // Draw Blood Drip Stem
-        const grad = ctx.createLinearGradient(d.x, 0, d.x, d.length);
-        grad.addColorStop(0, "#550005");
-        grad.addColorStop(0.4, "#8a030d");
-        grad.addColorStop(1, "#c70014");
-
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = d.width;
-        ctx.lineCap = "round";
-
-        ctx.beginPath();
-        ctx.moveTo(d.x, 0);
-        ctx.lineTo(d.x, d.length);
-        ctx.stroke();
-
-        // Blood Droplet Head at tip of drip
-        ctx.fillStyle = "#c70014";
-        ctx.beginPath();
-        ctx.arc(d.x, d.length, d.headRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Glistening highlight on droplet
-        ctx.fillStyle = "rgba(255, 140, 150, 0.7)";
-        ctx.beginPath();
-        ctx.arc(d.x - d.headRadius * 0.3, d.length - d.headRadius * 0.3, d.headRadius * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Render Detached Falling Drop
-        if (d.fallingDrop) {
-          const drop = d.fallingDrop;
-          drop.vy += 0.15;
-          drop.y += drop.vy;
-
-          ctx.fillStyle = "#9e000f";
-          ctx.beginPath();
-          ctx.arc(drop.x, drop.y, drop.r, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = "rgba(255, 120, 130, 0.6)";
-          ctx.beginPath();
-          ctx.arc(drop.x - 1, drop.y - 1, drop.r * 0.35, 0, Math.PI * 2);
-          ctx.fill();
-
-          if (drop.y > height + 10) {
-            d.fallingDrop = null;
-            if (Math.random() < 0.3) {
-              d.length = 10;
-              d.maxLength = 50 + Math.random() * (height * 0.8);
-            }
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [speed, density]);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
-}
-
-// ──────────────────────────────────────────────
-// 4. SHIMMER (Shimmers a shine light beam across screen periodically)
+// 2. SHIMMER (Shimmers a pure luminous light shine beam across screen periodically - no stars)
 // ──────────────────────────────────────────────
 export function ShimmerEffect({ speed = 1 }) {
   const canvasRef = useRef(null);
@@ -396,14 +266,13 @@ export function ShimmerEffect({ speed = 1 }) {
     window.addEventListener("resize", onResize);
 
     let progress = -0.4;
-    let sparkles = [];
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
       progress += 0.0035 * speed;
       if (progress > 1.6) {
-        progress = -0.5; // cycle every so often
+        progress = -0.5; // cycle sweep periodically
       }
 
       if (progress >= -0.2 && progress <= 1.2) {
@@ -416,50 +285,13 @@ export function ShimmerEffect({ speed = 1 }) {
         const beamWidth = Math.max(120, width * 0.22);
         const grad = ctx.createLinearGradient(-beamWidth / 2, 0, beamWidth / 2, 0);
         grad.addColorStop(0, "rgba(255, 255, 255, 0)");
-        grad.addColorStop(0.35, "rgba(200, 230, 255, 0.05)");
-        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.22)");
-        grad.addColorStop(0.65, "rgba(200, 230, 255, 0.05)");
+        grad.addColorStop(0.35, "rgba(200, 230, 255, 0.06)");
+        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.26)");
+        grad.addColorStop(0.65, "rgba(200, 230, 255, 0.06)");
         grad.addColorStop(1, "rgba(255, 255, 255, 0)");
 
         ctx.fillStyle = grad;
         ctx.fillRect(-beamWidth / 2, -height * 1.5, beamWidth, height * 3);
-        ctx.restore();
-
-        // Spawn occasional glint sparkles along beam
-        if (Math.random() < 0.25) {
-          sparkles.push({
-            x: Math.max(20, Math.min(width - 20, sweepX * 0.8 + (Math.random() - 0.5) * 60)),
-            y: Math.random() * height,
-            size: 4 + Math.random() * 8,
-            alpha: 1,
-            decay: 0.035,
-          });
-        }
-      }
-
-      // Draw glint sparkle stars
-      for (let i = sparkles.length - 1; i >= 0; i--) {
-        const sp = sparkles[i];
-        sp.alpha -= sp.decay;
-        if (sp.alpha <= 0) {
-          sparkles.splice(i, 1);
-          continue;
-        }
-        ctx.save();
-        ctx.translate(sp.x, sp.y);
-        ctx.globalAlpha = sp.alpha;
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowColor = "#78A9D0";
-        ctx.shadowBlur = 10;
-
-        const s = sp.size;
-        ctx.beginPath();
-        ctx.moveTo(0, -s);
-        ctx.quadraticCurveTo(0, 0, s, 0);
-        ctx.quadraticCurveTo(0, 0, 0, s);
-        ctx.quadraticCurveTo(0, 0, -s, 0);
-        ctx.quadraticCurveTo(0, 0, 0, -s);
-        ctx.fill();
         ctx.restore();
       }
 
@@ -473,7 +305,7 @@ export function ShimmerEffect({ speed = 1 }) {
     };
   }, [speed]);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1] bg-transparent" />;
 }
 
 // ──────────────────────────────────────────────
@@ -607,11 +439,10 @@ export function VHSTapeEffect() {
 // EXCLUSIVELY REDONE BACKGROUND EFFECTS LIST
 // ──────────────────────────────────────────────
 export const BACKGROUND_EFFECTS_LIST = [
-  { id: "none", name: "None", description: "Clean solid dark background" },
-  { id: "snow_fall", name: "Snow Fall", description: "Snow stacks at bottom & disperses on mouse" },
-  { id: "rain", name: "Rain", description: "Tokyo rain streaks reacting to mouse" },
-  { id: "blood_dripping", name: "Blood Dripping", description: "Realistic crimson blood trickling down" },
-  { id: "shimmer", name: "Shimmer", description: "Periodic smooth light sweep & sparkles" },
+  { id: "none", name: "None", description: "Clean transparent effect (shows wallpaper / colors)" },
+  { id: "snow_fall", name: "Snow Fall", description: "Micro-sized snow flakes stacking & melting at bottom, moves on mouse" },
+  { id: "rain", name: "Rain", description: "Tokyo rain streaks reacting to mouse velocity" },
+  { id: "shimmer", name: "Shimmer", description: "Periodic luminous light beam sweep across screen" },
   { id: "gradient_wave", name: "Gradient Wave", description: "Fluid luminous liquid wave reacting to mouse" },
   { id: "grain", name: "Grain", description: "Authentic cinematic film grain texture" },
   { id: "vhs_tape", name: "VHS Tape", description: "Retro CRT scanlines & tracking glitch" },
@@ -623,7 +454,6 @@ export function BackgroundEffect({ effect, config = {} }) {
   // Backwards compatibility alias resolution
   const resolved =
     effect === "snow" || effect === "snow_stack" ? "snow_fall" :
-    effect === "blood" || effect === "bleed" ? "blood_dripping" :
     effect === "vhs" ? "vhs_tape" :
     effect === "static" || effect === "static_grain" ? "grain" :
     effect === "aurora" || effect === "reactive" || effect === "anti_fall" ? "gradient_wave" :
@@ -634,8 +464,6 @@ export function BackgroundEffect({ effect, config = {} }) {
       return <SnowFallEffect speed={config.speed || 1} density={config.density || 1} />;
     case "rain":
       return <RainEffect speed={config.speed || 1} density={config.density || 1} />;
-    case "blood_dripping":
-      return <BloodDrippingEffect speed={config.speed || 1} density={config.density || 1} />;
     case "shimmer":
       return <ShimmerEffect speed={config.speed || 1} />;
     case "gradient_wave":
