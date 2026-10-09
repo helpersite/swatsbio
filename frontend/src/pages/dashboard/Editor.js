@@ -33,6 +33,7 @@ import { SlideshowManager } from "@/components/SlideshowManager";
 export const CARD_LAYOUTS = [
   { v: "classic", l: "Classic", desc: "Centered avatar, bio, badges & clean link stack" },
   { v: "minimal", l: "Minimal", desc: "Ultra-clean compact link stack with minimalist typography" },
+  { v: "mini_banner", l: "Mini Banner", desc: "Compact header banner with smooth bottom fade" },
   { v: "banner_left", l: "Cover Banner", desc: "Top header banner with left-docked identity" },
   { v: "slideshow", l: "Slideshow Deck", desc: "Interactive scrolling deck with Discord & project embeds" },
   { v: "bento_grid", l: "Bento Grid", desc: "Modern multi-tile responsive bento blocks" },
@@ -1059,6 +1060,7 @@ export default function Editor({ initialTab = "profile" }) {
                   onChange={(v) => patch("badges_position", v)}
                   options={[
                     { v: "below_name", l: "Below Name & Username" },
+                    { v: "next_to_name", l: "Next to Name (Inline)" },
                     { v: "below_desc", l: "Below Bio Description" },
                     { v: "above_avatar", l: "Above Avatar" },
                   ]}
@@ -1520,22 +1522,71 @@ export default function Editor({ initialTab = "profile" }) {
       {/* ========================================================================= */}
       {editorCategory === "widgets" && (
         <div className="space-y-6">
-          {/* 1. Spotify Favorite Playlist / Song Widget */}
-          <Panel title="Spotify Favorite Playlist & Library Widget">
+          {/* 1. Discord Server Invite Widget */}
+          <Panel title="Discord Server Invite Widget">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
                 <ToggleRow
-                  label="Enable Spotify Library Widget"
-                  description="Embed your favorite curated playlist on your profile"
-                  checked={s.widgets?.spotify?.enabled === true}
-                  onChange={(v) => patchWidgets("spotify", "enabled", v)}
+                  label="Enable Discord Server Widget"
+                  description="Display live online member counts, server icon & join button"
+                  checked={s.widgets?.discord_server?.enabled === true}
+                  onChange={(v) => patchWidgets("discord_server", "enabled", v)}
                 />
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-[#E5E7EB]/70">Favorite Playlist URL / Embed</Label>
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Server Invite Link or Code</Label>
                   <Input
-                    value={s.widgets?.spotify?.playlist_url || ""}
-                    onChange={(e) => patchWidgets("spotify", "playlist_url", e.target.value)}
-                    placeholder="https://open.spotify.com/playlist/..."
+                    value={s.widgets?.discord_server?.invite_url || ""}
+                    onChange={(e) => patchWidgets("discord_server", "invite_url", e.target.value.trim())}
+                    placeholder="https://discord.gg/your-server or invite-code"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="Server Widget Theme"
+                  value={s.widgets?.discord_server?.style || "discord"}
+                  onChange={(v) => patchWidgets("discord_server", "style", v)}
+                  options={[
+                    { v: "discord", l: "Discord 1:1 (Authentic Dark)" },
+                    { v: "nobg", l: "No Background (Clean Minimal)" },
+                    { v: "ghost", l: "Ghost Translucent (Frosted Glass)" },
+                  ]}
+                />
+                <div className="text-[11px] text-[#949ba4] leading-relaxed pt-1">
+                  Automatically queries Discord API to fetch live verified/community badge, guild icon, online green-dot members, and join button.
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+          {/* 2. Multi-Platform Music Player Widget (Spotify, SoundCloud, Apple Music) */}
+          <Panel title="Music Player Widget (SoundCloud, Spotify, Apple Music)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Embedded Music Player"
+                  description="Embed tracks from Spotify, SoundCloud, or Apple Music"
+                  checked={s.widgets?.music_player?.enabled === true}
+                  onChange={(v) => patchWidgets("music_player", "enabled", v)}
+                />
+                <SelectRow
+                  label="Music Platform"
+                  value={s.widgets?.music_player?.type || "spotify"}
+                  onChange={(v) => patchWidgets("music_player", "type", v)}
+                  options={[
+                    { v: "spotify", l: "Spotify Track / Playlist" },
+                    { v: "soundcloud", l: "SoundCloud Track / Playlist" },
+                    { v: "apple", l: "Apple Music Track / Album" },
+                  ]}
+                />
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Track or Playlist URL</Label>
+                  <Input
+                    value={s.widgets?.music_player?.url || ""}
+                    onChange={(e) => patchWidgets("music_player", "url", e.target.value.trim())}
+                    placeholder="https://open.spotify.com/track/... or soundcloud.com/..."
                     className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
                   />
                 </div>
@@ -1543,29 +1594,97 @@ export default function Editor({ initialTab = "profile" }) {
 
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
                 <div className="space-y-1">
-                  <Label className="text-[11px] text-[#E5E7EB]/70">Favorite Song Track URL</Label>
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Track Title (Supports Text Effects)</Label>
                   <Input
-                    value={s.widgets?.spotify?.fav_song_url || ""}
-                    onChange={(e) => patchWidgets("spotify", "fav_song_url", e.target.value)}
-                    placeholder="https://open.spotify.com/track/..."
-                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl font-mono"
+                    value={s.widgets?.music_player?.title || ""}
+                    onChange={(e) => patchWidgets("music_player", "title", e.target.value)}
+                    placeholder="e.g. [glow]Midnight Echoes[/glow]"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#E5E7EB]/70">Custom Artist Name (Supports Text Effects)</Label>
+                  <Input
+                    value={s.widgets?.music_player?.artist || ""}
+                    onChange={(e) => patchWidgets("music_player", "artist", e.target.value)}
+                    placeholder="e.g. [typewriter]Cyberwave Records[/typewriter]"
+                    className="bg-[#050609] border-white/10 text-white h-8 text-xs rounded-xl"
+                  />
+                </div>
+                <div className="text-[10px] text-white/40 italic">
+                  Music players fully render text effects like [glow], [typewriter], [stack], [grain], [sparkle], and [neon].
+                </div>
+              </div>
+            </div>
+          </Panel>
+
+          {/* 3. Account Stats & Creation Date Widget */}
+          <Panel title="Account Creation Date & Stats Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Account Stats Widget"
+                  description="Showcase how long ago your profile was made, views count & badges count"
+                  checked={s.widgets?.account_stats?.enabled === true}
+                  onChange={(v) => patchWidgets("account_stats", "enabled", v)}
+                />
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#080a10] border border-white/5 text-xs text-white/60 leading-relaxed">
+                Computes account longevity dynamically (e.g. "Active for 1 year 4 months · Oct 2024") and showcases total verified achievements.
+              </div>
+            </div>
+          </Panel>
+
+          {/* 4. Enhanced Timezone & Real Clock Widget */}
+          <Panel title="Real Clock & Timezone Widget">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <ToggleRow
+                  label="Enable Real Clock Widget"
+                  description="Display real-time ticking clock with live seconds"
+                  checked={s.widgets?.clock?.enabled === true}
+                  onChange={(v) => patchWidgets("clock", "enabled", v)}
+                />
                 <SelectRow
-                  label="Widget Frame Theme"
-                  value={s.widgets?.spotify?.theme || "glass"}
-                  onChange={(v) => patchWidgets("spotify", "theme", v)}
+                  label="Timezone Offset"
+                  value={s.widgets?.clock?.timezone || "local"}
+                  onChange={(v) => patchWidgets("clock", "timezone", v)}
                   options={[
-                    { v: "glass", l: "Frosted Glass" },
-                    { v: "compact", l: "Compact Card" },
-                    { v: "neon", l: "Cyber Neon" },
+                    { v: "local", l: "Visitor's Local Time" },
+                    { v: "UTC", l: "UTC (Coordinated Universal Time)" },
+                    { v: "America/New_York", l: "New York (EST/EDT)" },
+                    { v: "America/Los_Angeles", l: "Los Angeles (PST/PDT)" },
+                    { v: "Europe/London", l: "London (GMT/BST)" },
+                    { v: "Asia/Tokyo", l: "Tokyo (JST)" },
+                    { v: "Australia/Sydney", l: "Sydney (AEST)" },
+                  ]}
+                />
+              </div>
+
+              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
+                <SelectRow
+                  label="Clock Face Style"
+                  value={s.widgets?.clock?.style || "analog"}
+                  onChange={(v) => patchWidgets("clock", "style", v)}
+                  options={[
+                    { v: "analog", l: "Authentic Analog Clock (Rotating Hands)" },
+                    { v: "digital", l: "Cyber Digital Glow HUD" },
+                  ]}
+                />
+                <SelectRow
+                  label="Digital Time Format"
+                  value={s.widgets?.clock?.format || "12h"}
+                  onChange={(v) => patchWidgets("clock", "format", v)}
+                  options={[
+                    { v: "12h", l: "12-Hour (AM / PM)" },
+                    { v: "24h", l: "24-Hour (Military Time)" },
                   ]}
                 />
               </div>
             </div>
           </Panel>
 
-          {/* 2. Roblox Profile & Avatar Widget */}
+          {/* 5. Roblox Profile & Avatar Widget */}
           <Panel title="Roblox Profile & Avatar Widget">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
@@ -1603,7 +1722,7 @@ export default function Editor({ initialTab = "profile" }) {
             </div>
           </Panel>
 
-          {/* 3. Live Weather Widget */}
+          {/* 6. Live Weather Widget */}
           <Panel title="Live Weather & Atmospheric Widget">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
@@ -1632,55 +1751,6 @@ export default function Editor({ initialTab = "profile" }) {
                   options={[
                     { v: "celsius", l: "Celsius (°C)" },
                     { v: "fahrenheit", l: "Fahrenheit (°F)" },
-                  ]}
-                />
-              </div>
-            </div>
-          </Panel>
-
-          {/* 4. Live Clock & Timezone Widget */}
-          <Panel title="Live Timezone & Clock Widget">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
-                <ToggleRow
-                  label="Enable Live Clock Widget"
-                  description="Display real-time ticking clock with seconds"
-                  checked={s.widgets?.clock?.enabled === true}
-                  onChange={(v) => patchWidgets("clock", "enabled", v)}
-                />
-                <SelectRow
-                  label="Timezone Offset"
-                  value={s.widgets?.clock?.timezone || "local"}
-                  onChange={(v) => patchWidgets("clock", "timezone", v)}
-                  options={[
-                    { v: "local", l: "Visitor's Local Time" },
-                    { v: "UTC", l: "UTC (Coordinated Universal Time)" },
-                    { v: "America/New_York", l: "New York (EST/EDT)" },
-                    { v: "America/Los_Angeles", l: "Los Angeles (PST/PDT)" },
-                    { v: "Europe/London", l: "London (GMT/BST)" },
-                    { v: "Asia/Tokyo", l: "Tokyo (JST)" },
-                    { v: "Australia/Sydney", l: "Sydney (AEST)" },
-                  ]}
-                />
-              </div>
-
-              <div className="space-y-3 p-3.5 rounded-xl bg-[#080a10] border border-white/5">
-                <SelectRow
-                  label="Clock Format"
-                  value={s.widgets?.clock?.format || "12h"}
-                  onChange={(v) => patchWidgets("clock", "format", v)}
-                  options={[
-                    { v: "12h", l: "12-Hour (AM / PM)" },
-                    { v: "24h", l: "24-Hour (Military Time)" },
-                  ]}
-                />
-                <SelectRow
-                  label="Clock Face Style"
-                  value={s.widgets?.clock?.style || "digital"}
-                  onChange={(v) => patchWidgets("clock", "style", v)}
-                  options={[
-                    { v: "digital", l: "Cyber Digital Glow HUD" },
-                    { v: "minimal", l: "Minimal Monospace Pill" },
                   ]}
                 />
               </div>

@@ -8,136 +8,10 @@ function getCanvasDims(canvas) {
   };
 }
 
-// 1. Subtle Rain
-export function RainEffect({ speed = 1, density = 1 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const dims = getCanvasDims(canvas);
-    let width = (canvas.width = dims.width);
-    let height = (canvas.height = dims.height);
-
-    const onResize = () => {
-      const d = getCanvasDims(canvas);
-      width = canvas.width = d.width;
-      height = canvas.height = d.height;
-    };
-    window.addEventListener("resize", onResize);
-
-    const count = Math.min(60, Math.max(25, Math.floor((width / 24) * density)));
-    const drops = Array.from({ length: count }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      len: 12 + Math.random() * 18,
-      speed: (8 + Math.random() * 8) * speed,
-      drift: -0.2 + Math.random() * 0.4,
-      opacity: 0.18 + Math.random() * 0.28,
-    }));
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      for (let i = 0; i < drops.length; i++) {
-        const d = drops[i];
-        ctx.beginPath();
-        ctx.strokeStyle = `rgba(160, 205, 255, ${d.opacity})`;
-        ctx.lineWidth = 1;
-        ctx.moveTo(d.x, d.y);
-        ctx.lineTo(d.x + d.drift, d.y + d.len);
-        ctx.stroke();
-
-        d.y += d.speed;
-        d.x += d.drift;
-        if (d.y > height + d.len) {
-          d.y = -d.len;
-          d.x = Math.random() * width;
-        }
-        if (d.x > width) d.x = 0;
-        if (d.x < 0) d.x = width;
-      }
-
-      animId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [speed, density]);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
-}
-
-// 2. Snow Stack / Frost Snowflakes
-export function SnowStackEffect({ speed = 1, density = 1 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const dims = getCanvasDims(canvas);
-    let width = (canvas.width = dims.width);
-    let height = (canvas.height = dims.height);
-
-    const onResize = () => {
-      const d = getCanvasDims(canvas);
-      width = canvas.width = d.width;
-      height = canvas.height = d.height;
-    };
-    window.addEventListener("resize", onResize);
-
-    const count = Math.min(70, Math.max(30, Math.floor((width / 22) * density)));
-    const flakes = Array.from({ length: count }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: 1 + Math.random() * 2.2,
-      speed: (0.8 + Math.random() * 1.6) * speed,
-      drift: -0.4 + Math.random() * 0.8,
-      opacity: 0.2 + Math.random() * 0.45,
-    }));
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      for (let i = 0; i < flakes.length; i++) {
-        const f = flakes[i];
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(235, 245, 255, ${f.opacity})`;
-        ctx.fill();
-
-        f.y += f.speed;
-        f.x += f.drift;
-        if (f.y > height) {
-          f.y = -5;
-          f.x = Math.random() * width;
-        }
-        if (f.x > width) f.x = 0;
-        if (f.x < 0) f.x = width;
-      }
-
-      animId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [speed, density]);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
-}
-
-// 3. Anti-Fall Mouse Repulsion Physics
-export function AntiFallEffect({ color = "#78A9D0", sensitivity = 80 }) {
+// ──────────────────────────────────────────────
+// 1. SNOW FALL (Stacks at bottom, slowly melts, moves when mouse is close)
+// ──────────────────────────────────────────────
+export function SnowFallEffect({ speed = 1, density = 1 }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -157,9 +31,7 @@ export function AntiFallEffect({ color = "#78A9D0", sensitivity = 80 }) {
       mouse.y = e.clientY - rect.top;
       mouse.active = true;
     };
-    const onMouseLeave = () => {
-      mouse.active = false;
-    };
+    const onMouseLeave = () => { mouse.active = false; };
 
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseleave", onMouseLeave);
@@ -171,64 +43,90 @@ export function AntiFallEffect({ color = "#78A9D0", sensitivity = 80 }) {
     };
     window.addEventListener("resize", onResize);
 
-    const count = Math.min(65, Math.max(25, Math.floor(width / 26)));
-    const repRadius = Math.max(60, sensitivity * 1.6);
+    const count = Math.min(100, Math.max(35, Math.floor((width / 18) * density)));
+    const flakes = Array.from({ length: count }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: 0,
+      vy: (0.7 + Math.random() * 1.5) * speed,
+      r: 1.2 + Math.random() * 2.2,
+      opacity: 0.35 + Math.random() * 0.55,
+      drift: -0.3 + Math.random() * 0.6,
+    }));
 
-    const particles = Array.from({ length: count }, () => {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
-      return {
-        x,
-        y,
-        baseX: x,
-        baseY: y,
-        vx: 0,
-        vy: 0.6 + Math.random() * 0.9,
-        r: 1.5 + Math.random() * 2,
-        opacity: 0.3 + Math.random() * 0.45,
-      };
-    });
+    // Snow pile segments at the bottom of the screen
+    const pileCols = Math.max(30, Math.floor(width / 14));
+    const snowPile = Array(pileCols).fill(0);
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
+      // Draw accumulated snow stack at the bottom
+      ctx.fillStyle = "rgba(235, 245, 255, 0.55)";
+      ctx.beginPath();
+      ctx.moveTo(0, height);
+      const colWidth = width / (pileCols - 1);
+      for (let c = 0; c < pileCols; c++) {
+        const pileH = Math.min(36, snowPile[c] * 0.4);
+        ctx.lineTo(c * colWidth, height - pileH);
+      }
+      ctx.lineTo(width, height);
+      ctx.closePath();
+      ctx.fill();
 
+      // Slowly melt accumulated snow so it dissipates naturally
+      for (let c = 0; c < pileCols; c++) {
+        if (snowPile[c] > 0) snowPile[c] = Math.max(0, snowPile[c] - 0.015);
+      }
+
+      // Render falling flakes
+      for (let i = 0; i < flakes.length; i++) {
+        const f = flakes[i];
+
+        // Mouse repulsion physics
         if (mouse.active) {
-          const dx = p.x - mouse.x;
-          const dy = p.y - mouse.y;
+          const dx = f.x - mouse.x;
+          const dy = f.y - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
+          const repRadius = 90;
 
           if (dist < repRadius && dist > 0) {
-            const force = (repRadius - dist) / repRadius;
+            const force = ((repRadius - dist) / repRadius) * 2.2;
             const angle = Math.atan2(dy, dx);
-            p.vx += Math.cos(angle) * force * 1.8;
-            p.vy += Math.sin(angle) * force * 1.8;
+            f.vx += Math.cos(angle) * force;
+            f.vy += Math.sin(angle) * force;
           }
         }
 
-        p.vx *= 0.92;
-        p.vy = p.vy * 0.92 + 0.08;
+        f.vx *= 0.92;
+        f.vy = f.vy * 0.94 + 0.06 * (0.7 * speed);
 
-        p.x += p.vx;
-        p.y += p.vy;
+        f.x += f.vx + f.drift;
+        f.y += f.vy;
 
-        if (p.y > height + 10) {
-          p.y = -10;
-          p.x = Math.random() * width;
-          p.vx = 0;
-          p.vy = 0.6 + Math.random() * 0.9;
+        // Check if flake landed on bottom stack
+        if (f.y >= height - 4) {
+          const colIdx = Math.min(pileCols - 1, Math.max(0, Math.floor((f.x / width) * pileCols)));
+          if (snowPile[colIdx] < 60) {
+            snowPile[colIdx] += 1.2;
+          }
+          // Reset flake to top
+          f.y = -6;
+          f.x = Math.random() * width;
+          f.vx = 0;
+          f.vy = (0.7 + Math.random() * 1.5) * speed;
         }
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
+
+        if (f.x < 0) f.x = width;
+        if (f.x > width) f.x = 0;
 
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.globalAlpha = p.opacity;
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(240, 248, 255, ${f.opacity})`;
+        ctx.shadowColor = "rgba(255,255,255,0.4)";
+        ctx.shadowBlur = 4;
         ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
       }
 
       animId = requestAnimationFrame(render);
@@ -241,13 +139,15 @@ export function AntiFallEffect({ color = "#78A9D0", sensitivity = 80 }) {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(animId);
     };
-  }, [color, sensitivity]);
+  }, [speed, density]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
 }
 
-// 4. Matrix Digital Rain
-export function MatrixRainEffect({ speed = 1 }) {
+// ──────────────────────────────────────────────
+// 2. RAIN (Doesn't stack, reacts/moves to mouse)
+// ──────────────────────────────────────────────
+export function RainEffect({ speed = 1, density = 1 }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -259,82 +159,18 @@ export function MatrixRainEffect({ speed = 1 }) {
     let width = (canvas.width = dims.width);
     let height = (canvas.height = dims.height);
 
-    const onResize = () => {
-      const d = getCanvasDims(canvas);
-      width = canvas.width = d.width;
-      height = canvas.height = d.height;
+    let mouse = { x: -1000, y: -1000, active: false };
+
+    const onMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.active = true;
     };
-    window.addEventListener("resize", onResize);
+    const onMouseLeave = () => { mouse.active = false; };
 
-    const cols = Math.floor(width / 18);
-    const ypos = Array(cols).fill(0);
-    const chars = "0123456789ABCDEF$#*";
-
-    let lastTime = 0;
-    const interval = 45 / speed;
-
-    const render = (time) => {
-      if (time - lastTime > interval) {
-        lastTime = time;
-        ctx.fillStyle = "rgba(8, 9, 13, 0.12)";
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.fillStyle = "#5B8DB8";
-        ctx.font = "12pt monospace";
-
-        ypos.forEach((y, ind) => {
-          const text = chars.charAt(Math.floor(Math.random() * chars.length));
-          const x = ind * 18;
-          ctx.fillText(text, x, y);
-          if (y > 100 + Math.random() * 10000) ypos[ind] = 0;
-          else ypos[ind] = y + 16;
-        });
-      }
-      animId = requestAnimationFrame(render);
-    };
-    animId = requestAnimationFrame(render);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [speed]);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
-}
-
-// 5. Cyber Retro Grid
-export function CyberGridEffect() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
-      <div 
-        className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(91,141,184,0.25) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(91,141,184,0.25) 1px, transparent 1px)
-          `,
-          backgroundSize: "32px 32px",
-          maskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 80%)",
-          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 50% 40%, black 30%, transparent 80%)",
-        }}
-      />
-    </div>
-  );
-}
-
-// 6. Deep Starfield
-export function StarsEffect() {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const dims = getCanvasDims(canvas);
-    let width = (canvas.width = dims.width);
-    let height = (canvas.height = dims.height);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseleave", onMouseLeave);
 
     const onResize = () => {
       const d = getCanvasDims(canvas);
@@ -343,28 +179,185 @@ export function StarsEffect() {
     };
     window.addEventListener("resize", onResize);
 
-    const count = 75;
-    const stars = Array.from({ length: count }, () => ({
+    const count = Math.min(110, Math.max(40, Math.floor((width / 16) * density)));
+    const drops = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      r: 0.5 + Math.random() * 1.5,
-      twinkle: Math.random() * Math.PI * 2,
-      speed: 0.02 + Math.random() * 0.03,
-      baseAlpha: 0.2 + Math.random() * 0.6,
+      vx: 0,
+      vy: (12 + Math.random() * 8) * speed,
+      len: 14 + Math.random() * 18,
+      drift: -0.3 + Math.random() * 0.4,
+      opacity: 0.25 + Math.random() * 0.35,
     }));
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      for (let i = 0; i < stars.length; i++) {
-        const s = stars[i];
-        s.twinkle += s.speed;
-        const alpha = Math.max(0.1, s.baseAlpha * (0.6 + 0.4 * Math.sin(s.twinkle)));
+      for (let i = 0; i < drops.length; i++) {
+        const d = drops[i];
+
+        if (mouse.active) {
+          const dx = mouse.x - d.x;
+          const dy = mouse.y - d.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const pullRadius = 140;
+
+          if (dist < pullRadius && dist > 10) {
+            const force = ((pullRadius - dist) / pullRadius) * 1.5;
+            d.vx += (dx / dist) * force;
+          }
+        }
+
+        d.vx *= 0.90;
+        d.x += d.drift + d.vx;
+        d.y += d.vy;
+
+        if (d.y > height + d.len) {
+          d.y = -d.len;
+          d.x = Math.random() * width;
+          d.vx = 0;
+        }
+        if (d.x > width) d.x = 0;
+        if (d.x < 0) d.x = width;
 
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.strokeStyle = `rgba(160, 215, 255, ${d.opacity})`;
+        ctx.lineWidth = 1.2;
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x + d.drift + d.vx * 1.5, d.y + d.len);
+        ctx.stroke();
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+    render();
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseleave", onMouseLeave);
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(animId);
+    };
+  }, [speed, density]);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
+}
+
+// ──────────────────────────────────────────────
+// 3. BLOOD DRIPPING (Actual realistic blood dripping down screen)
+// ──────────────────────────────────────────────
+export function BloodDrippingEffect({ speed = 1, density = 1 }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animId;
+    const dims = getCanvasDims(canvas);
+    let width = (canvas.width = dims.width);
+    let height = (canvas.height = dims.height);
+
+    const onResize = () => {
+      const d = getCanvasDims(canvas);
+      width = canvas.width = d.width;
+      height = canvas.height = d.height;
+    };
+    window.addEventListener("resize", onResize);
+
+    // Drips hanging and trickling down
+    const dripCount = Math.min(32, Math.max(12, Math.floor((width / 45) * density)));
+    const drips = Array.from({ length: dripCount }, (_, ind) => ({
+      x: (ind / dripCount) * width + Math.random() * 20 - 10,
+      y: 0,
+      length: 0,
+      maxLength: 60 + Math.random() * (height * 0.75),
+      speed: (0.4 + Math.random() * 0.8) * speed,
+      width: 2.5 + Math.random() * 3.5,
+      headRadius: 3 + Math.random() * 3,
+      opacity: 0.85 + Math.random() * 0.15,
+      fallingDrop: null, // detached droplet running down
+    }));
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Top bloody border puddle / drip bar
+      ctx.fillStyle = "#80050e";
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(width, 0);
+      ctx.lineTo(width, 6);
+      ctx.lineTo(0, 6);
+      ctx.closePath();
+      ctx.fill();
+
+      for (let i = 0; i < drips.length; i++) {
+        const d = drips[i];
+
+        if (d.length < d.maxLength) {
+          d.length += d.speed;
+        } else if (!d.fallingDrop && Math.random() < 0.02) {
+          // Spawn detached blood drop falling to bottom
+          d.fallingDrop = {
+            x: d.x,
+            y: d.length,
+            vy: 2.5 * speed,
+            r: d.headRadius * 0.9,
+          };
+        }
+
+        // Draw Blood Drip Stem
+        const grad = ctx.createLinearGradient(d.x, 0, d.x, d.length);
+        grad.addColorStop(0, "#550005");
+        grad.addColorStop(0.4, "#8a030d");
+        grad.addColorStop(1, "#c70014");
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = d.width;
+        ctx.lineCap = "round";
+
+        ctx.beginPath();
+        ctx.moveTo(d.x, 0);
+        ctx.lineTo(d.x, d.length);
+        ctx.stroke();
+
+        // Blood Droplet Head at tip of drip
+        ctx.fillStyle = "#c70014";
+        ctx.beginPath();
+        ctx.arc(d.x, d.length, d.headRadius, 0, Math.PI * 2);
         ctx.fill();
+
+        // Glistening highlight on droplet
+        ctx.fillStyle = "rgba(255, 140, 150, 0.7)";
+        ctx.beginPath();
+        ctx.arc(d.x - d.headRadius * 0.3, d.length - d.headRadius * 0.3, d.headRadius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Render Detached Falling Drop
+        if (d.fallingDrop) {
+          const drop = d.fallingDrop;
+          drop.vy += 0.15;
+          drop.y += drop.vy;
+
+          ctx.fillStyle = "#9e000f";
+          ctx.beginPath();
+          ctx.arc(drop.x, drop.y, drop.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(255, 120, 130, 0.6)";
+          ctx.beginPath();
+          ctx.arc(drop.x - 1, drop.y - 1, drop.r * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (drop.y > height + 10) {
+            d.fallingDrop = null;
+            if (Math.random() < 0.3) {
+              d.length = 10;
+              d.maxLength = 50 + Math.random() * (height * 0.8);
+            }
+          }
+        }
       }
 
       animId = requestAnimationFrame(render);
@@ -375,88 +368,282 @@ export function StarsEffect() {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [speed, density]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
 }
 
-// 7. Aurora Wave
-export function AuroraEffect() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
-      <div 
-        className="absolute -inset-[50%] opacity-25 filter blur-[90px] animate-pulse"
-        style={{
-          background: "radial-gradient(circle at 50% 30%, rgba(91,141,184,0.5), rgba(74,222,128,0.2) 40%, rgba(168,85,247,0.15) 70%, transparent 85%)",
-          animationDuration: "8s"
-        }}
-      />
-    </div>
-  );
+// ──────────────────────────────────────────────
+// 4. SHIMMER (Shimmers a shine light beam across screen periodically)
+// ──────────────────────────────────────────────
+export function ShimmerEffect({ speed = 1 }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animId;
+    const dims = getCanvasDims(canvas);
+    let width = (canvas.width = dims.width);
+    let height = (canvas.height = dims.height);
+
+    const onResize = () => {
+      const d = getCanvasDims(canvas);
+      width = canvas.width = d.width;
+      height = canvas.height = d.height;
+    };
+    window.addEventListener("resize", onResize);
+
+    let progress = -0.4;
+    let sparkles = [];
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      progress += 0.0035 * speed;
+      if (progress > 1.6) {
+        progress = -0.5; // cycle every so often
+      }
+
+      if (progress >= -0.2 && progress <= 1.2) {
+        const sweepX = progress * (width + height);
+
+        ctx.save();
+        ctx.translate(sweepX, 0);
+        ctx.rotate((Math.PI / 180) * 25);
+
+        const beamWidth = Math.max(120, width * 0.22);
+        const grad = ctx.createLinearGradient(-beamWidth / 2, 0, beamWidth / 2, 0);
+        grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+        grad.addColorStop(0.35, "rgba(200, 230, 255, 0.05)");
+        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.22)");
+        grad.addColorStop(0.65, "rgba(200, 230, 255, 0.05)");
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(-beamWidth / 2, -height * 1.5, beamWidth, height * 3);
+        ctx.restore();
+
+        // Spawn occasional glint sparkles along beam
+        if (Math.random() < 0.25) {
+          sparkles.push({
+            x: Math.max(20, Math.min(width - 20, sweepX * 0.8 + (Math.random() - 0.5) * 60)),
+            y: Math.random() * height,
+            size: 4 + Math.random() * 8,
+            alpha: 1,
+            decay: 0.035,
+          });
+        }
+      }
+
+      // Draw glint sparkle stars
+      for (let i = sparkles.length - 1; i >= 0; i--) {
+        const sp = sparkles[i];
+        sp.alpha -= sp.decay;
+        if (sp.alpha <= 0) {
+          sparkles.splice(i, 1);
+          continue;
+        }
+        ctx.save();
+        ctx.translate(sp.x, sp.y);
+        ctx.globalAlpha = sp.alpha;
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "#78A9D0";
+        ctx.shadowBlur = 10;
+
+        const s = sp.size;
+        ctx.beginPath();
+        ctx.moveTo(0, -s);
+        ctx.quadraticCurveTo(0, 0, s, 0);
+        ctx.quadraticCurveTo(0, 0, 0, s);
+        ctx.quadraticCurveTo(0, 0, -s, 0);
+        ctx.quadraticCurveTo(0, 0, 0, -s);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+    render();
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(animId);
+    };
+  }, [speed]);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
 }
 
-// 8. Film Grain Overlay
-export function StaticGrainEffect({ opacity = 0.06 }) {
+// ──────────────────────────────────────────────
+// 5. GRADIENT WAVE (Fluid luminous gradient wave reacting to mouse)
+// ──────────────────────────────────────────────
+export function GradientWaveEffect({ speed = 1 }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let animId;
+    const dims = getCanvasDims(canvas);
+    let width = (canvas.width = dims.width);
+    let height = (canvas.height = dims.height);
+
+    let mouse = { x: width / 2, y: height / 2, targetX: width / 2, targetY: height / 2 };
+
+    const onMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.targetX = e.clientX - rect.left;
+      mouse.targetY = e.clientY - rect.top;
+    };
+    window.addEventListener("mousemove", onMouseMove);
+
+    const onResize = () => {
+      const d = getCanvasDims(canvas);
+      width = canvas.width = d.width;
+      height = canvas.height = d.height;
+    };
+    window.addEventListener("resize", onResize);
+
+    let step = 0;
+
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      mouse.x += (mouse.targetX - mouse.x) * 0.05;
+      mouse.y += (mouse.targetY - mouse.y) * 0.05;
+
+      step += 0.015 * speed;
+
+      // Draw 3 layers of fluid undulating sine waves
+      const waves = [
+        { color1: "rgba(91, 141, 184, 0.18)", color2: "rgba(56, 189, 248, 0.08)", freq: 0.003, amp: 35, speed: 1.0, offset: 0 },
+        { color1: "rgba(168, 85, 247, 0.15)", color2: "rgba(236, 72, 153, 0.06)", freq: 0.004, amp: 45, speed: -1.2, offset: 2 },
+        { color1: "rgba(34, 197, 94, 0.12)", color2: "rgba(6, 182, 212, 0.05)", freq: 0.0025, amp: 55, speed: 0.8, offset: 4 },
+      ];
+
+      waves.forEach((w) => {
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+
+        const mouseOffset = ((mouse.x - width / 2) / width) * 40;
+        const mouseHeightInfluence = ((mouse.y - height / 2) / height) * 60;
+
+        for (let x = 0; x <= width; x += 15) {
+          const y =
+            height * 0.65 +
+            Math.sin(x * w.freq + step * w.speed + w.offset + mouseOffset * 0.05) * w.amp +
+            Math.cos(x * w.freq * 0.5 + step * 0.5) * (w.amp * 0.5) +
+            mouseHeightInfluence;
+          ctx.lineTo(x, y);
+        }
+
+        ctx.lineTo(width, height);
+        ctx.closePath();
+
+        const grad = ctx.createLinearGradient(0, height * 0.4, width, height);
+        grad.addColorStop(0, w.color1);
+        grad.addColorStop(1, w.color2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      });
+
+      animId = requestAnimationFrame(render);
+    };
+    render();
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(animId);
+    };
+  }, [speed]);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
+}
+
+// ──────────────────────────────────────────────
+// 6. FILM GRAIN (Authentic textured film grain)
+// ──────────────────────────────────────────────
+export function GrainEffect({ opacity = 0.08 }) {
   return (
     <div
       className="absolute inset-0 pointer-events-none z-[1] mix-blend-overlay"
       style={{
-        opacity: Math.max(0.02, Math.min(0.15, opacity)),
+        opacity: Math.max(0.03, Math.min(0.20, opacity)),
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
       }}
     />
   );
 }
 
-// 9. Retro VHS Scanlines
-export function VHSEffect() {
+// ──────────────────────────────────────────────
+// 7. VHS TAPE (Authentic retro VHS tape scanlines & tracking glitch)
+// ──────────────────────────────────────────────
+export function VHSTapeEffect() {
   return (
-    <div className="absolute inset-0 pointer-events-none z-[1]">
+    <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
+      {/* Scanlines */}
       <div
-        className="absolute inset-0 opacity-[0.14]"
+        className="absolute inset-0 opacity-20"
         style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.08) 2px, rgba(255, 255, 255, 0.08) 4px)",
+          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.09) 2px, rgba(255, 255, 255, 0.09) 4px)",
+        }}
+      />
+      {/* Subtle CRT Vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          boxShadow: "inset 0 0 100px rgba(0,0,0,0.8)",
         }}
       />
     </div>
   );
 }
 
+// ──────────────────────────────────────────────
+// EXCLUSIVELY REDONE BACKGROUND EFFECTS LIST
+// ──────────────────────────────────────────────
 export const BACKGROUND_EFFECTS_LIST = [
-  { id: "none", name: "None", description: "Solid clean dark background" },
-  { id: "anti_fall", name: "Anti-Fall Physics", description: "Interactive mouse repulsion forcefield" },
-  { id: "rain", name: "Tokyo Drizzle", description: "Smooth streaming rain lines" },
-  { id: "snow_stack", name: "Frost Snow", description: "Gentle falling winter snowflakes" },
-  { id: "cyber_grid", name: "Cyber Grid", description: "Futuristic perspective wireframe" },
-  { id: "matrix", name: "Matrix Code", description: "Digital falling matrix glyphs" },
-  { id: "stars", name: "Starfield", description: "Deep night sky twinkling stars" },
-  { id: "aurora", name: "Aurora Borealis", description: "Vibrant ambient cosmic lights" },
-  { id: "static", name: "Film Grain", description: "Subtle cinematic vintage grain" },
-  { id: "vhs", name: "VHS Scanlines", description: "Retro CRT video tracking lines" },
+  { id: "none", name: "None", description: "Clean solid dark background" },
+  { id: "snow_fall", name: "Snow Fall", description: "Snow stacks at bottom & disperses on mouse" },
+  { id: "rain", name: "Rain", description: "Tokyo rain streaks reacting to mouse" },
+  { id: "blood_dripping", name: "Blood Dripping", description: "Realistic crimson blood trickling down" },
+  { id: "shimmer", name: "Shimmer", description: "Periodic smooth light sweep & sparkles" },
+  { id: "gradient_wave", name: "Gradient Wave", description: "Fluid luminous liquid wave reacting to mouse" },
+  { id: "grain", name: "Grain", description: "Authentic cinematic film grain texture" },
+  { id: "vhs_tape", name: "VHS Tape", description: "Retro CRT scanlines & tracking glitch" },
 ];
 
 export function BackgroundEffect({ effect, config = {} }) {
   if (!effect || effect === "none") return null;
 
-  switch (effect) {
+  // Backwards compatibility alias resolution
+  const resolved =
+    effect === "snow" || effect === "snow_stack" ? "snow_fall" :
+    effect === "blood" || effect === "bleed" ? "blood_dripping" :
+    effect === "vhs" ? "vhs_tape" :
+    effect === "static" || effect === "static_grain" ? "grain" :
+    effect === "aurora" || effect === "reactive" || effect === "anti_fall" ? "gradient_wave" :
+    effect;
+
+  switch (resolved) {
+    case "snow_fall":
+      return <SnowFallEffect speed={config.speed || 1} density={config.density || 1} />;
     case "rain":
       return <RainEffect speed={config.speed || 1} density={config.density || 1} />;
-    case "snow_stack":
-      return <SnowStackEffect speed={config.speed || 1} density={config.density || 1} />;
-    case "anti_fall":
-      return <AntiFallEffect color={config.color || "#78A9D0"} sensitivity={config.sensitivity || 80} />;
-    case "matrix":
-      return <MatrixRainEffect speed={config.speed || 1} />;
-    case "cyber_grid":
-      return <CyberGridEffect />;
-    case "stars":
-      return <StarsEffect />;
-    case "aurora":
-      return <AuroraEffect />;
-    case "static":
-      return <StaticGrainEffect opacity={config.opacity || 0.06} />;
-    case "vhs":
-      return <VHSEffect />;
+    case "blood_dripping":
+      return <BloodDrippingEffect speed={config.speed || 1} density={config.density || 1} />;
+    case "shimmer":
+      return <ShimmerEffect speed={config.speed || 1} />;
+    case "gradient_wave":
+      return <GradientWaveEffect speed={config.speed || 1} />;
+    case "grain":
+      return <GrainEffect opacity={config.opacity || 0.08} />;
+    case "vhs_tape":
+      return <VHSTapeEffect />;
     default:
       return null;
   }
@@ -543,7 +730,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
       const mx = mouseRef.current.x;
       const my = mouseRef.current.y;
 
-      // 1. Neon Aura Effect
       if (effect === "neon_aura" && mx > -100) {
         const rad = size * 3;
         const grad = ctx.createRadialGradient(mx, my, 0, mx, my, rad);
@@ -556,7 +742,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
         ctx.fill();
       }
 
-      // 2. Precision Dot Effect
       if (effect === "glow_dot" && mx > -100) {
         ctx.shadowColor = color;
         ctx.shadowBlur = 12;
@@ -567,7 +752,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
         ctx.shadowBlur = 0;
       }
 
-      // 3. Tactical Crosshair Effect
       if (effect === "crosshair" && mx > -100) {
         const arm = size * 1.2;
         const gap = size * 0.4;
@@ -576,23 +760,17 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
         ctx.shadowColor = color;
         ctx.shadowBlur = 8;
 
-        // Reticle lines
         ctx.beginPath();
-        // Top
         ctx.moveTo(mx, my - gap);
         ctx.lineTo(mx, my - gap - arm);
-        // Bottom
         ctx.moveTo(mx, my + gap);
         ctx.lineTo(mx, my + gap + arm);
-        // Left
         ctx.moveTo(mx - gap, my);
         ctx.lineTo(mx - gap - arm, my);
-        // Right
         ctx.moveTo(mx + gap, my);
         ctx.lineTo(mx + gap + arm, my);
         ctx.stroke();
 
-        // Center dot
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
         ctx.arc(mx, my, 1.5, 0, Math.PI * 2);
@@ -600,7 +778,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
         ctx.shadowBlur = 0;
       }
 
-      // 4. Trail & Sparkles Particle Loop
       if ((effect === "trail" || effect === "sparkles") && particlesRef.current.length > 0) {
         for (let i = particlesRef.current.length - 1; i >= 0; i--) {
           const p = particlesRef.current[i];
@@ -623,7 +800,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
           ctx.fillStyle = color;
 
           if (effect === "sparkles") {
-            // Draw 4-point star
             const s = p.size;
             ctx.beginPath();
             ctx.moveTo(0, -s);
@@ -633,7 +809,6 @@ export function CursorEffectsRenderer({ effect, color = "#5B8DB8", size = 18 }) 
             ctx.quadraticCurveTo(0, 0, 0, -s);
             ctx.fill();
           } else {
-            // Draw glowing particle circle
             ctx.beginPath();
             ctx.arc(0, 0, Math.max(1, p.size / 2), 0, Math.PI * 2);
             ctx.fill();

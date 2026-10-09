@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Wand2, Check, X, Sliders, Palette } from "lucide-react";
+import { Wand2, Check, X, Sliders } from "lucide-react";
 import { BACKGROUND_EFFECTS_LIST, BackgroundEffect } from "@/components/BackgroundEffects";
-import CustomColorPicker from "@/components/ColorPicker";
 
 export function BackgroundEffectsModal({
   open,
@@ -15,7 +14,7 @@ export function BackgroundEffectsModal({
   if (!open) return null;
 
   const currentBg = settings?.bg_effect || "none";
-  const bgConfig = settings?.bg_effect_config || { sensitivity: 80, speed: 1, color: "#78A9D0", density: 1, opacity: 0.08 };
+  const bgConfig = settings?.bg_effect_config || { speed: 1, density: 1, opacity: 0.08 };
 
   const handleSelectBg = (bgId) => {
     patch("bg_effect", bgId);
@@ -28,7 +27,7 @@ export function BackgroundEffectsModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="w-[720px] max-w-[calc(100vw-2rem)] h-[640px] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
+      <DialogContent className="w-[720px] max-w-[calc(100vw-2rem)] h-[620px] max-h-[92dvh] bg-[#0c0e15] border border-[#2b384e] text-white p-0 rounded-2xl shadow-[0_25px_80px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0 bg-[#090b10]">
           <div className="flex items-center gap-2.5">
@@ -40,13 +39,13 @@ export function BackgroundEffectsModal({
                 Background Ambient Effects
               </DialogTitle>
               <div className="text-[11px] text-[#E5E7EB]/50">
-                Live particle systems, atmospheric shaders, and retro CRT scanlines
+                Interactive weather, fluid gradient waves, film grain, dripping blood & shimmer
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer"
           >
             <X size={14} />
           </button>
@@ -54,8 +53,8 @@ export function BackgroundEffectsModal({
 
         {/* Modal Body */}
         <div className="p-4 flex-1 overflow-y-auto space-y-4">
-          {/* Options Grid with Live Mini Canvas in every option! */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {/* Options Grid with Live Mini Canvas in every option */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {BACKGROUND_EFFECTS_LIST.map((eff) => {
               const isSelected = currentBg === eff.id;
               return (
@@ -111,80 +110,50 @@ export function BackgroundEffectsModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {(currentBg === "anti_fall" || currentBg === "reactive") && (
+                {(currentBg === "rain" || currentBg === "snow_fall" || currentBg === "blood_dripping" || currentBg === "shimmer" || currentBg === "gradient_wave") && (
                   <div>
                     <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
-                      <span>Particle Sensitivity & Push Force</span>
-                      <span className="font-mono text-[#5B8DB8] text-[11px]">
-                        {bgConfig.sensitivity || 80}%
-                      </span>
+                      <span>Speed / Flow Velocity</span>
+                      <span className="font-mono text-[#5B8DB8] text-[11px]">{bgConfig.speed || 1}x</span>
                     </div>
                     <Slider
-                      value={[bgConfig.sensitivity || 80]}
-                      min={10}
-                      max={100}
-                      step={1}
-                      onValueChange={(v) => handleConfigChange("sensitivity", v[0])}
+                      value={[bgConfig.speed || 1]}
+                      min={0.4}
+                      max={2.5}
+                      step={0.1}
+                      onValueChange={(v) => handleConfigChange("speed", v[0])}
                     />
                   </div>
                 )}
 
-                {(currentBg === "anti_fall" || currentBg === "reactive") && (
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <span className="text-xs text-[#E5E7EB]/70">Particle Color:</span>
-                    <div className="w-36">
-                      <CustomColorPicker
-                        value={bgConfig.color || "#78A9D0"}
-                        onChange={(col) => handleConfigChange("color", col)}
-                        label="Color"
-                      />
+                {(currentBg === "rain" || currentBg === "snow_fall" || currentBg === "blood_dripping") && (
+                  <div>
+                    <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
+                      <span>Particle Density</span>
+                      <span className="font-mono text-[#5B8DB8] text-[11px]">{bgConfig.density || 1}x</span>
                     </div>
+                    <Slider
+                      value={[bgConfig.density || 1]}
+                      min={0.4}
+                      max={2.2}
+                      step={0.1}
+                      onValueChange={(v) => handleConfigChange("density", v[0])}
+                    />
                   </div>
                 )}
 
-                {(currentBg === "rain" || currentBg === "snow_stack") && (
-                  <>
-                    <div>
-                      <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
-                        <span>Fall Velocity</span>
-                        <span className="font-mono text-[#5B8DB8] text-[11px]">{bgConfig.speed || 1}x</span>
-                      </div>
-                      <Slider
-                        value={[bgConfig.speed || 1]}
-                        min={0.5}
-                        max={2.5}
-                        step={0.1}
-                        onValueChange={(v) => handleConfigChange("speed", v[0])}
-                      />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
-                        <span>Density / Amount</span>
-                        <span className="font-mono text-[#5B8DB8] text-[11px]">{bgConfig.density || 1}x</span>
-                      </div>
-                      <Slider
-                        value={[bgConfig.density || 1]}
-                        min={0.4}
-                        max={2}
-                        step={0.1}
-                        onValueChange={(v) => handleConfigChange("density", v[0])}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {currentBg === "static_grain" && (
-                  <div>
+                {currentBg === "grain" && (
+                  <div className="col-span-2">
                     <div className="flex justify-between text-xs text-[#E5E7EB]/70 mb-1">
-                      <span>Grain Film Opacity</span>
+                      <span>Film Grain Intensity</span>
                       <span className="font-mono text-[#5B8DB8] text-[11px]">
                         {Math.round((bgConfig.opacity || 0.08) * 100)}%
                       </span>
                     </div>
                     <Slider
                       value={[bgConfig.opacity || 0.08]}
-                      min={0.02}
-                      max={0.25}
+                      min={0.03}
+                      max={0.20}
                       step={0.01}
                       onValueChange={(v) => handleConfigChange("opacity", v[0])}
                     />
@@ -204,7 +173,7 @@ export function BackgroundEffectsModal({
             type="button"
             size="sm"
             onClick={onClose}
-            className="text-xs font-bold h-8 px-5 rounded-lg bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white shadow-[0_0_12px_rgba(91,141,184,0.35)]"
+            className="text-xs font-bold h-8 px-5 rounded-lg bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white shadow-[0_0_12px_rgba(91,141,184,0.35)] cursor-pointer"
           >
             Done
           </Button>

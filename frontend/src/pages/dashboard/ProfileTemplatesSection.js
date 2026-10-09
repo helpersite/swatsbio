@@ -6,13 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Check, Eye, Loader2, Plus, Search,
-  Trash2, Edit3, CheckSquare, Square
+  Trash2, Edit3, CheckSquare, Square,
+  Sparkles, ExternalLink, ShieldCheck, User,
+  Layers, Palette, Music
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { renderBioText } from "@/lib/textEffects";
+import { BackgroundEffect } from "@/components/BackgroundEffects";
 
 export default function ProfileTemplatesSection() {
   const { user, setUser } = useAuth();
@@ -77,11 +81,11 @@ export default function ProfileTemplatesSection() {
     category: t.visibility === "role" ? "Role Restricted" : (t.visibility === "unlisted" ? "Unlisted" : "Community"),
     tagline: t.description || `Shared by @${t.owner_username || "user"}`,
     author: `@${t.owner_username || "user"}`,
+    owner_username: t.owner_username || "swats",
     accent: t.settings?.accent_color || "#5B8DB8",
     bg_gradient: "from-blue-950/40 via-purple-950/20 to-[#08090d]",
     settings: t.settings || {},
     owner_id: t.owner_id,
-    owner_username: t.owner_username,
     visibility: t.visibility,
     target_role: t.target_role,
   }));
@@ -223,7 +227,7 @@ export default function ProfileTemplatesSection() {
         <div>
           <h1 className="text-base font-bold text-white font-display">Templates & Themes</h1>
           <p className="text-xs text-[#E5E7EB]/50">
-            Apply profile layouts, color accents, backgrounds, and fonts
+            Preview, customize, and equip community themes and layouts
           </p>
         </div>
         <Button
@@ -243,7 +247,7 @@ export default function ProfileTemplatesSection() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search templates..."
+              placeholder="Search templates by name, author, style..."
               className="bg-[#0c0e18] border-white/10 pl-9 text-xs text-white placeholder:text-white/30 h-9 rounded-xl"
             />
           </div>
@@ -292,96 +296,122 @@ export default function ProfileTemplatesSection() {
           {filteredTemplates.map((t) => {
             const isApplying = applyingId === t.id;
             const canManage = isAdmin || t.owner_id === user?.id;
+            const s = t.settings || {};
+            const accent = t.accent || "#5B8DB8";
 
             return (
               <div
                 key={t.id}
-                className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/50 overflow-hidden flex flex-col justify-between group transition-all shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+                className="rounded-2xl bg-[#0c0e18] border border-white/10 hover:border-[#5B8DB8]/60 overflow-hidden flex flex-col justify-between group transition-all duration-200 shadow-[0_8px_30px_rgba(0,0,0,0.5)] hover:shadow-[0_12px_40px_rgba(0,0,0,0.8)]"
               >
-                {/* Card Banner */}
-                <div className={`relative h-28 bg-gradient-to-br ${t.bg_gradient} p-3.5 flex flex-col justify-between border-b border-white/10 overflow-hidden`}>
-                  <div className="flex items-center justify-between z-10">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm"
-                        style={{
-                          backgroundColor: `${t.accent}20`,
-                          borderColor: `${t.accent}60`,
-                          color: t.accent,
-                        }}
-                      >
-                        {t.category}
-                      </span>
-                      {t.visibility === "role" && (
-                        <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-mono">
-                          {t.target_role || "Role"}
-                        </span>
-                      )}
-                    </div>
+                {/* Top Interactive Mini Preview Box */}
+                <div className="relative h-44 bg-[#050608] border-b border-white/10 overflow-hidden p-3 flex flex-col justify-between select-none">
+                  {/* Background Effect Canvas inside mini preview */}
+                  {s.bg_effect && s.bg_effect !== "none" && (
+                    <BackgroundEffect effect={s.bg_effect} config={s.bg_effect_config || { speed: 0.8 }} />
+                  )}
 
-                    <div className="flex items-center gap-1">
+                  {/* Ambient Glow */}
+                  <div
+                    className="absolute -right-6 -bottom-6 w-32 h-32 rounded-full filter blur-3xl opacity-30 pointer-events-none"
+                    style={{ backgroundColor: accent }}
+                  />
+
+                  {/* Top Bar: Category Pill & Live Preview Icon Button */}
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border shadow-sm backdrop-blur-md"
+                      style={{
+                        backgroundColor: `${accent}25`,
+                        borderColor: `${accent}60`,
+                        color: accent,
+                      }}
+                    >
+                      {t.category}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
                       {canManage && (
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(t)}
-                          className="w-6 h-6 rounded-lg bg-black/50 hover:bg-[#5B8DB8] text-white flex items-center justify-center text-xs transition-colors"
+                          className="w-7 h-7 rounded-lg bg-black/60 hover:bg-[#5B8DB8] text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
                           title="Edit"
                         >
-                          <Edit3 size={11} />
+                          <Edit3 size={12} />
                         </button>
                       )}
                       {canManage && (
                         <button
                           type="button"
                           onClick={() => handleDeleteTemplate(t.id, t.name)}
-                          className="w-6 h-6 rounded-lg bg-black/50 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors"
+                          className="w-7 h-7 rounded-lg bg-black/60 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
                           title="Delete"
                         >
-                          <Trash2 size={11} />
+                          <Trash2 size={12} />
                         </button>
                       )}
-                      <span className="text-[10px] text-white/60 font-mono">
-                        {t.author}
-                      </span>
+
+                      {/* Top Right Live Preview Modal Trigger Icon */}
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTemplate(t)}
+                        className="w-7 h-7 rounded-lg bg-black/70 hover:bg-[#5B8DB8] text-white/90 hover:text-white flex items-center justify-center border border-white/15 transition-all shadow-md group-hover:scale-105 cursor-pointer"
+                        title="Open Interactive Live Preview"
+                      >
+                        <Eye size={13} className="group-hover:text-white" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Header Title */}
-                  <div className="flex items-center gap-2 z-10">
+                  {/* Mini Mockup Bio Card */}
+                  <div
+                    className="relative z-10 mx-auto w-full max-w-[210px] p-2.5 rounded-xl border border-white/15 backdrop-blur-md bg-black/60 shadow-xl flex flex-col items-center text-center space-y-1"
+                    style={{ borderColor: `${accent}40` }}
+                  >
                     <div
-                      className="w-7 h-7 rounded-lg border flex items-center justify-center text-xs font-bold shadow-md"
-                      style={{ backgroundColor: t.accent, color: "#000" }}
+                      className="w-9 h-9 rounded-full border-2 flex items-center justify-center text-xs font-bold shadow-md"
+                      style={{ borderColor: accent, backgroundColor: `${accent}30`, color: "#fff" }}
                     >
                       {t.name.charAt(0)}
                     </div>
-                    <div>
-                      <div className="text-xs font-bold text-white">{t.name}</div>
-                      <div className="text-[10px] text-[#E5E7EB]/60 font-mono">{t.settings?.font_family || "Inter"}</div>
+                    <div className="text-xs font-black text-white truncate max-w-[170px]">
+                      {renderBioText(t.name)}
+                    </div>
+                    <div className="w-full flex justify-center gap-1">
+                      <span className="w-12 h-1.5 rounded-full bg-white/20" />
+                      <span className="w-6 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
                     </div>
                   </div>
 
-                  <div
-                    className="absolute -right-8 -bottom-8 w-28 h-28 rounded-full filter blur-2xl opacity-40 pointer-events-none"
-                    style={{ backgroundColor: t.accent }}
-                  />
+                  {/* Bottom info strip in banner */}
+                  <div className="relative z-10 flex items-center justify-between text-[10px] text-white/60 font-mono">
+                    <span>{s.layout || "classic"}</span>
+                    <span>{t.author}</span>
+                  </div>
                 </div>
 
                 {/* Card Body */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                  <p className="text-[11px] text-[#E5E7EB]/60 leading-relaxed line-clamp-2">
-                    {t.tagline}
-                  </p>
+                  <div>
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-bold text-white truncate">{t.name}</h3>
+                      <span className="text-[10px] font-mono text-[#5B8DB8] px-1.5 py-0.5 rounded bg-[#5B8DB8]/10 border border-[#5B8DB8]/20">
+                        {s.font_family || s.font || "Outfit"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#E5E7EB]/60 leading-relaxed line-clamp-2 mt-1">
+                      {t.tagline}
+                    </p>
+                  </div>
 
                   {/* Specs Pill List */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex flex-wrap gap-1.5">
                     <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                      {t.settings?.layout || "classic"}
+                      {s.layout || "classic"}
                     </span>
                     <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                      {t.settings?.bg_effect || "none"}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/70 border border-white/5">
-                      {t.settings?.font_family || "Inter"}
+                      {s.bg_effect || "none"}
                     </span>
                   </div>
 
@@ -391,21 +421,21 @@ export default function ProfileTemplatesSection() {
                       type="button"
                       variant="outline"
                       onClick={() => setPreviewTemplate(t)}
-                      className="flex-1 border-white/10 hover:bg-white/5 text-white/80 hover:text-white text-xs h-8 rounded-xl gap-1 cursor-pointer"
+                      className="flex-1 border-white/15 hover:bg-white/10 text-white/90 hover:text-white text-xs h-8 rounded-xl gap-1.5 cursor-pointer"
                     >
-                      <Eye size={12} /> Inspect
+                      <Eye size={13} /> Live Preview
                     </Button>
                     <Button
                       type="button"
                       disabled={isApplying}
                       onClick={() => handleApply(t)}
-                      className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 rounded-xl shadow-md gap-1 cursor-pointer"
+                      className="flex-1 bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 rounded-xl shadow-md gap-1.5 cursor-pointer"
                     >
                       {isApplying ? (
-                        <Loader2 size={12} className="animate-spin" />
+                        <Loader2 size={13} className="animate-spin" />
                       ) : (
                         <>
-                          <Check size={12} /> Equip
+                          <Check size={13} /> Equip
                         </>
                       )}
                     </Button>
@@ -417,64 +447,138 @@ export default function ProfileTemplatesSection() {
         </div>
       )}
 
-      {/* Inspect Modal */}
+      {/* Interactive Full Template Live Preview Modal */}
       <Dialog open={Boolean(previewTemplate)} onOpenChange={(o) => !o && setPreviewTemplate(null)}>
-        <DialogContent className="w-[620px] max-w-[calc(100vw-2rem)] bg-[#0c0e18] border border-[#2b384e] text-white p-5 rounded-2xl shadow-2xl">
-          {previewTemplate && (
-            <div className="space-y-4">
-              <DialogTitle className="text-base font-bold text-white font-display">
-                {previewTemplate.name}
-              </DialogTitle>
-              <p className="text-xs text-[#E5E7EB]/60">{previewTemplate.tagline}</p>
+        <DialogContent className="w-[780px] max-w-[calc(100vw-2rem)] h-[660px] max-h-[92dvh] bg-[#07090e] border border-[#2b384e] text-white p-0 rounded-3xl shadow-[0_25px_90px_rgba(0,0,0,0.95)] flex flex-col overflow-hidden">
+          {previewTemplate && (() => {
+            const s = previewTemplate.settings || {};
+            const accent = s.accent_color || previewTemplate.accent || "#5B8DB8";
+            const font = s.font_family || s.font || "Outfit";
 
-              {/* Specs Breakdown */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-[#07080c] p-3 rounded-xl border border-white/10 text-xs">
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Layout</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.layout || "classic"}</span>
+            return (
+              <div className="relative w-full h-full flex flex-col justify-between overflow-hidden">
+                {/* Background Ambient Effect */}
+                {s.bg_effect && s.bg_effect !== "none" && (
+                  <BackgroundEffect effect={s.bg_effect} config={s.bg_effect_config || { speed: 1 }} />
+                )}
+
+                {/* Top Floating Control Bar */}
+                <div className="relative z-30 p-4 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-xl shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shadow" style={{ backgroundColor: accent }}>
+                      {previewTemplate.name.charAt(0)}
+                    </span>
+                    <div>
+                      <DialogTitle className="text-sm font-bold text-white font-display">
+                        {previewTemplate.name}
+                      </DialogTitle>
+                      <div className="text-[11px] text-[#E5E7EB]/50">
+                        Live Interactive Template Preview
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      disabled={applyingId === previewTemplate.id}
+                      onClick={() => handleApply(previewTemplate)}
+                      className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md gap-1.5 cursor-pointer"
+                    >
+                      {applyingId === previewTemplate.id ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                      Equip Template
+                    </Button>
+                    <button
+                      onClick={() => setPreviewTemplate(null)}
+                      className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/70 hover:text-white transition-colors cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Background FX</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.bg_effect || "none"}</span>
+
+                {/* Center Live Mockup Canvas */}
+                <div className="relative z-20 flex-1 overflow-y-auto p-6 flex items-center justify-center">
+                  <div
+                    className="w-full max-w-sm rounded-3xl p-6 border shadow-2xl backdrop-blur-2xl text-center space-y-4 transition-all"
+                    style={{
+                      fontFamily: font,
+                      borderColor: `${accent}45`,
+                      background: "rgba(10, 13, 18, 0.78)",
+                      boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 35px ${accent}25`,
+                    }}
+                  >
+                    {/* Mockup Profile Avatar */}
+                    <div className="relative inline-block mx-auto">
+                      <div
+                        className="w-20 h-20 rounded-full border-2 flex items-center justify-center text-2xl font-black text-white shadow-xl mx-auto"
+                        style={{ borderColor: accent, backgroundColor: `${accent}25` }}
+                      >
+                        {previewTemplate.name.charAt(0)}
+                      </div>
+                    </div>
+
+                    {/* Mockup Title with Text Effect */}
+                    <div>
+                      <h2 className="text-xl font-black text-white">
+                        {renderBioText(previewTemplate.name)}
+                      </h2>
+                      <div className="text-xs font-semibold mt-0.5 tracking-wider uppercase" style={{ color: accent }}>
+                        {previewTemplate.author}
+                      </div>
+                    </div>
+
+                    {/* Mockup Description */}
+                    <p className="text-xs text-[#E5E7EB]/70 leading-relaxed font-normal">
+                      {previewTemplate.tagline}
+                    </p>
+
+                    {/* Mockup Links */}
+                    <div className="space-y-2 pt-2 border-t border-white/10">
+                      <div
+                        className="w-full py-2.5 px-3 rounded-xl border flex items-center justify-between text-xs font-semibold text-white backdrop-blur-md"
+                        style={{ borderColor: `${accent}35`, background: `${accent}15` }}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Sparkles size={14} style={{ color: accent }} />
+                          <span>Interactive Preview Link</span>
+                        </span>
+                        <ExternalLink size={12} className="text-white/40" />
+                      </div>
+                      <div
+                        className="w-full py-2.5 px-3 rounded-xl border border-white/10 bg-black/40 flex items-center justify-between text-xs font-semibold text-[#E5E7EB]/80"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Palette size={14} className="text-white/50" />
+                          <span>Custom Color & Effects</span>
+                        </span>
+                        <ExternalLink size={12} className="text-white/40" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Font Family</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.font_family || "Inter"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Avatar Effect</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.avatar_fx || "none"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Name Effect</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.name_effect || "none"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-white/40 uppercase font-bold block">Card Opacity</span>
-                  <span className="text-white font-mono">{previewTemplate.settings?.card_opacity || 90}%</span>
+
+                {/* Bottom Left "Template by: [Logo] [Name]" Bar */}
+                <div className="relative z-30 p-4 border-t border-white/10 bg-black/70 backdrop-blur-xl flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5 text-xs text-[#E5E7EB]/80">
+                    <span className="text-[11px] uppercase tracking-wider text-white/50 font-bold">
+                      Template by:
+                    </span>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white font-semibold">
+                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-black" style={{ backgroundColor: accent }}>
+                        {previewTemplate.owner_username.charAt(0).toUpperCase()}
+                      </span>
+                      <span>@{previewTemplate.owner_username}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] font-mono text-white/50">
+                    Layout: <strong className="text-white font-semibold">{s.layout || "classic"}</strong> · Effect: <strong className="text-white font-semibold">{s.bg_effect || "none"}</strong>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setPreviewTemplate(null)}
-                  className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
-                >
-                  Close
-                </Button>
-                <Button
-                  type="button"
-                  disabled={applyingId === previewTemplate.id}
-                  onClick={() => handleApply(previewTemplate)}
-                  className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
-                >
-                  {applyingId === previewTemplate.id ? "Equipping..." : "Equip Live"}
-                </Button>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -599,14 +703,14 @@ export default function ProfileTemplatesSection() {
                 type="button"
                 variant="outline"
                 onClick={() => setPublishOpen(false)}
-                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={publishing || !templateName.trim()}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md cursor-pointer"
               >
                 {publishing ? "Publishing..." : "Publish"}
               </Button>
@@ -674,14 +778,14 @@ export default function ProfileTemplatesSection() {
                 type="button"
                 variant="outline"
                 onClick={() => setEditModal({ ...editModal, open: false })}
-                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl"
+                className="border-white/10 hover:bg-white/5 text-xs text-white/70 h-8 rounded-xl cursor-pointer"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={savingEdit || !editModal.name.trim()}
-                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md"
+                className="bg-[#5B8DB8] hover:bg-[#4A7A9F] text-white text-xs font-bold h-8 px-4 rounded-xl shadow-md cursor-pointer"
               >
                 {savingEdit ? "Saving..." : "Save Changes"}
               </Button>

@@ -1085,6 +1085,7 @@ export function BadgesSection() {
   const owned = user.badges || [];
   const [shown, setShown] = useState(Array.isArray(user.settings?.badges_shown) ? user.settings.badges_shown : []);
   const [badgeLayout, setBadgeLayout] = useState(user.settings?.badge_layout || "classic");
+  const [badgesPosition, setBadgesPosition] = useState(user.settings?.badges_position || "below_name");
   const [customBadges, setCustomBadges] = useState(Array.isArray(user.settings?.custom_badges) ? user.settings.custom_badges : []);
   const [badgeStyle, setBadgeStyle] = useState({
     size: 28,
@@ -1140,6 +1141,7 @@ export function BadgesSection() {
           ...(user?.settings || {}),
           badges_shown: shown,
           badge_layout: badgeLayout,
+          badges_position: badgesPosition,
           custom_badges: customBadges,
           badge_style: badgeStyle,
           badge_color_overlap: badgeColorOverlap,
@@ -1347,17 +1349,30 @@ export function BadgesSection() {
         <div className="text-xs font-bold uppercase tracking-wider text-[#5B8DB8] pb-1 border-b border-white/5">
           Badge Appearance & Tooltips
         </div>
-        <SelectRow
-          label="Badge layout"
-          value={badgeLayout}
-          onChange={setBadgeLayout}
-          options={[
-            { v: "classic", l: "Individual badges" },
-            { v: "all_in_one", l: "All badges in one pill" },
-            { v: "grid", l: "Grid" },
-            { v: "pills", l: "Separate pills" },
-          ]}
-        />
+        <div className="grid sm:grid-cols-2 gap-3">
+          <SelectRow
+            label="Badge layout"
+            value={badgeLayout}
+            onChange={setBadgeLayout}
+            options={[
+              { v: "classic", l: "Individual badges" },
+              { v: "all_in_one", l: "All badges in one pill" },
+              { v: "grid", l: "Grid" },
+              { v: "pills", l: "Separate pills" },
+            ]}
+          />
+          <SelectRow
+            label="Badges placement"
+            value={badgesPosition}
+            onChange={setBadgesPosition}
+            options={[
+              { v: "below_name", l: "Below Name (Default)" },
+              { v: "next_to_name", l: "Next to Name (Inline)" },
+              { v: "above_avatar", l: "Above Avatar" },
+              { v: "below_desc", l: "Below Bio Description" },
+            ]}
+          />
+        </div>
         <div className="grid sm:grid-cols-2 gap-3">
           <ToggleRow label="Badge background" checked={badgeStyle.background !== false} onChange={(value) => setBadgeStyle((style) => ({ ...style, background: value }))} />
           <ToggleRow label="Badge outline" checked={badgeStyle.outline !== false} onChange={(value) => setBadgeStyle((style) => ({ ...style, outline: value }))} />

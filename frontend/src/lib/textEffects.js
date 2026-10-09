@@ -30,6 +30,9 @@ export const USERNAME_EFFECTS_LIST = [
   { id: "none", name: "No Effect", desc: "Clean default typography styling", wrap: (t) => t },
   { id: "glow", name: "Glow", desc: "Refined luminous backlight glow with customizable accent color", wrap: (t, color = "#5B8DB8") => `:glow#${color.replace(/^#/, "")}:${t}:glow:` },
   { id: "sparkle", name: "Sparkle", desc: "Animated golden sparkle particles around your name", wrap: (t, color = "#F5C542") => `:sparkle#${color.replace(/^#/, "")}:${t}:sparkle:` },
+  { id: "stack", name: "3D Stack", desc: "Layered 3D depth multi-chroma chromatic text stack", wrap: (t, color = "#5B8DB8") => `:stack#${color.replace(/^#/, "")}:${t}:stack:` },
+  { id: "typewriter", name: "Typewriter", desc: "Live animated character-by-character typewriter effect", wrap: (t) => `:typewriter:${t}:` },
+  { id: "grain", name: "Film Grain", desc: "Cinematic textured noise grain typography", wrap: (t) => `:grain:${t}:` },
   { id: "wave_flow", name: "Wave Flow", desc: "True flowing sine wave undulating animation across letters", wrap: (t) => `:waveflow:${t}:` },
   { id: "rgb_glow", name: "RGB Glow", desc: "Pulsing multi-chroma RGB rainbow perimeter glow", wrap: (t) => `:rgbglow:${t}:` },
   { id: "bleed", name: "Bleed", desc: "Dripping dark crimson blood shadow & aura", wrap: (t) => `:blood:${t}:` },
@@ -38,6 +41,60 @@ export const USERNAME_EFFECTS_LIST = [
   { id: "rainbow", name: "Rainbow Wave", desc: "Smooth chromatic color shifting gradient", wrap: (t) => `:rainbow:${t}:` },
   { id: "outline", name: "Outline", desc: "Crisp color-stroked lettering", wrap: (t, color = "#5B8DB8") => `:outline#${color.replace(/^#/, "")}:${t}:outline:` },
 ];
+
+function TypewriterText({ text }) {
+  const [displayed, setDisplayed] = useState("");
+  const [cursorVisible, setCursorVisible] = useState(true);
+
+  useEffect(() => {
+    let index = 0;
+    let forward = true;
+    let timeoutId;
+
+    const tick = () => {
+      if (forward) {
+        index++;
+        setDisplayed(text.slice(0, index));
+        if (index >= text.length) {
+          forward = false;
+          timeoutId = setTimeout(tick, 2200); // pause at full text
+          return;
+        }
+        timeoutId = setTimeout(tick, 90 + Math.random() * 40);
+      } else {
+        index--;
+        setDisplayed(text.slice(0, index));
+        if (index <= 0) {
+          forward = true;
+          timeoutId = setTimeout(tick, 600); // pause before retyping
+          return;
+        }
+        timeoutId = setTimeout(tick, 45);
+      }
+    };
+
+    timeoutId = setTimeout(tick, 100);
+
+    const cursorInterval = setInterval(() => {
+      setCursorVisible((v) => !v);
+    }, 450);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(cursorInterval);
+    };
+  }, [text]);
+
+  return (
+    <span className="font-mono inline-flex items-center tracking-wide text-white">
+      <span>{displayed || "\u00A0"}</span>
+      <span
+        className={`inline-block w-[2px] h-[1em] ml-0.5 bg-[#5B8DB8] ${cursorVisible ? "opacity-100" : "opacity-0"}`}
+        style={{ boxShadow: "0 0 6px #5B8DB8" }}
+      />
+    </span>
+  );
+}
 
 function ShuffleText({ text }) {
   const [display, setDisplay] = useState(text);
@@ -73,16 +130,16 @@ function ShuffleText({ text }) {
 export function stripEffectSyntax(text) {
   if (!text || typeof text !== "string") return "";
   let clean = text;
-  // 1. Strip bracketed effect tags: [:sparkle#3845FF:koni:sparkle:], [:glow:koni:], [:neon#3845FF:koni:]
+  // 1. Strip bracketed effect tags: [:sparkle#3845FF:koni:sparkle:], [:glow:koni:], [:neon#3845FF:koni:], [:stack:koni:]
   clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):([a-zA-Z0-9_#-]+):\]/g, "$2");
   clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):([^:\n\]]+):\]/g, "$2");
   clean = clean.replace(/\[:([a-zA-Z0-9_#-]+):\]/g, "");
-  // 2. Strip unbracketed tags: :sparkle#3845FF:koni:sparkle:, :glow:koni:glow:, :waveflow:koni:
+  // 2. Strip unbracketed tags: :sparkle#3845FF:koni:sparkle:, :glow:koni:glow:, :waveflow:koni:, :stack:koni:
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):([a-zA-Z0-9_#-]+):/g, "$2");
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):([^:\n]+):/g, "$2");
   clean = clean.replace(/:([a-zA-Z0-9_#-]+):/g, "");
   // 3. Strip BBCode-like tags
-  clean = clean.replace(/\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire|badge|font)[^\]]*\]/gi, "");
+  clean = clean.replace(/\[\/?(?:b|i|u|s|color|glow|neon|sparkle|glitch|wave|fire|badge|font|stack|grain)[^\]]*\]/gi, "");
   // 4. Strip markdown link format [text](url) -> text
   clean = clean.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
   // 5. Strip markdown formatting
@@ -124,6 +181,8 @@ export function renderBioText(text) {
     { re: /^:flicker:([^:\n]+)(?::(?:flicker|[a-zA-Z0-9_#-]+))?:/i, type: "flicker" },
     { re: /^:bats:([^:\n]+)(?::(?:bats|[a-zA-Z0-9_#-]+))?:/i, type: "bats" },
     { re: /^:sparkle(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "sparkle" },
+    { re: /^:stack(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "stack" },
+    { re: /^:grain:([^:\n]+)(?::(?:grain|[a-zA-Z0-9_#-]+))?:/i, type: "grain" },
     { re: /^:outline(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "outline" },
     { re: /^:highlight(?:#([0-9a-fA-F]{3,8}))?:([^:\n]+)(?::([a-zA-Z0-9_#-]+))?:/i, type: "highlight" },
     { re: /^:fire:([^:\n]+)(?::(?:fire|[a-zA-Z0-9_#-]+))?:/i, type: "fire" },
@@ -166,6 +225,10 @@ export function renderBioText(text) {
           const content = m[2] || m[1] || "";
           const color = resolveColor(m[1], m[3] === "sparkle" ? null : m[3], "#F5C542");
           tokens.push({ t: "sparkle", v: content, color });
+        } else if (p.type === "stack") {
+          const content = m[2] || m[1] || "";
+          const color = resolveColor(m[1], m[3] === "stack" ? null : m[3], "#5B8DB8");
+          tokens.push({ t: "stack", v: content, color });
         } else if (p.type === "outline") {
           const content = m[2] || m[1] || "";
           const color = resolveColor(m[1], m[3] === "outline" ? null : m[3], "#5B8DB8");
@@ -215,6 +278,45 @@ export function renderBioText(text) {
 
       case "shuffle":
         return <ShuffleText key={idx} text={tok.v} />;
+
+      case "typewriter":
+        return <TypewriterText key={idx} text={tok.v} />;
+
+      case "stack": {
+        const hex = tok.color || "#5B8DB8";
+        return (
+          <span
+            key={idx}
+            className="font-black inline-block text-white tracking-wider uppercase relative"
+            style={{
+              textShadow: `2px 2px 0px ${hex}, 4px 4px 0px rgba(0,0,0,0.8), -1px -1px 0px rgba(255,255,255,0.25), 0 0 18px ${hex}88`,
+              letterSpacing: "0.05em",
+            }}
+          >
+            {tok.v}
+          </span>
+        );
+      }
+
+      case "grain":
+        return (
+          <span
+            key={idx}
+            className="font-bold inline-block text-white relative px-0.5"
+            style={{
+              textShadow: "0 0 10px rgba(255,255,255,0.4)",
+              filter: "contrast(130%)",
+            }}
+          >
+            <span className="relative z-10">{tok.v}</span>
+            <span
+              className="absolute inset-0 pointer-events-none opacity-40 mix-blend-overlay"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+              }}
+            />
+          </span>
+        );
 
       case "waveflow":
         return (
@@ -358,13 +460,6 @@ export function renderBioText(text) {
           <span key={idx} className="font-medium text-fx-ghost inline-flex items-center gap-1">
             <Ghost size={14} aria-hidden="true" className="opacity-80" />
             <span className="text-slate-300 italic">{tok.v}</span>
-          </span>
-        );
-
-      case "typewriter":
-        return (
-          <span key={idx} className="font-mono text-fx-typewriter inline-block border-r-2 border-[#5B8DB8] pr-0.5 animate-pulse">
-            {tok.v}
           </span>
         );
 

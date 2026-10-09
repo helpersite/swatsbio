@@ -193,12 +193,12 @@ function HudBottomCenterScroll({ onClick, accent, visible = true }) {
   );
 }
 
-function DiscordGuildCardWidget({ guildConfig, accent }) {
+function DiscordGuildCardWidget({ guildConfig, inviteUrl, accent, theme = "discord 1:1", style }) {
   const [liveData, setLiveData] = useState(null);
   const [copied, setCopied] = useState(false);
-  const inviteUrl = (guildConfig?.invite_url || "").trim();
-  const match = inviteUrl.match(/(?:discord\.gg|discord(?:app)?\.com\/invite)\/([a-zA-Z0-9_-]+)/i);
-  const code = match ? match[1] : (inviteUrl.startsWith("http") ? "" : inviteUrl);
+  const rawInvite = (inviteUrl || guildConfig?.invite_url || guildConfig?.invite_link || guildConfig?.url || "").trim();
+  const match = rawInvite.match(/(?:discord\.gg|discord(?:app)?\.com\/invite)\/([a-zA-Z0-9_-]+)/i);
+  const code = match ? match[1] : (rawInvite.startsWith("http") ? "" : rawInvite);
 
   useEffect(() => {
     if (!code) return;
@@ -227,92 +227,106 @@ function DiscordGuildCardWidget({ guildConfig, accent }) {
   const memberCount = liveData?.approximate_member_count ?? guildConfig?.member_count;
   const description = guild.description || guildConfig?.description || "";
   const isVerified = guild.features?.includes("VERIFIED") || guild.features?.includes("PARTNERED");
-  const fullInviteLink = inviteUrl.startsWith("http") ? inviteUrl : (code ? `https://discord.gg/${code}` : "#");
+  const isCommunity = guild.features?.includes("COMMUNITY") || isVerified;
+  const fullInviteLink = rawInvite.startsWith("http") ? rawInvite : (code ? `https://discord.gg/${code}` : "#");
+
+  const styleMode = guildConfig?.style || guildConfig?.theme || theme || "discord 1:1";
+  const isNoBg = styleMode === "no bg" || styleMode === "none";
+  const isGhost = styleMode === "ghost";
+
+  const containerStyle = isNoBg
+    ? "bg-transparent border-0 shadow-none"
+    : isGhost
+    ? "bg-white/[0.04] border border-white/15 backdrop-blur-xl shadow-2xl"
+    : "bg-[#1e1f22] border border-[#5865F2]/40 shadow-2xl";
 
   return (
-    <div className="w-full rounded-2xl bg-[#111214] border border-[#5865F2]/40 text-[#E5E7EB] shadow-2xl overflow-hidden text-left transition-all hover:border-[#5865F2]/70">
+    <div className={`w-full rounded-2xl text-[#E5E7EB] overflow-hidden text-left transition-all ${containerStyle}`}>
       {/* Top Banner Cover */}
-      <div
-        className="h-24 bg-[#1e1f22] bg-cover bg-center relative p-3 flex justify-between items-start"
-        style={{
-          backgroundImage: bannerUrl ? `url(${bannerUrl})` : "linear-gradient(135deg, #5865F2 0%, #1e1f22 100%)",
-        }}
-      >
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-white font-semibold border border-white/10 shadow">
-          <SiDiscord size={12} className="text-[#5865F2]" />
-          <span>Discord Guild</span>
+      {!isNoBg && (
+        <div
+          className="h-20 bg-[#141517] bg-cover bg-center relative p-3 flex justify-between items-start"
+          style={{
+            backgroundImage: bannerUrl ? `url(${bannerUrl})` : "linear-gradient(135deg, rgba(88,101,242,0.3) 0%, rgba(20,21,23,0.95) 100%)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] text-white font-semibold border border-white/10 shadow">
+            <SiDiscord size={12} className="text-[#5865F2]" />
+            <span>Discord Server</span>
+          </div>
+          {isCommunity && (
+            <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[#5865F2] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-white/10">
+              <Users size={11} /> Community
+            </span>
+          )}
         </div>
-        {isVerified && (
-          <span className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[#5865F2] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border border-white/10">
-            <ShieldCheck size={12} /> Verified
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Content Area */}
-      <div className="p-4 pt-0 -mt-7 relative">
-        <div className="flex items-end justify-between mb-3">
-          <div className="relative">
-            {iconUrl ? (
-              <img src={iconUrl} alt="" className="w-14 h-14 rounded-2xl border-4 border-[#111214] bg-[#1e1f22] object-cover shadow-xl" />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl border-4 border-[#111214] bg-[#5865F2] flex items-center justify-center text-white shadow-xl">
-                <SiDiscord size={24} />
+      <div className={`p-4 ${isNoBg ? "pt-2" : "-mt-7 pt-0"} relative`}>
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative shrink-0">
+              {iconUrl ? (
+                <img src={iconUrl} alt="" className="w-13 h-13 rounded-2xl border-2 border-[#1e1f22] bg-[#141517] object-cover shadow-xl" />
+              ) : (
+                <div className="w-13 h-13 rounded-2xl border-2 border-[#1e1f22] bg-[#5865F2] flex items-center justify-center text-white shadow-xl">
+                  <SiDiscord size={24} />
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-white flex items-center gap-1.5 truncate">
+                <span>{name}</span>
+                {isVerified && <ShieldCheck size={14} className="text-[#5865F2] shrink-0" />}
+              </h3>
+              <div className="flex items-center gap-2.5 text-[11px] mt-0.5 font-mono">
+                <div className="flex items-center gap-1 font-medium text-emerald-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{onlineCount != null ? Number(onlineCount).toLocaleString() : "Active"}</span>
+                  <span className="text-white/40 font-normal text-[10px]">Online</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-white/20" />
+                <div className="flex items-center gap-1 font-medium text-white/70">
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  <span>{memberCount != null ? Number(memberCount).toLocaleString() : "Members"}</span>
+                  <span className="text-white/40 font-normal text-[10px]">Total</span>
+                </div>
               </div>
-            )}
-          </div>
-          {/* Counts Badges */}
-          <div className="flex items-center gap-2.5 py-1 px-2.5 rounded-xl bg-[#1e1f22] border border-white/5 text-[11px]">
-            <div className="flex items-center gap-1.5 font-medium text-white">
-              <span className="w-2 h-2 rounded-full bg-[#23a55a] animate-pulse" />
-              <span>{onlineCount != null ? Number(onlineCount).toLocaleString() : "Active"}</span>
-              <span className="text-[#949ba4] font-normal text-[10px]">Online</span>
-            </div>
-            <div className="w-1 h-1 rounded-full bg-white/20" />
-            <div className="flex items-center gap-1.5 font-medium text-white">
-              <span className="w-2 h-2 rounded-full bg-[#80848e]" />
-              <span>{memberCount != null ? Number(memberCount).toLocaleString() : "Community"}</span>
-              <span className="text-[#949ba4] font-normal text-[10px]">Members</span>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-1">
-          <h3 className="text-base font-bold text-white flex items-center gap-1.5 truncate">
-            {name}
-          </h3>
-          {description && (
-            <p className="text-xs text-[#dbdee1]/80 leading-relaxed line-clamp-2">
-              {description}
-            </p>
+          {/* Far Right Join Button */}
+          {rawInvite && (
+            <div className="shrink-0 flex items-center gap-1.5">
+              <a
+                href={fullInviteLink}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-[#5865F2]/25 transition-all hover:scale-105 active:scale-95"
+              >
+                <SiDiscord size={13} /> Join
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(fullInviteLink);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all"
+                title="Copy server invite"
+              >
+                {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Action Buttons */}
-        {inviteUrl && (
-          <div className="mt-3.5 pt-3 border-t border-white/10 flex gap-2">
-            <a
-              href={fullInviteLink}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 py-2 rounded-xl bg-[#5865F2] hover:bg-[#4752c4] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-lg shadow-[#5865F2]/25 transition-all hover:scale-[1.01] active:scale-95"
-            >
-              <SiDiscord size={15} /> Join Server
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(fullInviteLink);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-              className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-medium text-[#E5E7EB] flex items-center gap-1.5 transition-all"
-              title="Copy server invite link"
-            >
-              {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
-              <span>{copied ? "Copied" : "Invite"}</span>
-            </button>
-          </div>
+        {description && (
+          <p className="text-xs text-[#dbdee1]/80 leading-relaxed line-clamp-2 mt-1">
+            {description}
+          </p>
         )}
       </div>
     </div>
@@ -398,7 +412,7 @@ export default function PublicBio() {
     oembedLink.setAttribute("href", `https://swatsbio-production.up.railway.app/api/oembed?username=${bio.username}`);
     oembedLink.setAttribute("title", customTitle);
 
-    // Automatic User Avatar Favicon
+    // Automatic User Avatar & Custom Favicon (Rounded)
     let originalFavicon = null;
     const faviconUrl = pfpUrl || s.custom_favicon;
     if (faviconUrl) {
@@ -409,7 +423,29 @@ export default function PublicBio() {
         document.getElementsByTagName("head")[0].appendChild(link);
       }
       originalFavicon = link.href;
-      link.href = faviconUrl;
+
+      try {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 64;
+          const ctx = canvas.getContext("2d");
+          ctx.beginPath();
+          ctx.arc(32, 32, 31, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.drawImage(img, 0, 0, 64, 64);
+          link.href = canvas.toDataURL("image/png");
+        };
+        img.onerror = () => {
+          link.href = faviconUrl;
+        };
+        img.src = faviconUrl;
+      } catch (e) {
+        link.href = faviconUrl;
+      }
     }
 
     // Tab Title Effects
@@ -1887,6 +1923,13 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
     ...(s.badge_style || {}),
   };
   const badgeLayout = layoutOverride || s.badge_layout || "classic";
+  const badgesPos = s.advanced_positioning_enabled ? (s.badges_position || "below_name") : (s.badges_position || "below_name");
+
+  // If badges are configured to be next to name and this isn't the inline call, don't render below
+  if (badgesPos === "next_to_name" && !["compact_inline", "inline"].includes(layoutOverride)) {
+    return null;
+  }
+
   const shownIds = Array.isArray(s.badges_shown) ? s.badges_shown.map((id) => String(id)) : [];
   const systemBadges = (badges || []).filter((b) => {
     return shownIds.length > 0 && shownIds.includes(String(b));
@@ -1900,6 +1943,16 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
   ];
 
   if (allBadges.length === 0) return null;
+
+  if (["compact_inline", "inline"].includes(badgeLayout)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 align-middle ml-2 select-none relative z-30">
+        {allBadges.map((b, idx) => (
+          <BadgeItem key={b.id || b.name || idx} badgeData={b} accent={accent} displayStyle={{ ...displayStyle, size: 18 }} />
+        ))}
+      </span>
+    );
+  }
 
   const alignClass = align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center";
 
@@ -2093,29 +2146,119 @@ function WeatherWidget({ location = "London", unit = "C", accent }) {
   );
 }
 
-function ClockWidget({ timezone = "UTC", format = "24h", label = "Local Time", accent }) {
-  const [timeStr, setTimeStr] = useState("");
+function EnhancedClockWidget({ timezone = "UTC", format = "24h", label = "Local Time", clock_style = "analog", accent }) {
+  const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    const update = () => {
-      try {
-        const now = new Date();
-        const options = {
-          timeZone: timezone === "auto" || !timezone ? undefined : timezone,
-          hour: "numeric",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: format === "12h",
-        };
-        setTimeStr(now.toLocaleTimeString(undefined, options));
-      } catch (e) {
-        setTimeStr(new Date().toLocaleTimeString());
-      }
-    };
-    update();
-    const id = setInterval(update, 1000);
+    const id = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(id);
-  }, [timezone, format]);
+  }, []);
+
+  let tz = timezone === "auto" || !timezone ? undefined : timezone;
+  let timeStr = "";
+  let hours = time.getHours();
+  let minutes = time.getMinutes();
+  let seconds = time.getSeconds();
+
+  try {
+    const options = {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: format === "12h",
+    };
+    timeStr = time.toLocaleTimeString(undefined, options);
+
+    // Get localized hours/minutes/seconds for analog hands
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: false,
+    }).formatToParts(time);
+
+    parts.forEach((p) => {
+      if (p.type === "hour") hours = parseInt(p.value, 10);
+      if (p.type === "minute") minutes = parseInt(p.value, 10);
+      if (p.type === "second") seconds = parseInt(p.value, 10);
+    });
+  } catch (e) {
+    timeStr = time.toLocaleTimeString();
+  }
+
+  const secondDeg = (seconds / 60) * 360;
+  const minuteDeg = ((minutes + seconds / 60) / 60) * 360;
+  const hourDeg = (((hours % 12) + minutes / 60) / 12) * 360;
+
+  if (clock_style === "analog") {
+    return (
+      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-black/45 border border-white/10 backdrop-blur-xl shadow-lg transition-all hover:border-white/20">
+        <div className="flex items-center gap-3">
+          {/* Authentic Rotating SVG Analog Clock Face */}
+          <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-[#181a20] to-[#0d0e12] border-2 border-white/20 shadow-inner flex items-center justify-center shrink-0">
+            {/* Hour tick marks */}
+            <div className="absolute inset-0.5 rounded-full pointer-events-none">
+              <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-0.5 h-1.5 bg-white/60 rounded-full" />
+              <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0.5 h-1.5 bg-white/60 rounded-full" />
+              <span className="absolute left-0.5 top-1/2 -translate-y-1/2 h-0.5 w-1.5 bg-white/60 rounded-full" />
+              <span className="absolute right-0.5 top-1/2 -translate-y-1/2 h-0.5 w-1.5 bg-white/60 rounded-full" />
+            </div>
+
+            {/* Hour hand */}
+            <div
+              className="absolute w-0.5 bg-white rounded-full origin-bottom shadow-sm transition-transform duration-200"
+              style={{
+                height: "12px",
+                bottom: "50%",
+                left: "calc(50% - 1px)",
+                transform: `rotate(${hourDeg}deg)`,
+              }}
+            />
+
+            {/* Minute hand */}
+            <div
+              className="absolute w-0.5 bg-[#94a3b8] rounded-full origin-bottom shadow-sm transition-transform duration-200"
+              style={{
+                height: "17px",
+                bottom: "50%",
+                left: "calc(50% - 1px)",
+                transform: `rotate(${minuteDeg}deg)`,
+              }}
+            />
+
+            {/* Second hand */}
+            <div
+              className="absolute w-[1px] rounded-full origin-bottom shadow-sm"
+              style={{
+                background: accent || "#ef4444",
+                height: "19px",
+                bottom: "50%",
+                left: "calc(50% - 0.5px)",
+                transform: `rotate(${secondDeg}deg)`,
+                boxShadow: `0 0 4px ${accent || "#ef4444"}`,
+              }}
+            />
+
+            {/* Center Pin */}
+            <div className="absolute w-1.5 h-1.5 rounded-full bg-white ring-1 ring-black z-10" />
+          </div>
+
+          <div className="text-left min-w-0">
+            <div className="text-xs font-bold text-white truncate">{label || "Local Clock"}</div>
+            <div className="text-[10px] font-mono text-white/50 uppercase tracking-wider">{tz || "Local Time"}</div>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-xs font-mono font-bold text-white tracking-widest px-2.5 py-1 rounded-xl bg-white/[0.06] border border-white/10 shadow-inner">
+            {timeStr || "--:--:--"}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between p-3 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md">
@@ -2125,12 +2268,146 @@ function ClockWidget({ timezone = "UTC", format = "24h", label = "Local Time", a
         </div>
         <div className="text-left">
           <div className="text-xs font-bold text-white">{label || "Clock"}</div>
-          <div className="text-[10px] font-mono text-white/50 uppercase">{timezone || "Local"}</div>
+          <div className="text-[10px] font-mono text-white/50 uppercase">{tz || "Local"}</div>
         </div>
       </div>
       <div className="text-sm font-mono font-bold text-white tracking-wider px-2.5 py-1 rounded-xl bg-black/60 border border-white/10">
         {timeStr || "--:--:--"}
       </div>
+    </div>
+  );
+}
+
+function AccountStatsWidget({ bio, accent }) {
+  const createdAt = bio?.created_at;
+  const views = bio?.views || 0;
+  const badgesCount = (bio?.badges || []).length;
+
+  const getAccountAge = (dateString) => {
+    if (!dateString) return "Early Pioneer";
+    try {
+      const created = new Date(dateString);
+      const now = new Date();
+      const diffMs = Math.max(0, now - created);
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+
+      if (diffYears >= 1) {
+        const remMonths = diffMonths % 12;
+        return `Active for ${diffYears}y ${remMonths > 0 ? `${remMonths}m` : ""}`;
+      }
+      if (diffMonths >= 1) return `Active for ${diffMonths} months`;
+      if (diffDays >= 1) return `Active for ${diffDays} days`;
+      return "Joined today";
+    } catch (e) {
+      return "Active Member";
+    }
+  };
+
+  const formattedDate = createdAt ? new Date(createdAt).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : null;
+
+  return (
+    <div className="p-3.5 rounded-2xl bg-black/45 border border-white/10 backdrop-blur-xl space-y-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <ShieldCheck size={14} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-white">Account Stats</div>
+            <div className="text-[10px] text-white/50">{formattedDate ? `Member since ${formattedDate}` : "Verified Member"}</div>
+          </div>
+        </div>
+        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-emerald-300 font-semibold border border-white/10">
+          {getAccountAge(createdAt)}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 text-center">
+        <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+            <Eye size={12} className="text-sky-400" />
+            <span>{views.toLocaleString()}</span>
+          </div>
+          <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Profile Views</div>
+        </div>
+        <div className="p-2 rounded-xl bg-white/[0.03] border border-white/5">
+          <div className="text-xs font-bold text-white flex items-center justify-center gap-1">
+            <Award size={12} className="text-amber-400" />
+            <span>{badgesCount}</span>
+          </div>
+          <div className="text-[9px] text-white/40 uppercase tracking-wider mt-0.5">Badges Earned</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MusicPlayerWidget({ config = {}, accent }) {
+  const type = config.type || "spotify"; // spotify, soundcloud, apple
+  const url = config.url || "";
+  const title = config.title || "";
+  const artist = config.artist || "";
+
+  if (!url) return null;
+
+  const extractId = (u) => {
+    const match = u.match(/(?:playlist|track|album|track\/|album\/)([a-zA-Z0-9]+)/);
+    return match ? match[1] : u;
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-white/15 bg-black/50 shadow-xl backdrop-blur-xl">
+      {(title || artist) && (
+        <div className="px-3 py-2 bg-white/[0.04] border-b border-white/10 flex items-center justify-between">
+          <div className="text-left min-w-0">
+            {title && <div className="text-xs font-bold text-white truncate">{renderBioText(title)}</div>}
+            {artist && <div className="text-[10px] text-white/60 truncate">{renderBioText(artist)}</div>}
+          </div>
+          <div className="shrink-0">
+            {type === "spotify" && <SiSpotify size={14} className="text-[#1DB954]" />}
+            {type === "soundcloud" && <SiSoundcloud size={16} className="text-[#ff5500]" />}
+            {type === "apple" && <SiApplemusic size={14} className="text-[#fa243c]" />}
+          </div>
+        </div>
+      )}
+
+      {type === "spotify" && (
+        <iframe
+          src={`https://open.spotify.com/embed/${url.includes("playlist") ? "playlist" : "track"}/${extractId(url)}?utm_source=generator&theme=0`}
+          width="100%"
+          height="152"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="lazy"
+          title="Spotify Embed"
+        />
+      )}
+
+      {type === "soundcloud" && (
+        <iframe
+          width="100%"
+          height="150"
+          scrolling="no"
+          frameBorder="no"
+          allow="autoplay"
+          src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false`}
+          title="SoundCloud Embed"
+        />
+      )}
+
+      {type === "apple" && (
+        <iframe
+          allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
+          frameBorder="0"
+          height="150"
+          style={{ width: "100%", maxWidth: "100%", overflow: "hidden", background: "transparent" }}
+          sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+          src={url.includes("embed.") ? url : url.replace("music.apple.com", "embed.music.apple.com")}
+          title="Apple Music Embed"
+        />
+      )}
     </div>
   );
 }
@@ -2173,44 +2450,56 @@ function RobloxWidget({ username, userId, accent }) {
 function ProfileWidgets({ bio, accent }) {
   const s = bio?.settings || {};
   const widgets = s.widgets || {};
-  const hasWidgets = widgets.spotify?.enabled || widgets.roblox?.enabled || widgets.weather?.enabled || widgets.clock?.enabled || s.spotify_playlist_url || s.spotify_song_url;
+  const hasWidgets =
+    widgets.spotify?.enabled ||
+    widgets.roblox?.enabled ||
+    widgets.weather?.enabled ||
+    widgets.clock?.enabled ||
+    widgets.discord_server?.enabled ||
+    widgets.music_player?.enabled ||
+    widgets.account_stats?.enabled ||
+    s.spotify_playlist_url ||
+    s.spotify_song_url;
 
   if (!hasWidgets) return null;
 
-  const extractSpotifyId = (url) => {
-    if (!url) return "";
-    const match = url.match(/(?:playlist|track|album)\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : url;
-  };
-
   return (
     <div className="mt-4 space-y-3 w-full text-left">
-      {/* Spotify Custom Playlist/Song Embed */}
-      {(widgets.spotify?.enabled || s.spotify_playlist_url || s.spotify_song_url) && (
+      {/* Discord Server Invite Widget */}
+      {widgets.discord_server?.enabled && (
+        <DiscordGuildCardWidget
+          inviteUrl={widgets.discord_server?.invite_url || widgets.discord_server?.url}
+          style={widgets.discord_server?.style || "discord"}
+          accent={accent}
+        />
+      )}
+
+      {/* Music Player Widget (Spotify, SoundCloud, Apple Music) */}
+      {widgets.music_player?.enabled && (
+        <MusicPlayerWidget
+          config={widgets.music_player}
+          accent={accent}
+        />
+      )}
+
+      {/* Account Stats Widget */}
+      {widgets.account_stats?.enabled && (
+        <AccountStatsWidget bio={bio} accent={accent} />
+      )}
+
+      {/* Legacy Spotify Custom Playlist/Song Embed */}
+      {!widgets.music_player?.enabled && (widgets.spotify?.enabled || s.spotify_playlist_url || s.spotify_song_url) && (
         <div className="rounded-2xl overflow-hidden border border-[#1DB954]/30 bg-black/40 shadow-xl">
-          {widgets.spotify?.playlist_url || s.spotify_playlist_url ? (
-            <iframe
-              src={`https://open.spotify.com/embed/playlist/${extractSpotifyId(widgets.spotify?.playlist_url || s.spotify_playlist_url)}?utm_source=generator&theme=0`}
-              width="100%"
-              height="152"
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-              className="rounded-2xl"
-              title="Spotify Playlist"
-            />
-          ) : widgets.spotify?.song_url || s.spotify_song_url ? (
-            <iframe
-              src={`https://open.spotify.com/embed/track/${extractSpotifyId(widgets.spotify?.song_url || s.spotify_song_url)}?utm_source=generator&theme=0`}
-              width="100%"
-              height="152"
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="lazy"
-              className="rounded-2xl"
-              title="Spotify Song"
-            />
-          ) : null}
+          <iframe
+            src={`https://open.spotify.com/embed/${(widgets.spotify?.playlist_url || s.spotify_playlist_url) ? "playlist" : "track"}/${(widgets.spotify?.playlist_url || s.spotify_playlist_url || widgets.spotify?.song_url || s.spotify_song_url || "").match(/(?:playlist|track|album)\/([a-zA-Z0-9]+)/)?.[1] || ""}?utm_source=generator&theme=0`}
+            width="100%"
+            height="152"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+            className="rounded-2xl"
+            title="Spotify Embed"
+          />
         </div>
       )}
 
@@ -2232,12 +2521,13 @@ function ProfileWidgets({ bio, accent }) {
         />
       )}
 
-      {/* Clock Widget */}
+      {/* Enhanced Clock Widget (Analog or Digital) */}
       {widgets.clock?.enabled && (
-        <ClockWidget
+        <EnhancedClockWidget
           timezone={widgets.clock?.timezone || "UTC"}
           format={widgets.clock?.format || "24h"}
           label={widgets.clock?.label || "Local Time"}
+          clock_style={widgets.clock?.style || "analog"}
           accent={accent}
         />
       )}
@@ -2245,8 +2535,8 @@ function ProfileWidgets({ bio, accent }) {
   );
 }
 
-function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
-  if (!discord && !bio?.connections?.discord) return null;
+function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio, style = "discord" }) {
+  if (!discord && !bio?.connections?.discord && !bio?.settings?.discord_snowflake_id) return null;
   const s = bio?.settings || {};
   const dc = bio?.connections?.discord || discord || {};
   const discordId = s.discord_snowflake_id || dc?.id || dc?.user_id;
@@ -2260,13 +2550,9 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
     let heartbeatInterval = null;
     let alive = true;
 
-    // 1. Initial REST fetch for instant response (cleanly handle 404 without error logging)
     const fetchLanyard = () => {
       fetch(`https://api.lanyard.rest/v1/users/${discordId}`)
-        .then((res) => {
-          if (!res.ok) return null;
-          return res.json();
-        })
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (alive && data?.success && data?.data) {
             setLanyard(data.data);
@@ -2276,7 +2562,6 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
     };
     fetchLanyard();
 
-    // 2. Real-time Lanyard WebSocket connection
     try {
       ws = new WebSocket("wss://api.lanyard.rest/socket");
       ws.onmessage = (event) => {
@@ -2330,19 +2615,27 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
   const spotify = lanyard?.spotify;
 
   const statusMap = {
-    online: { label: "online", bg: "rgba(34,197,94,0.18)", border: "rgba(34,197,94,0.6)", color: "#86efac" },
-    idle: { label: "idle", bg: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.6)", color: "#fbbf24" },
-    dnd: { label: "busy", bg: "rgba(239,68,68,0.18)", border: "rgba(239,68,68,0.6)", color: "#fca5a5" },
-    offline: { label: "offline", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.4)", color: "#cbd5e1" },
-    streaming: { label: "live", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.5)", color: "#d8b4fe" },
+    online: { label: "online", bg: "rgba(34,197,94,0.18)", border: "rgba(34,197,94,0.6)", color: "#23a55a" },
+    idle: { label: "idle", bg: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.6)", color: "#f0b232" },
+    dnd: { label: "dnd", bg: "rgba(239,68,68,0.18)", border: "rgba(239,68,68,0.6)", color: "#f23f43" },
+    offline: { label: "offline", bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.4)", color: "#80848e" },
+    streaming: { label: "streaming", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.5)", color: "#593695" },
   };
   const visual = statusMap[liveStatus] || statusMap.online;
+
+  const isNoBg = style === "nobg" || s.discord_style === "nobg";
+  const isGhost = style === "ghost" || s.discord_style === "ghost";
 
   return (
     <div
       onClick={onClick}
-      className={`mt-4 flex items-center gap-3 rounded-2xl p-3 transition-all ${onClick ? "cursor-pointer hover:bg-[#5865F2]/15 hover:scale-[1.01]" : ""}`}
-      style={{ background: "rgba(88,101,242,0.10)", border: "1px solid rgba(88,101,242,0.3)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
+      className={`mt-4 flex items-center gap-3 rounded-2xl p-3 transition-all ${onClick ? "cursor-pointer hover:scale-[1.01]" : ""} ${
+        isNoBg
+          ? "bg-transparent border border-white/10"
+          : isGhost
+          ? "bg-white/[0.04] backdrop-blur-2xl border border-white/15 shadow-xl hover:bg-white/[0.07]"
+          : "bg-[#232428] border border-[#1e1f22] text-[#dbdee1] shadow-2xl hover:bg-[#2b2d31]"
+      }`}
     >
       <div className="relative shrink-0">
         {liveAvatar ? (
@@ -2351,7 +2644,7 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
           <span className="w-10 h-10 rounded-full bg-[#5865F2]/30 flex items-center justify-center border border-white/10"><SiDiscord color="#5865F2" size={18} /></span>
         )}
         <span
-          className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#0b0d12]"
+          className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#111214]"
           style={{ background: visual.color, boxShadow: `0 0 10px ${visual.color}` }}
           title={liveStatus}
         />
@@ -2359,7 +2652,7 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
 
       <div className="text-left min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/50 font-bold">Discord</span>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[#949ba4] font-bold">Discord</span>
           {customStatusText && (
             <span className="text-[10px] text-white/70 truncate max-w-[150px] italic flex items-center gap-1">
               {customStatusEmoji && <span>{customStatusEmoji}</span>}
@@ -2367,11 +2660,11 @@ function DiscordPresenceWidget({ discord, accent, showBadge, onClick, bio }) {
             </span>
           )}
         </div>
-        <div className="text-xs text-[#E5E7EB] font-bold truncate">{liveName}</div>
+        <div className="text-xs text-white font-bold truncate">{liveName}</div>
         {spotify ? (
           <div className="text-[10px] text-emerald-400 truncate mt-0.5 font-mono flex items-center gap-1">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Listening to {spotify.song} — {spotify.artist}</span>
+            <span>Listening to {renderBioText(spotify.song)} — {renderBioText(spotify.artist)}</span>
           </div>
         ) : mainActivity ? (
           <div className="text-[10px] text-white/70 truncate mt-0.5 font-mono">
@@ -3158,6 +3451,91 @@ function BioCard({ bio }) {
           </div>
         )}
 
+        {/* LAYOUT: MINI BANNER HEADER (Very compact banner fading out smoothly) */}
+        {layout === "mini_banner" && (
+          <div>
+            {/* Very Small Banner with bottom fade */}
+            <div
+              className={`profile-header-banner relative -mx-6 -mt-6 sm:-mx-8 sm:-mt-8 h-20 sm:h-24 bg-cover bg-center overflow-hidden ${!headerBannerHidden && headerBannerEffect !== "none" ? `profile-banner-fx-${headerBannerEffect}` : ""}`}
+              style={headerBannerStyle}
+            >
+              {!headerBannerHidden && headerBannerIsVideo && <video src={headerBannerUrl} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover" />}
+              {!headerBannerHidden && (
+                <>
+                  <div className="absolute inset-0 mix-blend-color opacity-30" style={{ backgroundColor: headerBannerColor }} />
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/90" />
+                </>
+              )}
+            </div>
+
+            {/* Avatar Overlapping Mini Banner */}
+            <div className="relative -mt-9 sm:-mt-11 mb-2.5 flex items-end justify-between px-1 z-10">
+              <div className="relative inline-block">
+                <img
+                  src={pfp}
+                  alt={bio.display_name || bio.username}
+                  className="w-18 h-18 sm:w-20 sm:h-20 object-cover border-3 ring-2 ring-black/50 shadow-2xl relative z-10"
+                  style={{
+                    ...avatarShape,
+                    ...customAvatarSize,
+                    ...customAvatarOffsetY,
+                    borderColor: accent,
+                    boxShadow: `0 6px 20px rgba(0,0,0,0.6), 0 0 ${s.glow_intensity ?? 30}px ${glowColor}`,
+                  }}
+                />
+                <AvatarDecoration decoration={s.avatar_decoration} />
+              </div>
+            </div>
+
+            {/* Info Bar */}
+            <div className="text-left px-1 mt-1">
+              <div className="flex items-center flex-wrap gap-1.5">
+                <h1 className={`profile-title-3d text-xl sm:text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
+                  {renderBioText(bio.display_name || bio.username)}
+                </h1>
+                {badgesPos === "next_to_name" && (
+                  <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
+                )}
+              </div>
+              <div className="text-xs font-semibold tracking-wide mt-0.5" style={{ color: accent }}>
+                @{bio.username}
+              </div>
+              {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
+              <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "left"} bio={bio} />
+              {locationText && <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] uppercase tracking-[0.18em] text-[#E5E7EB]/75"><MapPin size={10} /> {locationText}</div>}
+              {bio.description && (
+                <div className="text-xs sm:text-sm mt-2.5 leading-relaxed" style={{ color: descColor, textAlign: adv.desc_alignment || undefined }}>
+                  {renderBioText(bio.description)}
+                </div>
+              )}
+              <SocialIconsRow links={socialLinks} accent={accent} align={adv.icons_alignment || "left"} onSocialClick={showPresenceModal ? handlePresenceClick : null} iconNoBg={iconNoBg} iconStyle={socialIconStyle} />
+            </div>
+
+            {showDiscordWidget && <DiscordPresenceWidget discord={discord} accent={accent} bio={bio} showBadge={s.presence?.show_discord_badge} onClick={showPresenceModal ? () => setPresenceModal({ type: "discord", discord }) : undefined} />}
+            {s.presence?.spotify && <NowPlaying username={bio.username} accent={accent} discordId={discord?.id} format={spotifyFormat} />}
+            
+            <ProfileWidgets bio={bio} accent={accent} />
+
+            {cardLinks.length > 0 && (
+              <RenderLinksContainer
+                links={cardLinks}
+                accent={accent}
+                linkBg={linkBg}
+                linkText={linkText}
+                cardBorder={cardBorder}
+                rightBtnStyle={linkBtnStyle}
+                linkLayoutStyle={s.link_layout_style}
+                linkAnimation={s.link_animation}
+                iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
+                showPresenceModal={showPresenceModal}
+                onPresenceClick={handlePresenceClick}
+              />
+            )}
+          </div>
+        )}
+
         {/* LAYOUT 3: BANNER HEADER (Cover with Avatar Docked Left) */}
         {(layout === "banner_left" || layout === "banner") && (
           <div>
@@ -3194,9 +3572,14 @@ function BioCard({ bio }) {
 
             {/* Wide Status / Info Bar */}
             <div className="text-left px-1 mt-1">
-              <h1 className={`profile-title-3d text-2xl sm:text-3xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
-                {renderBioText(bio.display_name || bio.username)}
-              </h1>
+              <div className="flex items-center flex-wrap gap-2">
+                <h1 className={`profile-title-3d text-2xl sm:text-3xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
+                  {renderBioText(bio.display_name || bio.username)}
+                </h1>
+                {badgesPos === "next_to_name" && (
+                  <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
+                )}
+              </div>
               <div className="text-xs font-semibold tracking-wide mt-0.5" style={{ color: accent }}>
                 @{bio.username}
               </div>
@@ -3244,7 +3627,12 @@ function BioCard({ bio }) {
               <MediaDisplay src={pfp} alt={bio.display_name || bio.username} className="w-24 h-24 mx-auto object-cover border-2 relative z-10" style={{ ...avatarShape, ...customAvatarSize, ...customAvatarOffsetY, borderColor: accent, boxShadow: `0 0 ${s.glow_intensity ?? 30}px ${glowColor}` }} />
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
-            <h1 className={`profile-title-3d text-2xl font-extrabold mt-3.5 ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+            <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5">
+              <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+              {badgesPos === "next_to_name" && (
+                <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />
+              )}
+            </div>
             <div className="text-sm mt-0.5" style={{ color: accent }}>@{bio.username}</div>
             {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
             <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "center"} bio={bio} />
@@ -4102,11 +4490,11 @@ function LinkTile({ l, accent, index = 0, linkBg = null, linkText = null, cardBo
 
       <div className="flex items-center justify-between gap-2">
         <div 
-          className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-110" 
+          className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-transform duration-200 group-hover:scale-110 shrink-0" 
           style={{
-            background: noBg ? "transparent" : c.icon_color_overlay ? `${brandColor}18` : "rgba(6,8,12,0.8)",
-            border: noBg ? "none" : `1px solid ${brandColor}40`,
-            boxShadow: noBg ? "none" : `0 2px 8px rgba(0,0,0,0.4)`
+            background: noBg ? "transparent" : c.icon_color_overlay ? `linear-gradient(135deg, ${brandColor}44 0%, ${brandColor}18 100%)` : "rgba(6,8,12,0.8)",
+            border: noBg ? "none" : c.icon_color_overlay ? `1.5px solid ${brandColor}88` : `1px solid ${brandColor}40`,
+            boxShadow: noBg ? "none" : c.icon_color_overlay ? `0 0 14px ${brandColor}44, inset 0 0 8px ${brandColor}22` : `0 2px 8px rgba(0,0,0,0.4)`
           }}
         >
           {c.avatar && c.avatar_url ? (
@@ -4114,7 +4502,7 @@ function LinkTile({ l, accent, index = 0, linkBg = null, linkText = null, cardBo
           ) : c.custom_icon && c.custom_icon_url ? (
             <img src={c.custom_icon_url} alt="" className="w-5 h-5 object-contain" style={{ filter: glow ? `drop-shadow(0 0 ${glowSize}px ${glow})` : undefined }} />
           ) : (
-            <span style={{ color: brandColor, filter: glow ? `drop-shadow(0 0 ${glowSize}px ${glow})` : (noBg ? `drop-shadow(0 0 6px ${brandColor}55)` : undefined) }}>
+            <span style={{ color: brandColor, filter: glow ? `drop-shadow(0 0 ${glowSize}px ${glow})` : (noBg || c.icon_color_overlay ? `drop-shadow(0 0 6px ${brandColor}88)` : undefined) }}>
               <Ic size={noBg ? 24 : 19} />
             </span>
           )}
@@ -4195,10 +4583,11 @@ function LinkCard({ l, accent, index = 0, linkBg = null, linkText = null, cardBo
           <div 
             className={`w-9 h-9 ${pill ? "rounded-full" : "rounded-xl"} flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110`}
             style={{ 
-              background: noBg ? "transparent" : c.icon_color_overlay ? `${brandColor}18` : "rgba(8,9,11,0.75)",
-              border: noBg ? "none" : `1px solid ${brandColor}35`, 
+              background: noBg ? "transparent" : c.icon_color_overlay ? `linear-gradient(135deg, ${brandColor}44 0%, ${brandColor}18 100%)` : "rgba(8,9,11,0.75)",
+              border: noBg ? "none" : c.icon_color_overlay ? `1.5px solid ${brandColor}88` : `1px solid ${brandColor}35`, 
               color: brandColor,
-              filter: glow ? `drop-shadow(0 0 ${glowSize}px ${glow})` : (noBg ? `drop-shadow(0 0 6px ${brandColor}55)` : "none")
+              boxShadow: c.icon_color_overlay ? `0 0 14px ${brandColor}44, inset 0 0 8px ${brandColor}22` : undefined,
+              filter: glow ? `drop-shadow(0 0 ${glowSize}px ${glow})` : (noBg || c.icon_color_overlay ? `drop-shadow(0 0 6px ${brandColor}88)` : "none")
             }}
           >
             <Ic size={noBg ? 22 : 18} />
@@ -4808,8 +5197,8 @@ function SpotifyPresenceModal({ data, bio, accent, onClose }) {
                 <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-pulse" />
                 {np?.playing ? "Currently Playing" : "Spotify Connected"}
               </div>
-              <div className="text-base font-bold text-white truncate">{trackName}</div>
-              <div className="text-xs text-[#E5E7EB]/60 truncate">{artistName}</div>
+              <div className="text-base font-bold text-white truncate">{renderBioText(trackName)}</div>
+              <div className="text-xs text-[#E5E7EB]/60 truncate">{renderBioText(artistName)}</div>
             </div>
           </div>
 
