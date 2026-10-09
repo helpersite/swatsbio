@@ -27,7 +27,7 @@ export function OverviewSection() {
   const dc = user?.connections?.discord;
   const sp = user?.connections?.spotify;
   const accent = s.accent_color || "#5B8DB8";
-  const bioUrl = `https://swats.bio/${user?.username || "user"}`;
+  const bioUrl = `https://feds.lol/${user?.username || "user"}`;
 
   const copyBioLink = () => {
     navigator.clipboard.writeText(bioUrl);
@@ -60,7 +60,7 @@ export function OverviewSection() {
   // 3. Active Aesthetic Modules Status
   const aestheticModules = [
     { name: "Layout Style", val: s.card_style || s.card_layout || "Classic Noir", icon: LayoutDashboard, path: "/dashboard/layout" },
-    { name: "Background FX", val: s.bg_effect && s.bg_effect !== "none" ? s.bg_effect.replace(/_/g, " ") : "Clean Solid", icon: Wand2Icon, path: "/dashboard/profile" },
+    { name: "Background FX", val: s.bg_effect && s.bg_effect !== "none" ? s.bg_effect.replace(/_/g, " ") : "Clean Solid", icon: Sparkles, path: "/dashboard/profile" },
     { name: "Cursor Trail", val: s.cursor && s.cursor !== "default" ? s.cursor.replace(/_/g, " ") : "Default Pointer", icon: MousePointer2, path: "/dashboard/profile" },
     { name: "Music Embed", val: s.widgets?.music_player?.enabled ? (s.widgets.music_player.type || "Active") : (s.audio?.tracks?.length ? "MP3 Audio" : "Disabled"), icon: Music, path: "/dashboard/layout" },
     { name: "Discord Presence", val: dc || s.presence?.discord !== false ? "Live Sync" : "Inactive", icon: SiDiscord, path: "/dashboard/connections" },
@@ -105,7 +105,7 @@ export function OverviewSection() {
                 <span className="text-[#5B8DB8] truncate">{renderBioText(user?.display_name || user?.username)}</span>
               </h2>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-[#E5E7EB]/60 font-mono">swats.bio/{user?.username}</span>
+                <span className="text-xs text-[#E5E7EB]/60 font-mono">feds.lol/{user?.username}</span>
                 <button
                   type="button"
                   onClick={copyBioLink}

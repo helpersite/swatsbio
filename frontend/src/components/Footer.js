@@ -53,8 +53,8 @@ export default function Footer() {
           </div>
         </div>
         <div className="pt-6 border-t border-[#4A6B8A]/10 text-[#E5E7EB]/30 text-xs pb-10 flex flex-col sm:flex-row justify-between gap-2">
-          <span>© {new Date().getFullYear()} Swats.bio — All rights reserved.</span>
-          <span>Made for the tactical web.</span>
+          <span>© {new Date().getFullYear()} feds.lol — All rights reserved.</span>
+          <span>Engineered for the Cyber Halo web.</span>
         </div>
       </div>
     </footer>

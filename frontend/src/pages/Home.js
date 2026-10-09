@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 
 const FAQ = [
-  { q: "Do I need an invite code?", a: "Yes. swats.bio is invite-only during beta to keep the community tight, private and fast. Grab one from an existing member or buy a code." },
+  { q: "Do I need an invite code?", a: "Yes. feds.lol is invite-only during beta to keep the community tight, private and fast. Grab one from an existing member or verify access." },
   { q: "Is it really free?", a: "The waitlist tier is free at launch. Premium Beta gives instant access with everything unlocked for a one-time payment." },
   { q: "Can I use Discord & Spotify?", a: "Absolutely — connect them for live presence, now-playing widgets, avatar sync and guild tags." },
   { q: "How private is my page?", a: "Lock your page behind a password / enter-screen (text, PIN or number lock) and hide any individual link at will." },
-  { q: "Can I customize the audio player and backgrounds?", a: "Yes! Choose from 9 canvas-rendered background effects, full custom spectrum color picker, and our sleek card-width audio player with real-time LRC lyrics." },
+  { q: "Can I customize the audio player and backgrounds?", a: "Yes! Choose from canvas-rendered background effects, full custom spectrum color picker, and our sleek card-width audio player with real-time LRC lyrics." },
 ];
 
 export default function Home() {
@@ -113,7 +113,7 @@ export default function Home() {
         </h1>
 
         <p className="mt-7 text-[#E5E7EB]/75 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          swats.bio is your go-to place to craft aesthetic bios and link everything in one place — built-in music player, custom themes, and live Discord presence included.
+          feds.lol is your go-to place to craft aesthetic bios and link everything in one place — built-in music player, custom themes, and live Discord presence included.
         </p>
 
         {/* Hero CTA Buttons */}

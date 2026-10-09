@@ -217,7 +217,7 @@ export default function Dashboard() {
         <div className="px-2 pt-1 pb-3 mb-2 border-b border-white/5">
           <div className="flex items-center gap-2">
             <span className="font-display text-lg font-black tracking-tight text-white">
-              swats<span className="text-[#5B8DB8]">.bio</span>
+              feds<span className="text-[#5B8DB8]">.lol</span>
             </span>
           </div>
           <div className="text-[11px] uppercase font-bold tracking-widest text-[#E5E7EB]/50 mt-0.5 pl-0.5">
@@ -320,7 +320,7 @@ export default function Dashboard() {
       {/* Mobile Top Navbar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0c0e15] px-4 py-3 flex items-center justify-between border-b border-white/10">
         <span className="font-display text-base font-black tracking-tight text-white">
-          swats<span className="text-[#5B8DB8]">.bio</span>
+          feds<span className="text-[#5B8DB8]">.lol</span>
         </span>
         <select
           value={active}

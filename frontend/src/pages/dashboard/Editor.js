@@ -29,6 +29,9 @@ import { BackgroundEffectsModal } from "@/components/BackgroundEffectsModal";
 import { BannerEffectsModal } from "@/components/BannerEffectsModal";
 import { CursorEffectsModal } from "@/components/CursorEffectsModal";
 import { NameEffectsModal } from "@/components/NameEffectsModal";
+import { BioEffectsModal } from "@/components/BioEffectsModal";
+import { LocationEffectsModal } from "@/components/LocationEffectsModal";
+import { RoleEffectsModal } from "@/components/RoleEffectsModal";
 import { SlideshowManager } from "@/components/SlideshowManager";
 
 // Exported Layout list
@@ -337,14 +340,11 @@ function RealLayoutPreview({ layout, isSelected, pfpUrl }) {
 export default function Editor({ initialTab = "profile" }) {
   const { user, setUser } = useAuth();
   const [editorCategory, setEditorCategory] = useState(initialTab || "profile");
-  const [s, setS] = useState(user.settings || {});
-  const [displayName, setDisplayName] = useState(user.display_name || "");
-  const [username, setUsername] = useState(user.username || "");
-  const [description, setDescription] = useState(user.description || "");
+  const [s, setS] = useState(user?.settings || {});
+  const [displayName, setDisplayName] = useState(user?.display_name || "");
+  const [username, setUsername] = useState(user?.username || "");
+  const [description, setDescription] = useState(user?.description || "");
   const [saving, setSaving] = useState(false);
-
-  // FX Quick Dropdown State
-  const [activeFxTarget, setActiveFxTarget] = useState(null); // "name" | "bio" | null
 
   // Modals state
   const [mediaModal, setMediaModal] = useState({ open: false, type: "pfp" });
@@ -353,6 +353,18 @@ export default function Editor({ initialTab = "profile" }) {
   const [bannerModalOpen, setBannerModalOpen] = useState(false);
   const [cursorModalOpen, setCursorModalOpen] = useState(false);
   const [nameModalOpen, setNameModalOpen] = useState(false);
+  const [bioModalOpen, setBioModalOpen] = useState(false);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setS(user.settings || {});
+      setDisplayName(user.display_name || "");
+      setUsername(user.username || "");
+      setDescription(user.description || "");
+    }
+  }, [user]);
 
   useEffect(() => {
     if (initialTab) setEditorCategory(initialTab);
@@ -726,35 +738,35 @@ export default function Editor({ initialTab = "profile" }) {
               </div>
             </div>
 
-            {/* 4 Dedicated Effect Buttons below the 4 boxes */}
+            {/* 4 Dedicated Effect Navigation Controls */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-white/10">
               <Button
                 type="button"
                 onClick={() => setAvatarModalOpen(true)}
                 className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
               >
-                <Sparkles size={15} className="text-[#5B8DB8]" /> Avatar Effects
+                <Sparkles size={15} className="text-[#5B8DB8]" /> Effects
               </Button>
               <Button
                 type="button"
-                onClick={() => setBgModalOpen(true)}
+                onClick={() => setBioModalOpen(true)}
                 className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
               >
-                <Wand2 size={15} className="text-[#5B8DB8]" /> Background Effects
+                <FileText size={15} className="text-[#5B8DB8]" /> Bio Effects
               </Button>
               <Button
                 type="button"
-                onClick={() => setBannerModalOpen(true)}
+                onClick={() => setLocationModalOpen(true)}
                 className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
               >
-                <Layers size={15} className="text-[#5B8DB8]" /> Banner Effects
+                <Icons.MapPin size={15} className="text-[#5B8DB8]" /> Location Effects
               </Button>
               <Button
                 type="button"
-                onClick={() => setCursorModalOpen(true)}
+                onClick={() => setRoleModalOpen(true)}
                 className="bg-[#080a10] hover:bg-[#5B8DB8]/20 text-white hover:text-[#5B8DB8] border border-white/10 hover:border-[#5B8DB8]/50 h-10 rounded-xl text-xs font-bold gap-2 transition-all shadow-sm cursor-pointer"
               >
-                <MousePointer2 size={15} className="text-[#5B8DB8]" /> Cursor Effects
+                <Award size={15} className="text-[#5B8DB8]" /> Role Effects
               </Button>
             </div>
           </Panel>
@@ -796,178 +808,68 @@ export default function Editor({ initialTab = "profile" }) {
             </div>
           </Panel>
 
-          {/* Profile Identity Text Inputs with Integrated [ ✨ FX ] Trigger */}
-          <Panel title="Profile Identity & Details">
-            <div className="space-y-4">
-              {/* Display Name Input with Direct FX Trigger */}
-              <div className="space-y-1.5 relative">
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Display Name</Label>
-                  <div className="flex items-center gap-2">
-                    {s.name_effect && s.name_effect !== "none" && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] border border-[#5B8DB8]/30 font-bold capitalize">
-                        FX: {s.name_effect}
-                      </span>
-                    )}
-                    <span className="text-[11px] font-mono text-[#5B8DB8]">Identity</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveFxTarget(activeFxTarget === "name" ? null : "name")}
-                    className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
-                      activeFxTarget === "name" || (s.name_effect && s.name_effect !== "none")
-                        ? "bg-[#5B8DB8] text-white border-[#5B8DB8] shadow-[0_0_12px_rgba(91,141,184,0.4)]"
-                        : "bg-[#080a10] border-white/15 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 hover:border-[#5B8DB8]/50"
-                    }`}
-                    title="Choose Animated Text Effect for Display Name"
-                  >
-                    <Sparkles size={13} />
-                    <span>FX</span>
-                  </button>
-                  <Input
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Your Display Name"
-                    className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8] flex-1"
-                  />
-                </div>
-
-                {/* Popover FX selector for Name */}
-                {activeFxTarget === "name" && (
-                  <div className="p-3 rounded-2xl bg-[#0c0e18] border border-[#5B8DB8]/50 shadow-2xl space-y-2 z-20">
-                    <div className="flex items-center justify-between text-xs font-bold text-white pb-1 border-b border-white/10">
-                      <span>Select Name Effect (Instantly Applied)</span>
-                      <button onClick={() => setActiveFxTarget(null)} className="text-white/50 hover:text-white"><X size={12} /></button>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                      {USERNAME_EFFECTS_LIST.map((ue) => (
-                        <button
-                          key={ue.id}
-                          type="button"
-                          onClick={() => {
-                            patch("name_effect", ue.id);
-                            applyEffectToTarget(ue, "name");
-                          }}
-                          className={`p-2 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                            s.name_effect === ue.id
-                              ? "bg-[#5B8DB8] text-white border-[#5B8DB8]"
-                              : "bg-[#080a10] hover:bg-[#5B8DB8]/20 border-white/10 hover:border-[#5B8DB8] text-white"
-                          }`}
-                        >
-                          <span className="text-[11px] truncate">{ue.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {/* Profile Identity Text Inputs - Clean, direct, minimal */}
+          <Panel title="Profile Identity">
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Display Name</Label>
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Display Name"
+                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                />
               </div>
 
-              {/* Bio Description Input with Direct FX Trigger */}
-              <div className="space-y-1.5 relative">
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Bio</Label>
-                  <div className="flex items-center gap-2">
-                    {s.bio_effect && s.bio_effect !== "none" && (
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#5B8DB8]/20 text-[#5B8DB8] border border-[#5B8DB8]/30 font-bold capitalize">
-                        FX: {s.bio_effect}
-                      </span>
-                    )}
-                    <span className="text-[11px] font-mono text-[#E5E7EB]/40">Markdown formatting</span>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveFxTarget(activeFxTarget === "bio" ? null : "bio")}
-                    className={`h-9 px-3 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 mt-0.5 ${
-                      activeFxTarget === "bio" || (s.bio_effect && s.bio_effect !== "none")
-                        ? "bg-[#5B8DB8] text-white border-[#5B8DB8] shadow-[0_0_12px_rgba(91,141,184,0.4)]"
-                        : "bg-[#080a10] border-white/15 text-[#5B8DB8] hover:bg-[#5B8DB8]/10 hover:border-[#5B8DB8]/50"
-                    }`}
-                    title="Choose Animated Text Effect for Bio"
-                  >
-                    <Sparkles size={13} />
-                    <span>FX</span>
-                  </button>
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={3}
-                    placeholder="Tell visitors about yourself..."
-                    className="bg-[#080a10] border-white/10 text-white text-xs rounded-xl focus:border-[#5B8DB8] flex-1 resize-none"
-                  />
-                </div>
-
-                {/* Popover FX selector for Bio */}
-                {activeFxTarget === "bio" && (
-                  <div className="p-3 rounded-2xl bg-[#0c0e18] border border-[#5B8DB8]/50 shadow-2xl space-y-2 z-20">
-                    <div className="flex items-center justify-between text-xs font-bold text-white pb-1 border-b border-white/10">
-                      <span>Select Bio Effect (Instantly Applied)</span>
-                      <button onClick={() => setActiveFxTarget(null)} className="text-white/50 hover:text-white"><X size={12} /></button>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                      {USERNAME_EFFECTS_LIST.map((ue) => (
-                        <button
-                          key={ue.id}
-                          type="button"
-                          onClick={() => {
-                            patch("bio_effect", ue.id);
-                            applyEffectToTarget(ue, "bio");
-                          }}
-                          className={`p-2 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                            s.bio_effect === ue.id
-                              ? "bg-[#5B8DB8] text-white border-[#5B8DB8]"
-                              : "bg-[#080a10] hover:bg-[#5B8DB8]/20 border-white/10 hover:border-[#5B8DB8] text-white"
-                          }`}
-                        >
-                          <span className="text-[11px] truncate">{ue.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="space-y-1">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Username</Label>
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                />
               </div>
 
-              {/* Occupation */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
+              <div className="space-y-1">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Bio</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Biography or description"
+                  className="bg-[#080a10] border-white/10 text-white text-xs rounded-xl focus:border-[#5B8DB8] resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Occupation</Label>
-                  <span className="text-[11px] font-mono text-white/40">Role or Profession</span>
+                  <Input
+                    value={s.occupation || ""}
+                    onChange={(e) => patch("occupation", e.target.value)}
+                    placeholder="Occupation / Role"
+                    className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                  />
                 </div>
-                <Input
-                  value={s.occupation || ""}
-                  onChange={(e) => patch("occupation", e.target.value)}
-                  placeholder="e.g. Software Engineer / Visual Artist / Cyber Security"
-                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
-                />
-              </div>
 
-              {/* Location */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
+                <div className="space-y-1">
                   <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Location</Label>
-                  <span className="text-[11px] font-mono text-white/40">Country or City</span>
+                  <Input
+                    value={s.location || ""}
+                    onChange={(e) => patch("location", e.target.value)}
+                    placeholder="Location"
+                    className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
+                  />
                 </div>
-                <Input
-                  value={s.location || ""}
-                  onChange={(e) => patch("location", e.target.value)}
-                  placeholder="e.g. Tokyo, Japan / Los Angeles / London"
-                  className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
-                />
               </div>
 
-              {/* Tags */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Tags</Label>
-                  <span className="text-[11px] font-mono text-white/40">Comma-separated badges</span>
-                </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-[#E5E7EB]/80 font-semibold">Tags</Label>
                 <Input
                   value={s.tags || ""}
                   onChange={(e) => patch("tags", e.target.value)}
-                  placeholder="e.g. Developer, Designer, Anime, Crypto"
+                  placeholder="Tags (comma-separated, e.g. dev, web3, design)"
                   className="bg-[#080a10] border-white/10 text-white h-9 text-xs rounded-xl focus:border-[#5B8DB8]"
                 />
               </div>
@@ -2131,6 +2033,34 @@ export default function Editor({ initialTab = "profile" }) {
         displayName={displayName}
         setDisplayName={setDisplayName}
         username={username}
+        settings={s}
+        patch={patch}
+      />
+
+      {/* Bio Effects Modal */}
+      <BioEffectsModal
+        open={bioModalOpen}
+        onClose={() => setBioModalOpen(false)}
+        description={description}
+        setDescription={setDescription}
+        settings={s}
+        patch={patch}
+      />
+
+      {/* Location Effects Modal */}
+      <LocationEffectsModal
+        open={locationModalOpen}
+        onClose={() => setLocationModalOpen(false)}
+        location={s.location}
+        settings={s}
+        patch={patch}
+      />
+
+      {/* Role Effects Modal */}
+      <RoleEffectsModal
+        open={roleModalOpen}
+        onClose={() => setRoleModalOpen(false)}
+        occupation={s.occupation}
         settings={s}
         patch={patch}
       />

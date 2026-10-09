@@ -189,7 +189,7 @@ export default function Pricing() {
               onClick={() => setModalOpen(true)}
               className="rounded-full bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold px-5 py-2.5 shadow-[0_0_20px_rgba(91,141,184,0.35)] gap-2 transition-all hover:scale-105"
             >
-              <Heart size={14} className="fill-white" /> Tip / Donate to SWAT.BIO
+              <Heart size={14} className="fill-white" /> Tip / Donate to feds.lol
             </Button>
           </div>
 
@@ -337,7 +337,7 @@ export default function Pricing() {
                 <Heart size={20} className="fill-[#5B8DB8]" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">Support SWAT.BIO</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-white">Support feds.lol</DialogTitle>
                 <div className="text-xs text-[#E5E7EB]/50">Choose your preferred payment or crypto method</div>
               </div>
             </div>

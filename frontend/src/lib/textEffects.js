@@ -47,7 +47,6 @@ export const USERNAME_EFFECTS_LIST = [
   { id: "grain", name: "Film Grain", desc: "Cinematic textured noise grain typography", wrap: (t) => `:grain:${t}:` },
   { id: "wave_flow", name: "Wave Flow", desc: "True flowing sine wave undulating animation across letters", wrap: (t) => `:waveflow:${t}:` },
   { id: "rgb_glow", name: "RGB Glow", desc: "Pulsing multi-chroma RGB rainbow perimeter glow", wrap: (t) => `:rgbglow:${t}:` },
-  { id: "bleed", name: "Bleed", desc: "Dripping dark crimson blood shadow & aura", wrap: (t) => `:blood:${t}:` },
   { id: "flicker", name: "Flicker", desc: "High-voltage neon phosphor flickering strobe", wrap: (t) => `:flicker:${t}:` },
   { id: "neon", name: "Neon Edge", desc: "Intense neon tube edge glow with customizable color", wrap: (t, color = "#06b6d4") => `:neon#${color.replace(/^#/, "")}:${t}:neon:` },
   { id: "rainbow", name: "Rainbow Wave", desc: "Smooth chromatic color shifting gradient", wrap: (t) => `:rainbow:${t}:` },
@@ -198,8 +197,8 @@ export function renderBioText(text) {
     { re: /^:fire:([^:\n]+)(?::(?:fire|[a-zA-Z0-9_#-]+))?:/i, type: "fire" },
     { re: /^:matrix:([^:\n]+)(?::(?:matrix|[a-zA-Z0-9_#-]+))?:/i, type: "plain" },
     { re: /^:glitch:([^:\n]+)(?::(?:glitch|[a-zA-Z0-9_#-]+))?:/i, type: "glitch" },
-    { re: /^:blood:([^:\n]+)(?::(?:blood|[a-zA-Z0-9_#-]+))?:/i, type: "blood" },
-    { re: /^:bleed:([^:\n]+)(?::(?:bleed|[a-zA-Z0-9_#-]+))?:/i, type: "blood" },
+    { re: /^:blood:([^:\n]+)(?::(?:blood|[a-zA-Z0-9_#-]+))?:/i, type: "plain" },
+    { re: /^:bleed:([^:\n]+)(?::(?:bleed|[a-zA-Z0-9_#-]+))?:/i, type: "plain" },
     { re: /^:wave:([^:\n]+)(?::(?:wave|[a-zA-Z0-9_#-]+))?:/i, type: "waveflow" },
     { re: /^:smoke:([^:\n]+)(?::(?:smoke|[a-zA-Z0-9_#-]+))?:/i, type: "smoke" },
     { re: /^:stars:([^:\n]+)(?::(?:stars|[a-zA-Z0-9_#-]+))?:/i, type: "stars" },
@@ -453,13 +452,6 @@ export function renderBioText(text) {
       case "glitch":
         return (
           <span key={idx} className="font-extrabold text-fx-glitch inline-block" data-text={tok.v}>
-            {tok.v}
-          </span>
-        );
-
-      case "blood":
-        return (
-          <span key={idx} className="font-bold text-red-500 text-fx-blood inline-block">
             {tok.v}
           </span>
         );

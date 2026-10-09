@@ -52,7 +52,7 @@ export function NameEffectsModal({
                 Display Name Effects Studio
               </DialogTitle>
               <div className="text-[11px] text-[#E5E7EB]/50">
-                Wavy flows, RGB glows, sparkles, and blood dripping animations
+                Luminous flows, RGB glows, star sparkles, and cyber pulse animations
               </div>
             </div>
           </div>

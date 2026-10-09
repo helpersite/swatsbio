@@ -13,17 +13,17 @@ export default function ToolsSection() {
   const { user, mutate } = useAuth();
   const [toolTab, setToolTab] = useState("metadata");
 
-  const bioLink = `https://swats.bio/${user?.username || "user"}`;
+  const bioLink = `https://feds.lol/${user?.username || "user"}`;
   const userSettings = user?.settings || {};
 
   // ──────────────────────────────────────────────
   // 1. METADATA & OPENGRAPH STUDIO STATE
   // ──────────────────────────────────────────────
-  const [metaTitle, setMetaTitle] = useState(userSettings.meta_title || `${user?.display_name || user?.username || "Creator"} (@${user?.username || "user"}) • Swats.bio`);
-  const [metaDesc, setMetaDesc] = useState(userSettings.meta_desc || user?.description || "Explore my official links, social channels, and exclusive content on Swats.bio.");
+  const [metaTitle, setMetaTitle] = useState(userSettings.meta_title || `${user?.display_name || user?.username || "Creator"} (@${user?.username || "user"}) • feds.lol`);
+  const [metaDesc, setMetaDesc] = useState(userSettings.meta_desc || user?.description || "Explore my official links, social channels, and exclusive content on feds.lol.");
   const [metaThemeColor, setMetaThemeColor] = useState(userSettings.meta_theme_color || userSettings.accent_color || "#5B8DB8");
   const [metaImage, setMetaImage] = useState(userSettings.meta_image || userSettings.profile_embed_image || userSettings.pfp || "");
-  const [metaKeywords, setMetaKeywords] = useState(userSettings.meta_keywords || "swats bio, biolink, links, creator, gaming, social");
+  const [metaKeywords, setMetaKeywords] = useState(userSettings.meta_keywords || "feds, feds.lol, biolink, links, creator, cyber halo, underground");
   const [twitterCardType, setTwitterCardType] = useState(userSettings.twitter_card || "summary_large_image");
   const [savingMeta, setSavingMeta] = useState(false);
 

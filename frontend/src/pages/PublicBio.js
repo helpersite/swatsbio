@@ -1894,7 +1894,7 @@ function BadgeItem({ badgeData, badgeId, accent, displayStyle = {} }) {
   }
 
   const Ic = Icons[iconName] || Icons.Award;
-  const size = Math.min(44, Math.max(20, Number(displayStyle.size) || 28));
+  const size = Math.min(48, Math.max(14, Number(displayStyle.size) || 28));
   const borderRadius = displayStyle.shape === "square" ? "4px" : displayStyle.shape === "rounded" ? "9px" : "9999px";
   const glow = displayStyle.glow === false ? "none" : `0 0 ${Math.max(4, glowIntensity / 2)}px ${glowColor || col}44`;
   const tooltipMode = displayStyle.tooltip_style || displayStyle.tooltip || "normal";
@@ -2019,9 +2019,9 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
   const s = bio?.settings || {};
   const displayStyle = {
     tooltip_style: s.badge_tooltip_style || "normal",
-    badge_color_overlap: s.badge_color_overlap,
-    badge_glow_overlap: s.badge_glow_overlap,
     ...(s.badge_style || {}),
+    badge_color_overlap: s.badge_color_overlap || s.badge_style?.badge_color_overlap,
+    badge_glow_overlap: s.badge_glow_overlap || s.badge_style?.badge_glow_overlap,
   };
   const badgeLayout = layoutOverride || s.badge_layout || "classic";
   const badgesPos = s.advanced_positioning_enabled ? (s.badges_position || "below_name") : (s.badges_position || "below_name");
@@ -2035,9 +2035,7 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
   const systemBadges = (badges || []).filter((b) => {
     return shownIds.length > 0 && shownIds.includes(String(b));
   });
-  const customBadges = bio?.role === "admin"
-    ? (s.custom_badges || []).filter((cb) => cb && cb.enabled !== false)
-    : [];
+  const customBadges = (s.custom_badges || []).filter((cb) => cb && cb.enabled !== false);
   const allBadges = [
     ...systemBadges.map((id) => ({ id, isCustom: false })),
     ...customBadges.map((cb) => ({ ...cb, isCustom: true })),
@@ -2094,6 +2092,42 @@ function BadgesRow({ badges, accent, align = "center", bio, layoutOverride }) {
     <div className={`flex flex-wrap ${alignClass} items-center gap-2 mt-2.5 relative z-30`}>
       {allBadges.map((b, idx) => (
         <BadgeItem key={b.id || b.name || idx} badgeData={b} accent={accent} displayStyle={displayStyle} />
+      ))}
+    </div>
+  );
+}
+
+function ProfileTags({ tags, s = {}, accent = "#5B8DB8", align = "center" }) {
+  const tagList = Array.isArray(tags)
+    ? tags.filter(Boolean).map((t) => (typeof t === "string" ? t.trim() : t?.name || ""))
+    : typeof tags === "string"
+    ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+
+  if (tagList.length === 0) return null;
+
+  const tagColor = s.tag_color || "#E5E7EB";
+  const tagBg = s.tag_bg_color || "rgba(255,255,255,0.06)";
+  const tagBorder = s.tag_border_color || "rgba(255,255,255,0.12)";
+  const tagGlow = s.tag_glow_color ? `0 0 10px ${s.tag_glow_color}55` : undefined;
+  const tagShape = s.tag_style === "square" ? "rounded-md" : s.tag_style === "pill" ? "rounded-full" : "rounded-lg";
+  const alignClass = align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center";
+
+  return (
+    <div className={`mt-2 flex items-center ${alignClass} gap-1.5 flex-wrap`}>
+      {tagList.map((tag, idx) => (
+        <span
+          key={idx}
+          className={`px-2.5 py-0.5 text-[11px] font-mono tracking-tight border backdrop-blur-md transition-all hover:scale-105 select-none ${tagShape}`}
+          style={{
+            color: tagColor,
+            backgroundColor: tagBg,
+            borderColor: tagBorder,
+            boxShadow: tagGlow,
+          }}
+        >
+          #{tag.startsWith("#") ? tag.slice(1) : tag}
+        </span>
       ))}
     </div>
   );
@@ -3386,7 +3420,10 @@ function BioCard({ bio }) {
                 <MediaDisplay src={pfp} alt={bio.display_name || bio.username} className="w-24 h-24 mx-auto object-cover border-2 relative z-10" style={{ ...avatarShape, borderColor: accent, boxShadow: `0 0 ${s.glow_intensity ?? 30}px ${glowColor}` }} />
                 <AvatarDecoration decoration={s.avatar_decoration} />
               </div>
-              <h1 className={`profile-title-3d text-2xl sm:text-3xl font-black mt-3.5 ${titleAlignClass}`} style={titleVisual}>{renderBioText(bio.display_name || bio.username)}</h1>
+              <h1 className={`profile-title-3d text-2xl sm:text-3xl font-black mt-3.5 ${titleAlignClass}`} style={titleVisual}>
+                {renderBioText(bio.display_name || bio.username)}
+                {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+              </h1>
               <div className="text-xs font-semibold mt-1 tracking-wider uppercase" style={{ color: accent }}>@{bio.username}</div>
               <BadgesRow badges={bio.badges} accent={accent} align="center" bio={bio} />
               {/* Occupation, Location & Tags Strip */}
@@ -3637,7 +3674,10 @@ function BioCard({ bio }) {
               <MediaDisplay src={pfp} alt={bio.display_name || bio.username} className="w-22 h-22 mx-auto object-cover border-2 relative z-10" style={{ ...avatarShape, ...customAvatarSize, ...customAvatarOffsetY, borderColor: accent, boxShadow: `0 0 ${s.glow_intensity ?? 30}px ${glowColor}` }} />
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
-            <h1 className={`profile-title-3d text-2xl font-extrabold mt-3.5 ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+            <h1 className={`profile-title-3d text-2xl font-extrabold mt-3.5 ${titleAlignClass}`} style={customTitleStyle}>
+              {renderBioText(bio.display_name || bio.username)}
+              {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+            </h1>
             <div className="text-xs font-medium mt-0.5" style={{ color: accent }}>@{bio.username}</div>
             {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
             <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "center"} bio={bio} />
@@ -3899,7 +3939,10 @@ function BioCard({ bio }) {
                 <AvatarDecoration decoration={s.avatar_decoration} />
               </div>
               <div>
-                <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+                <h1 className={`profile-title-3d text-2xl font-extrabold ${titleAlignClass}`} style={customTitleStyle}>
+                  {renderBioText(bio.display_name || bio.username)}
+                  {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+                </h1>
                 <div className="text-sm font-medium mt-0.5" style={{ color: accent }}>@{bio.username}</div>
               </div>
               {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
@@ -3938,7 +3981,10 @@ function BioCard({ bio }) {
           <div>
             <div className="flex items-center justify-between gap-4 text-left">
               <div className="flex-1 min-w-0">
-                <h1 className={`profile-title-3d text-2xl font-extrabold truncate ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+                <h1 className={`profile-title-3d text-2xl font-extrabold truncate ${titleAlignClass}`} style={customTitleStyle}>
+                  {renderBioText(bio.display_name || bio.username)}
+                  {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+                </h1>
                 <div className="text-xs font-medium" style={{ color: accent }}>@{bio.username}</div>
                 {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
                 <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "left"} bio={bio} />
@@ -3989,6 +4035,7 @@ function BioCard({ bio }) {
               <div>
                 <h1 className={`profile-title-3d text-2xl font-bold truncate ${titleAlignClass}`} style={customTitleStyle}>
                   {renderBioText(bio.display_name || bio.username)}
+                  {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
                 {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
@@ -4047,6 +4094,7 @@ function BioCard({ bio }) {
               </div>
               <h1 className={`profile-title-3d text-2xl font-extrabold mt-3 ${titleAlignClass}`} style={customTitleStyle}>
                 {renderBioText(bio.display_name || bio.username)}
+                {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
               </h1>
               <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
               {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
@@ -4077,6 +4125,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style}
                 linkAnimation={s.link_animation || "glass_lift"}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -4096,6 +4146,7 @@ function BioCard({ bio }) {
               <div className="min-w-0 flex-1">
                 <h1 className={`profile-title-3d text-2xl font-extrabold truncate ${titleAlignClass}`} style={customTitleStyle}>
                   {renderBioText(bio.display_name || bio.username)}
+                  {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
                 </h1>
                 <div className="text-xs font-semibold" style={{ color: accent }}>@{bio.username}</div>
                 {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
@@ -4125,6 +4176,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style || "bento"}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -4140,7 +4193,10 @@ function BioCard({ bio }) {
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
             <div>
-              <h1 className={`profile-title-3d text-xl font-bold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+              <h1 className={`profile-title-3d text-xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
+                {renderBioText(bio.display_name || bio.username)}
+                {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+              </h1>
               <div className="text-xs" style={{ color: accent }}>@{bio.username}</div>
             </div>
             {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
@@ -4159,6 +4215,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style || "pill"}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -4182,7 +4240,10 @@ function BioCard({ bio }) {
               <MediaDisplay src={pfp} alt={bio.display_name || bio.username} className="relative z-10 h-24 w-24 rounded-full border-4 border-[#111419] object-cover shadow-xl" style={{ ...avatarShape, ...customAvatarSize, ...customAvatarOffsetY, borderColor: accent, boxShadow: `0 0 ${s.glow_intensity ?? 30}px ${glowColor}` }} />
               <AvatarDecoration decoration={s.avatar_decoration} />
             </div>
-            <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+            <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
+              {renderBioText(bio.display_name || bio.username)}
+              {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+            </h1>
             <div className="mt-0.5 text-xs font-medium" style={{ color: accent }}>@{bio.username}</div>
             {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
             <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "center"} bio={bio} />
@@ -4201,6 +4262,8 @@ function BioCard({ bio }) {
                 linkLayoutStyle={s.link_layout_style || "grid_2col"}
                 linkAnimation={s.link_animation}
                 iconNoBg={iconNoBg}
+                linkColorOverlap={s.link_color_overlap}
+                linkGlowOverlap={s.link_glow_overlap}
                 showPresenceModal={showPresenceModal}
                 onPresenceClick={handlePresenceClick}
               />
@@ -4216,7 +4279,10 @@ function BioCard({ bio }) {
                 <AvatarDecoration decoration={s.avatar_decoration} />
               </div>
               <div>
-                <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>{renderBioText(bio.display_name || bio.username)}</h1>
+                <h1 className={`profile-title-3d text-2xl font-bold ${titleAlignClass}`} style={customTitleStyle}>
+                  {renderBioText(bio.display_name || bio.username)}
+                  {badgesPos === "next_to_name" && <BadgesRow badges={bio.badges} accent={accent} bio={bio} layoutOverride="compact_inline" />}
+                </h1>
                 <div className="mt-0.5 text-xs" style={{ color: accent }}>@{bio.username}</div>
                 {viewsPos === "below_name" && <ViewsBadge bio={bio} position="below_name" />}
                 <BadgesRow badges={bio.badges} accent={accent} align={adv.badges_alignment || "left"} bio={bio} />
@@ -4228,7 +4294,20 @@ function BioCard({ bio }) {
             </div>
             <div className="grid min-w-0 grid-cols-2 content-start gap-2.5">
               {cardLinks.map((link, index) => (
-                <LinkTile key={link.id} l={link} accent={accent} index={index} linkBg={linkBg} linkText={linkText} cardBorder={cardBorder} animation={s.link_animation} iconNoBg={iconNoBg} onPresenceClick={showPresenceModal ? handlePresenceClick : null} />
+                <LinkTile
+                  key={link.id}
+                  l={link}
+                  accent={accent}
+                  index={index}
+                  linkBg={linkBg}
+                  linkText={linkText}
+                  cardBorder={cardBorder}
+                  animation={s.link_animation}
+                  iconNoBg={iconNoBg}
+                  linkColorOverlap={s.link_color_overlap}
+                  linkGlowOverlap={s.link_glow_overlap}
+                  onPresenceClick={showPresenceModal ? handlePresenceClick : null}
+                />
               ))}
             </div>
           </div>

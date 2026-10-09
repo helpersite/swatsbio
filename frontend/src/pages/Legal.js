@@ -5,10 +5,10 @@ import { FileText, ShieldCheck, Copyright, Lock, Activity, Cookie, Scale, UserX 
 
 const SECTIONS = [
   { icon: FileText, title: "Terms of Service", clauses: [
-    ["1. Acceptance", "By accessing swats.bio you agree to these terms. If you do not agree, do not use the service. We may update these terms; continued use constitutes acceptance."],
-    ["2. Eligibility & Invites", "swats.bio is invite-only during beta. You must be at least 13 years old. Invite codes are personal and may be revoked if abused."],
-    ["3. Acceptable Use", "You may not use swats.bio to distribute malware, phishing links, illegal content, or to impersonate others. We reserve the right to suspend accounts that violate these rules without notice."],
-    ["4. Content Ownership", "You own the content you publish. By publishing, you grant swats.bio a limited license to host and display it. You are solely responsible for what you upload."],
+    ["1. Acceptance", "By accessing feds.lol you agree to these terms. If you do not agree, do not use the service. We may update these terms; continued use constitutes acceptance."],
+    ["2. Eligibility & Invites", "feds.lol is invite-only during beta. You must be at least 13 years old. Invite codes are personal and may be revoked if abused."],
+    ["3. Acceptable Use", "You may not use feds.lol to distribute malware, phishing links, illegal content, or to impersonate others. We reserve the right to suspend accounts that violate these rules without notice."],
+    ["4. Content Ownership", "You own the content you publish. By publishing, you grant feds.lol a limited license to host and display it. You are solely responsible for what you upload."],
     ["5. Service Availability", "The service is provided \"as is\" during beta. We do not guarantee uptime and are not liable for data loss, though we take reasonable precautions."],
   ]},
   { icon: Lock, title: "Privacy Policy", clauses: [

@@ -154,7 +154,7 @@ export default function Auth() {
           localStorage.setItem("swats_token", data.token);
         }
         await refresh();
-        toast.success("Account deployed with Discord! Welcome to swats.bio");
+        toast.success("Account deployed with Discord! Welcome to feds.lol");
         navigate("/dashboard");
         return;
       }
@@ -164,7 +164,7 @@ export default function Auth() {
         toast.success("Welcome back, operator.");
       } else {
         await register(form);
-        toast.success("Account deployed. Welcome to swats.bio!");
+        toast.success("Account deployed. Welcome to feds.lol!");
       }
       navigate("/dashboard");
     } catch (err) {
@@ -211,7 +211,7 @@ export default function Auth() {
                       required
                       value={botAccount}
                       onChange={(e) => setBotAccount(e.target.value)}
-                      placeholder="e.g. operator or you@swats.bio"
+                      placeholder="e.g. operator or you@feds.lol"
                       className="bg-[#08090B]/60 border-[#4A6B8A]/30 pl-10"
                     />
                   </Field>
@@ -281,7 +281,7 @@ export default function Auth() {
                     </div>
                   </div>
                   <p className="text-xs text-[#E5E7EB]/70 mt-2.5 leading-relaxed">
-                    Swats.bio is invite-only. Enter an invite code below to deploy your profile.
+                    feds.lol is invite-only. Enter an invite code below to deploy your profile.
                   </p>
                 </div>
               ) : (
@@ -303,7 +303,7 @@ export default function Auth() {
 
               <form onSubmit={submit} className="space-y-4">
                 {!pendingDiscord && (
-                  <Field icon={Mail} label="Email"><Input data-testid="auth-email-input" type="email" required value={form.email} onChange={set("email")} placeholder="you@swats.bio" className="bg-[#08090B]/60 border-[#4A6B8A]/30 pl-10" /></Field>
+                  <Field icon={Mail} label="Email"><Input data-testid="auth-email-input" type="email" required value={form.email} onChange={set("email")} placeholder="you@feds.lol" className="bg-[#08090B]/60 border-[#4A6B8A]/30 pl-10" /></Field>
                 )}
 
                 <AnimatePresence initial={false}>
@@ -329,7 +329,7 @@ export default function Auth() {
                   {(tab === "register" || pendingDiscord) && (
                     <motion.div key="invite" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.28, ease: "easeInOut" }} className="overflow-hidden">
                       <div className="pt-0.5">
-                        <Field icon={KeyRound} label="Invite code"><Input data-testid="auth-invite-input" required value={form.invite_code} onChange={set("invite_code")} placeholder="SWAT-XXXX" className="bg-[#08090B]/60 border-[#4A6B8A]/30 pl-10 font-mono" /></Field>
+                        <Field icon={KeyRound} label="Invite code"><Input data-testid="auth-invite-input" required value={form.invite_code} onChange={set("invite_code")} placeholder="FEDS-XXXX" className="bg-[#08090B]/60 border-[#4A6B8A]/30 pl-10 font-mono" /></Field>
                       </div>
                     </motion.div>
                   )}

@@ -242,92 +242,8 @@ export function RainEffect({ speed = 1, density = 1.2 }) {
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
 }
 
-// ──────────────────────────────────────────────
-// 3. BLOOD DRIPPING (Actual dripping blood streams running down the viewport)
-// ──────────────────────────────────────────────
-export function BloodDrippingEffect({ speed = 1 }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const dims = getCanvasDims(canvas);
-    let width = (canvas.width = dims.width);
-    let height = (canvas.height = dims.height);
-
-    const onResize = () => {
-      const d = getCanvasDims(canvas);
-      width = canvas.width = d.width;
-      height = canvas.height = d.height;
-    };
-    window.addEventListener("resize", onResize);
-
-    const streamCount = Math.max(12, Math.floor(width / 60));
-    const streams = Array.from({ length: streamCount }, (_, i) => ({
-      x: (width / streamCount) * i + Math.random() * 20,
-      y: 0,
-      length: 20 + Math.random() * (height * 0.45),
-      speed: (0.4 + Math.random() * 0.8) * speed,
-      thick: 2.5 + Math.random() * 4,
-      dropY: 0,
-      dropSpeed: (1.5 + Math.random() * 2.5) * speed,
-      active: true,
-      stainRadius: 4 + Math.random() * 8,
-    }));
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Top edge dripping pool bar
-      const topGrad = ctx.createLinearGradient(0, 0, 0, 18);
-      topGrad.addColorStop(0, "rgba(180, 10, 20, 0.95)");
-      topGrad.addColorStop(1, "rgba(120, 0, 10, 0.3)");
-      ctx.fillStyle = topGrad;
-      ctx.fillRect(0, 0, width, 14);
-
-      for (let i = 0; i < streams.length; i++) {
-        const s = streams[i];
-
-        // Draw top dripping stream
-        ctx.beginPath();
-        ctx.fillStyle = "rgba(160, 5, 15, 0.9)";
-        ctx.moveTo(s.x - s.thick, 0);
-        ctx.quadraticCurveTo(s.x, s.length * 0.6, s.x - s.thick * 0.6, s.length);
-        ctx.arc(s.x, s.length, s.thick, 0, Math.PI);
-        ctx.quadraticCurveTo(s.x, s.length * 0.6, s.x + s.thick, 0);
-        ctx.closePath();
-        ctx.fill();
-
-        // Droplet falling down
-        if (s.dropY < height) {
-          s.dropY += s.dropSpeed;
-          ctx.beginPath();
-          ctx.arc(s.x, s.dropY, s.thick * 0.9, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(190, 10, 25, 0.95)";
-          ctx.fill();
-        } else {
-          s.dropY = s.length + 5;
-        }
-
-        // Slow dripping extension
-        if (s.length < height * 0.7) {
-          s.length += s.speed * 0.05;
-        }
-      }
-
-      animId = requestAnimationFrame(render);
-    };
-    render();
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [speed]);
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-[1]" />;
+export function BloodDrippingEffect() {
+  return null;
 }
 
 // ──────────────────────────────────────────────
@@ -441,20 +357,18 @@ export const BACKGROUND_EFFECTS_LIST = [
   { id: "none", name: "None", description: "Clean transparent effect (shows wallpaper / solid color)" },
   { id: "snow_fall", name: "Snow Fall", description: "Dense micro-crystals stacking & melting at bottom, reacts to mouse" },
   { id: "rain", name: "Rain", description: "Tokyo neon rain streaks reacting to mouse velocity" },
-  { id: "blood_drip", name: "Blood Dripping", description: "Authentic crimson blood dripping down the screen" },
   { id: "shimmer", name: "Shimmer", description: "Periodic luminous light beam sweep across screen" },
   { id: "grain", name: "Grain", description: "Authentic cinematic film grain texture" },
   { id: "vhs_tape", name: "VHS Tape", description: "Retro CRT scanlines & tracking glitch" },
 ];
 
 export function BackgroundEffect({ effect, config = {} }) {
-  if (!effect || effect === "none") return null;
+  if (!effect || effect === "none" || effect === "blood" || effect === "dripping_blood" || effect === "blood_drip") return null;
 
   const resolved =
     effect === "snow" || effect === "snow_stack" ? "snow_fall" :
     effect === "vhs" ? "vhs_tape" :
     effect === "static" || effect === "static_grain" ? "grain" :
-    effect === "blood" || effect === "dripping_blood" ? "blood_drip" :
     effect;
 
   switch (resolved) {
@@ -462,8 +376,6 @@ export function BackgroundEffect({ effect, config = {} }) {
       return <SnowFallEffect speed={config.speed || 1} density={config.density || 1.3} />;
     case "rain":
       return <RainEffect speed={config.speed || 1} density={config.density || 1.2} />;
-    case "blood_drip":
-      return <BloodDrippingEffect speed={config.speed || 1} />;
     case "shimmer":
       return <ShimmerEffect speed={config.speed || 1} />;
     case "grain":

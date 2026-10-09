@@ -11,14 +11,14 @@ const FEATURES = [
   "Page password / enter screen", "Custom fonts (2 per user)",
 ];
 
-// 2 = full, 1 = partial, 0 = none  →  [swats.bio, legacy builders, standard bio tools, basic link pages]
+// 2 = full, 1 = partial, 0 = none  →  [feds.lol, legacy builders, standard bio tools, basic link pages]
 const MATRIX = [
   [2, 2, 1, 1], [2, 1, 1, 0], [2, 1, 1, 1], [2, 2, 1, 1], [2, 2, 1, 1],
   [2, 1, 0, 0], [2, 0, 0, 0], [2, 1, 1, 1], [2, 2, 1, 0], [2, 1, 1, 1],
   [2, 2, 1, 1], [2, 1, 0, 0],
 ];
 
-const COLS = ["swats.bio", "legacy builders", "standard bio tools", "basic link pages"];
+const COLS = ["feds.lol", "legacy builders", "standard bio tools", "basic link pages"];
 
 function Cell({ v }) {
   if (v === 2) return <span className="inline-flex w-7 h-7 rounded-full bg-[#5B8DB8]/15 items-center justify-center"><Check className="text-[#5B8DB8]" size={16} /></span>;

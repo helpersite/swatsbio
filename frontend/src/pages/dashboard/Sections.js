@@ -1151,7 +1151,23 @@ export function BadgesSection() {
   });
   const [saving, setSaving] = useState(false);
   const [checkingBooster, setCheckingBooster] = useState(false);
-  const canCreateCustomBadge = user?.role === "admin";
+  const canCreateCustomBadge = true;
+
+  // Tags Customization State
+  const initialTags = Array.isArray(user?.settings?.tags)
+    ? user.settings.tags
+    : typeof user?.settings?.tags === "string"
+    ? user.settings.tags.split(",").map((t) => t.trim()).filter(Boolean)
+    : [];
+  const [tags, setTags] = useState(initialTags);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [tagStyle, setTagStyle] = useState(user?.settings?.tag_style || "pill");
+  const [tagColor, setTagColor] = useState(user?.settings?.tag_color || "#E5E7EB");
+  const [tagBgColor, setTagBgColor] = useState(user?.settings?.tag_bg_color || "rgba(255,255,255,0.06)");
+  const [tagGlowColor, setTagGlowColor] = useState(user?.settings?.tag_glow_color || "");
+
+  const [badgeColorOverlap, setBadgeColorOverlap] = useState(user?.settings?.badge_color_overlap || "");
+  const [badgeGlowOverlap, setBadgeGlowOverlap] = useState(user?.settings?.badge_glow_overlap || "");
 
   useEffect(() => {
     if (user?.settings) {
@@ -1160,6 +1176,19 @@ export function BadgesSection() {
       if (user.settings.badges_position) setBadgesPosition(user.settings.badges_position);
       if (Array.isArray(user.settings.custom_badges)) setCustomBadges(user.settings.custom_badges);
       if (user.settings.badge_style) setBadgeStyle((prev) => ({ ...prev, ...user.settings.badge_style }));
+      if (user.settings.badge_color_overlap !== undefined) setBadgeColorOverlap(user.settings.badge_color_overlap || "");
+      if (user.settings.badge_glow_overlap !== undefined) setBadgeGlowOverlap(user.settings.badge_glow_overlap || "");
+
+      const tList = Array.isArray(user.settings.tags)
+        ? user.settings.tags
+        : typeof user.settings.tags === "string"
+        ? user.settings.tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
+      setTags(tList);
+      if (user.settings.tag_style) setTagStyle(user.settings.tag_style);
+      if (user.settings.tag_color) setTagColor(user.settings.tag_color);
+      if (user.settings.tag_bg_color) setTagBgColor(user.settings.tag_bg_color);
+      if (user.settings.tag_glow_color !== undefined) setTagGlowColor(user.settings.tag_glow_color || "");
     }
   }, [user]);
 
@@ -1202,8 +1231,30 @@ export function BadgesSection() {
     }
   };
 
-  const [badgeColorOverlap, setBadgeColorOverlap] = useState(user?.settings?.badge_color_overlap || "");
-  const [badgeGlowOverlap, setBadgeGlowOverlap] = useState(user?.settings?.badge_glow_overlap || "");
+  const handleAddTag = () => {
+    const clean = newTagInput.trim().replace(/^#/, "");
+    if (!clean) return;
+    if (tags.includes(clean)) return toast.info("Tag already exists");
+    const nextTags = [...tags, clean];
+    setTags(nextTags);
+    setNewTagInput("");
+    toast.success(`Added tag #${clean}`);
+  };
+
+  const handleRemoveTag = (idx) => {
+    const nextTags = tags.filter((_, i) => i !== idx);
+    setTags(nextTags);
+  };
+
+  const moveTag = (idx, direction) => {
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= tags.length) return;
+    const nextTags = [...tags];
+    const temp = nextTags[idx];
+    nextTags[idx] = nextTags[targetIdx];
+    nextTags[targetIdx] = temp;
+    setTags(nextTags);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -1218,12 +1269,17 @@ export function BadgesSection() {
           badge_style: badgeStyle,
           badge_color_overlap: badgeColorOverlap,
           badge_glow_overlap: badgeGlowOverlap,
+          tags: tags.join(", "),
+          tag_style: tagStyle,
+          tag_color: tagColor,
+          tag_bg_color: tagBgColor,
+          tag_glow_color: tagGlowColor,
         },
       });
       setUser(data);
-      toast.success("Badge settings saved!");
+      toast.success("Badges and tags saved successfully!");
     } catch {
-      toast.error("Failed to save badges");
+      toast.error("Failed to save badges and tags");
     } finally {
       setSaving(false);
     }
@@ -1486,6 +1542,128 @@ export function BadgesSection() {
             value={badgeGlowOverlap}
             onChange={setBadgeGlowOverlap}
           />
+        </div>
+      </div>
+
+      {/* Interactive Tag Customization Workspace */}
+      <div className="swat-glass rounded-3xl p-5 border border-[#5B8DB8]/30 space-y-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-white flex items-center gap-1.5 font-display">
+              <Sparkles size={15} className="text-[#5B8DB8]" /> Profile Tags Customization
+            </span>
+          </div>
+          <span className="text-[11px] font-mono text-[#5B8DB8]">{tags.length} Active Tags</span>
+        </div>
+
+        {/* Live Tags Preview */}
+        <div className="p-3.5 rounded-2xl bg-[#08090b]/80 border border-white/10 text-center space-y-1.5">
+          <div className="text-[10px] uppercase font-bold tracking-wider text-white/50">Live Tags Preview</div>
+          {tags.length === 0 ? (
+            <div className="text-xs text-white/40 italic py-2">No tags added yet. Type below and press Enter or click &quot;Add Tag&quot;.</div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 flex-wrap min-h-[32px]">
+              {tags.map((tag, idx) => (
+                <span
+                  key={idx}
+                  className={`px-3 py-1 text-xs font-mono tracking-tight border backdrop-blur-md transition-all select-none ${
+                    tagStyle === "square" ? "rounded-md" : tagStyle === "rounded" ? "rounded-lg" : "rounded-full"
+                  }`}
+                  style={{
+                    color: tagColor,
+                    backgroundColor: tagBgColor,
+                    borderColor: tagColor ? `${tagColor}44` : "rgba(255,255,255,0.15)",
+                    boxShadow: tagGlowColor ? `0 0 10px ${tagGlowColor}66` : undefined,
+                  }}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add Tag Input & Chip Manager */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Input
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              placeholder="Enter new tag name (e.g. Developer, Web3, Anime, Crypto)..."
+              className="bg-[#080a10] border-white/15 text-white h-9 text-xs rounded-xl flex-1 focus:border-[#5B8DB8]"
+            />
+            <Button
+              type="button"
+              onClick={handleAddTag}
+              className="bg-[#5B8DB8] hover:bg-[#4A6B8A] text-white text-xs font-bold h-9 px-4 rounded-xl gap-1.5 cursor-pointer"
+            >
+              <Plus size={14} /> Add Tag
+            </Button>
+          </div>
+
+          {/* Tag Chips with Reorder and Delete */}
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {tags.map((t, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-white/90 group"
+                >
+                  <span>#{t}</span>
+                  <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveTag(idx, -1)}
+                      className="p-0.5 hover:text-[#5B8DB8] disabled:opacity-20 text-[10px]"
+                      title="Move Left"
+                    >
+                      ◀
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === tags.length - 1}
+                      onClick={() => moveTag(idx, 1)}
+                      className="p-0.5 hover:text-[#5B8DB8] disabled:opacity-20 text-[10px]"
+                      title="Move Right"
+                    >
+                      ▶
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(idx)}
+                      className="p-0.5 hover:text-red-400 text-[11px] ml-1"
+                      title="Remove Tag"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Tag Styling Settings */}
+        <div className="grid sm:grid-cols-3 gap-3 pt-3 border-t border-white/10">
+          <SelectRow
+            label="Tag Pill Shape"
+            value={tagStyle}
+            onChange={setTagStyle}
+            options={[
+              { v: "pill", l: "Rounded Full Pill" },
+              { v: "rounded", l: "Rounded Square (8px)" },
+              { v: "square", l: "Sharp Tactical (4px)" },
+            ]}
+          />
+          <ColorRow label="Tag Text Color" value={tagColor} onChange={setTagColor} />
+          <ColorRow label="Tag Glow Aura" value={tagGlowColor} onChange={setTagGlowColor} />
         </div>
       </div>
 

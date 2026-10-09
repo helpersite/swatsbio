@@ -5,7 +5,6 @@ export const PROFILE_AVATAR_EFFECTS = [
   { id: "neon_rim", name: "Neon Rim", description: "Ultra-bright neon perimeter halo aura" },
   { id: "ripple", name: "Ripple", description: "Expanding concentric energy rings" },
   { id: "shimmer", name: "Shimmer", description: "Continuous radiant metallic light sweep" },
-  { id: "bleeding", name: "Bleeding", description: "Deep crimson blood drip & dark pulse aura" },
   { id: "rainbow", name: "Rainbow", description: "Rotating chromatic rainbow spectrum border" },
   { id: "spin", name: "Spin", description: "Continuous 360-degree rotating perimeter halo" },
   { id: "cyber_vortex", name: "Orbit Vortex", description: "Rotating dual-ring field with particle sparks" },
